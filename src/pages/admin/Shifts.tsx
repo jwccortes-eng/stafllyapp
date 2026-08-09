@@ -2151,97 +2151,74 @@ function DesktopShifts() {
 
   const handleCopyWeek = async () => {
     if (!canEdit || !selectedCompanyId) return;
-    setCopyingWeek(true);
     const nextWeekStart = addDays(weekStart, 7);
     const currentWeekShifts = shifts.filter(s => {
       const sd = new Date(s.date + "T00:00:00");
       return sd >= weekStart && sd <= addDays(weekStart, 6);
     });
     if (currentWeekShifts.length === 0) {
-      toast.error("No shifts to copy in the current week");
-      setCopyingWeek(false);
+      toast.error("No hay Servicios que copiar en esta semana");
       return;
     }
-    let created = 0;
-    for (const s of currentWeekShifts) {
-      const dayOfWeek = new Date(s.date + "T00:00:00").getDay();
-      const wsDay = weekStart.getDay();
-      const offset = ((dayOfWeek - wsDay) + 7) % 7;
+
+    // P0 FINAL — un snapshot canónico por Servicio origen, congelado ANTES de
+    // escribir. Copiar semana usa exactamente el mismo motor de series que
+    // Crear, Publicar, Duplicar y Editar → Repetir.
+    const wsDay = weekStart.getDay();
+    const plans = currentWeekShifts.map((s) => {
+      const offset = ((new Date(s.date + "T00:00:00").getDay() - wsDay) + 7) % 7;
       const targetDate = format(addDays(nextWeekStart, offset), "yyyy-MM-dd");
-      const raw = s as any;
-      const { data: newShift, error } = await supabase.from("scheduled_shifts").insert({
-        company_id: selectedCompanyId,
-        title: s.title,
-        date: targetDate,
-        start_time: s.start_time,
-        end_time: s.end_time,
-        slots: s.slots ?? 1,
-        client_id: s.client_id || null,
-        location_id: s.location_id || null,
-        notes: s.notes || null,
-        claimable: s.claimable ?? false,
-        // Phase 2 #2.2: align fields with handleDuplicateToDay (#2.1).
-        meeting_point: raw.meeting_point || null,
-        special_instructions: raw.special_instructions || null,
-        pay_type: raw.pay_type || "hourly",
-        day_type: raw.day_type || "full_day",
-        pay_override: raw.pay_override ?? false,
-        attendance_mode: raw.attendance_mode || null,
-        clock_method: raw.clock_method || "both",
-        transportation_required: raw.transportation_required ?? false,
-        car_capacity: raw.car_capacity ?? 5,
-        transportation_notes: raw.transportation_notes || null,
-        shift_admin_id: raw.shift_admin_id || null,
-        meeting_point_location_id: raw.meeting_point_location_id || null,
-        job_site_location_id: raw.job_site_location_id || null,
-        // Explicitly NOT copied: driver_employee_id, QR recipients
-        // Assignments handled separately below, gated by shifts_config.copy_week_assignments
-        status: "draft",
-        created_by: user?.id,
-      } as any).select("id, shift_ref").single();
-      if (error) continue;
-      /* P0 · SHIFT IDENTITY: el título NO lleva número. La referencia visible
-       * (`shift_ref`) la emite la secuencia por empresa; prefijar el título
-       * creaba un segundo número compitiendo en cabeceras. */
-      // Copy assignments (respects shifts_config.copy_week_assignments)
-      if (shiftsConfig.copy_week_assignments && newShift) {
-        const shiftAssigns = assignments.filter(a => a.shift_id === s.id);
-        if (shiftAssigns.length > 0) {
-          const newAssigns = shiftAssigns.map(a => ({
-            company_id: selectedCompanyId,
-            shift_id: newShift.id,
-            employee_id: a.employee_id,
-            status: "pending",
-          }));
-          const { error: copyAssignError } = await supabase.from("shift_assignments").insert(newAssigns as any);
-          if (copyAssignError) {
-            notifyWarning({
-              key: "shift-copy-assign",
-              title: "Se copió el turno, pero sin equipo",
-              fact: `No pudimos copiar ${newAssigns.length} asignación(es).`,
-              consequence: "Revisa el turno copiado y asigna el equipo manualmente.",
-              cause: copyAssignError,
-            });
-          }
-        }
-      }
-      if (newShift) {
-        await logShiftActivity("copiar_semana", newShift.id, null, {
-          source_shift: s.id, source_date: s.date, target_date: targetDate,
-        });
-      }
-      created++;
-    }
-    const weekLabel = `${format(nextWeekStart, "MMM d")}–${format(addDays(nextWeekStart, 6), "MMM d")}`;
-    // Phase 2 #2.2: make assignment-copy behavior visible in the toast.
-    toast.success(`${created} turnos duplicados a ${weekLabel} como borrador.`, {
-      description: shiftsConfig.copy_week_assignments
-        ? "Asignaciones copiadas como pending — los empleados deben aceptar."
-        : "Sin asignaciones copiadas. Asigna empleados para activar.",
+      const employeeIds = shiftsConfig.copy_week_assignments
+        ? Array.from(new Set(assignments.filter(a => a.shift_id === s.id).map(a => a.employee_id)))
+        : [];
+      const snapshot = snapshotFromServiceRow(s as any, {
+        companyId: selectedCompanyId,
+        employeeIds,
+        publicationIntent: "draft",
+      });
+      return {
+        sourceId: s.id,
+        sourceDate: s.date,
+        targetDate,
+        intent: buildSeriesIntentFromSnapshot({ snapshot, baseDate: targetDate, copyAssignments: true }),
+      };
     });
-    setCopyingWeek(false);
-    loadData();
+
+    const weekLabel = `${format(nextWeekStart, "MMM d")}–${format(addDays(nextWeekStart, 6), "MMM d")}`;
+    openSeriesPreview({
+      intents: plans.map((p) => p.intent),
+      routeLabel: `Copiar semana a ${weekLabel}`,
+      confirmLabel: `Copiar ${plans.length} Servicio${plans.length === 1 ? "" : "s"}`,
+      run: async () => {
+        setCopyingWeek(true);
+        try {
+          let created = 0;
+          for (const plan of plans) {
+            const outcomes = await createServiceSeries(plan.intent);
+            const summary = summarizeSeries(outcomes);
+            if (summary.created + summary.reused === 0) continue;
+            created += summary.created + summary.reused;
+            const newId = outcomes.find((o) => o.shiftId)?.shiftId;
+            if (newId) {
+              await logShiftActivity("copiar_semana", newId, null, {
+                source_shift: plan.sourceId, source_date: plan.sourceDate, target_date: plan.targetDate,
+              });
+            }
+            await verifySeriesAfterPersist(plan.intent, outcomes);
+          }
+          toast.success(`${created} Servicios copiados a ${weekLabel} como borrador.`, {
+            description: shiftsConfig.copy_week_assignments
+              ? "Equipo copiado como pendiente — los empleados deben aceptar."
+              : "Sin equipo copiado. Asigna trabajadores para activar.",
+          });
+          loadData();
+        } finally {
+          setCopyingWeek(false);
+        }
+      },
+    });
   };
+
 
   const toggleEmployee = (id: string) => {
     setSelectedEmployees(prev =>
