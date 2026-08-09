@@ -285,8 +285,13 @@ export function buildConnecteamRow(
   const addr = resolveAddress(shift, ctx);
 
 
-  // Number of users: prefer declared slots/capacity; fall back to assigned count.
-  const numberOfUsers = String(s.slots ?? userNames.length ?? 0);
+  // Number of users: `slots = NULL` significa "cantidad de personal PENDIENTE",
+  // no 0 ni 1. En ese caso la columna viaja VACÍA: no se inventa capacidad.
+  const numberOfUsers =
+    s.slots == null
+      ? (userNames.length > 0 ? String(userNames.length) : "")
+      : String(s.slots);
+
 
   // Users: empty by default in v1.1 (Connecteam needs exact identifiers).
   const usersValue = opts.includeUsers ? userNames.join("; ") : "";
