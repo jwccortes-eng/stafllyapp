@@ -15,7 +15,7 @@ import {
   resolveVisualDate,
   type RawVisualExtraction,
 } from "@/lib/intake/visual-extraction";
-import { canCreateDraft } from "@/lib/intake/candidate";
+import { canCreateDraft, getCandidateReadiness } from "@/lib/intake/candidate";
 
 const COMPANY = "11111111-1111-1111-1111-111111111111";
 const OTHER_COMPANY = "22222222-2222-2222-2222-222222222222";
@@ -123,9 +123,10 @@ describe("A. captura de calendario: una celda = un candidato", () => {
     expect(levels.workers).toBe("MISSING");
   });
 
-  it("bloquea la creación mientras falte información", () => {
-    expect(canCreateDraft(res.candidates[0]).ok).toBe(false);
+  it("permite el borrador y deja la hora como pendiente de publicación", () => {
+    expect(canCreateDraft(res.candidates[0]).ok).toBe(true);
     expect(res.candidates[0].missingFields).toContain("start_time");
+    expect(getCandidateReadiness(res.candidates[0]).publishGaps).toContain("start_time");
   });
 
   it("avisa que el color no define identidad", () => {

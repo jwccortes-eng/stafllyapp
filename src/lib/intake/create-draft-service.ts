@@ -33,22 +33,61 @@ export type CreateDraftOutcome =
   | { status: "blocked"; reason: string; candidateId: string }
   | { status: "error"; reason: string; candidateId: string };
 
+/**
+ * Bloque de pendientes que viaja dentro de `notes`.
+ *
+ * No se crea ninguna tabla paralela: la información detectada pero aún no
+ * vinculada (cliente/venue) y los campos que faltan quedan legibles en el
+ * propio Servicio para completarlos después.
+ */
+export const INTAKE_PENDING_MARK = "[Intake pendiente]";
+
+export function buildPendingBlock(candidate: ServiceCandidate): string | null {
+  const lines: string[] = [];
+  const client = (candidate.clientCandidate.raw ?? "").trim();
+  const venue = (candidate.venueCandidate.raw ?? "").trim();
+
+  if (client && !candidate.clientCandidate.resolvedId) {
+    lines.push(`Cliente detectado: ${client} — pendiente de vincular`);
+  }
+  if (venue && !candidate.locationCandidate.resolvedId) {
+    lines.push(`Venue detectado: ${venue} — pendiente de vincular`);
+  }
+  if (!candidate.startTime) lines.push("Hora de inicio pendiente de confirmar");
+  if (!candidate.endTime) lines.push("Hora de fin pendiente de confirmar");
+  if (!candidate.requestedWorkers) lines.push("Cantidad de personal pendiente");
+  if (candidate.roleCandidates.length > 0) {
+    lines.push(`Roles mencionados: ${candidate.roleCandidates.join(", ")}`);
+  }
+
+  if (lines.length === 0) return null;
+  return [INTAKE_PENDING_MARK, ...lines.map((l) => `- ${l}`)].join("\n");
+}
+
 /** Payload exacto que se escribe. Expuesto para tests y auditoría. */
 export function buildDraftPayload(
   candidate: ServiceCandidate,
   ctx: CreateDraftContext,
 ): Record<string, unknown> {
+  // `scheduled_shifts.start_time/end_time` son NOT NULL. Cuando el origen no
+  // define horario no se inventa una jornada: se ancla al mismo instante y el
+  // pendiente queda declarado en notas, bloqueando publicación y export.
+  const startTime = candidate.startTime ?? "00:00";
+  const endTime = candidate.endTime ?? startTime;
+  const pending = buildPendingBlock(candidate);
+  const notes = [candidate.notes?.trim() || null, pending].filter(Boolean).join("\n\n") || null;
+
   return {
     company_id: ctx.companyId,
     title: candidateTitle(candidate),
     date: candidate.serviceDate,
-    start_time: candidate.startTime,
-    end_time: candidate.endTime,
-    slots: candidate.requestedWorkers ?? 1,
+    start_time: startTime,
+    end_time: endTime,
+    slots: candidate.requestedWorkers ?? null,
     client_id: candidate.clientCandidate.resolvedId,
     location_id: candidate.locationCandidate.resolvedId,
     job_site_address: candidate.venueCandidate.raw || null,
-    notes: candidate.notes,
+    notes,
     status: "open",
     publication_status: "draft",
     published_at: null,
@@ -62,6 +101,7 @@ export function buildDraftPayload(
     }),
   };
 }
+
 
 /** Crea (o reutiliza) el draft de un candidato revisado. */
 export async function createDraftServiceFromCandidate(

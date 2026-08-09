@@ -8,6 +8,13 @@
 import { describe, expect, it } from "vitest";
 import { parseTextToCandidates } from "@/lib/intake/text-parser";
 import { expandDateList } from "@/lib/intake/date-expansion";
+import {
+  canCreateDraft,
+  getCandidateReadiness,
+  recomputeCandidate,
+} from "@/lib/intake/candidate";
+import { confirmRef } from "@/lib/intake/entity-resolution";
+import { buildDraftPayload } from "@/lib/intake/create-draft-service";
 
 const REF = "2026-08-09";
 const ctx = { companyId: "c1", referenceDate: REF } as const;
@@ -144,5 +151,56 @@ describe("variantes de escritura", () => {
     const millennium = res.candidates.filter((c) => /millennium/i.test(c.venueCandidate.raw));
     expect(imperial.every((c) => c.startTime === "17:00")).toBe(true);
     expect(millennium.every((c) => c.startTime === null)).toBe(true);
+  });
+});
+
+/**
+ * P0 — Creación de borradores con entidades pendientes.
+ *
+ * Los 9 trabajos reales deben poder guardarse como `scheduled_shifts` draft
+ * aunque Imperial siga sin vincularse y falten hora final y personal.
+ */
+describe("READY_TO_CREATE_DRAFT con entidades pendientes", () => {
+  const { candidates } = parseTextToCandidates(REAL_INPUT, ctx);
+
+  it("los 9 servicios son creables como borrador", () => {
+    expect(candidates).toHaveLength(9);
+    expect(candidates.filter((c) => canCreateDraft(c).ok)).toHaveLength(9);
+  });
+
+  it("ninguno está listo para publicar ni exportar a Connecteam", () => {
+    for (const c of candidates) {
+      const r = getCandidateReadiness(c);
+      expect(r.readyToCreateDraft).toBe(true);
+      expect(r.publishGaps.length).toBeGreaterThan(0);
+      expect(r.exportGaps.length).toBeGreaterThan(0);
+      expect(r.pendingEntities).toContain("Imperial");
+    }
+  });
+
+  it("el payload preserva lo detectado y no inventa personal", () => {
+    const payload = buildDraftPayload(candidates[0], { companyId: "c1", userId: "u1" });
+    expect(payload.publication_status).toBe("draft");
+    expect(payload.date).toBe("2026-08-30");
+    expect(payload.start_time).toBe("17:00");
+    expect(payload.slots).toBeNull();
+    expect(payload.client_id).toBeNull();
+    expect(payload.location_id).toBeNull();
+    expect(String(payload.title)).toContain("Imperial");
+    expect(String(payload.notes)).toContain("pendiente de vincular");
+    expect(String(payload.notes)).toContain("Cantidad de personal pendiente");
+  });
+
+  it("completar un servicio no afecta a los otros ocho", () => {
+    const completed = recomputeCandidate({
+      ...candidates[0],
+      endTime: "23:00",
+      requestedWorkers: 6,
+      clientCandidate: confirmRef(candidates[0].clientCandidate, "client-1", "Imperial"),
+      locationCandidate: confirmRef(candidates[0].locationCandidate, "loc-1", "Imperial"),
+      venueCandidate: confirmRef(candidates[0].venueCandidate, "loc-1", "Imperial"),
+    });
+    expect(getCandidateReadiness(completed).exportGaps).toHaveLength(0);
+    expect(getCandidateReadiness(candidates[1]).exportGaps.length).toBeGreaterThan(0);
   });
 });

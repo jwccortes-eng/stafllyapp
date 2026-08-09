@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { canCreateDraft, type ServiceCandidate } from "@/lib/intake/candidate";
+import { canCreateDraft, getCandidateReadiness, type ServiceCandidate } from "@/lib/intake/candidate";
 import type { ConfidenceLevel, UnresolvedElement } from "@/lib/intake/visual-extraction";
 import CandidateQuickEditSheet from "@/components/intake/CandidateQuickEditSheet";
 import EntityResolutionSheet from "@/components/intake/EntityResolutionSheet";
@@ -227,6 +227,21 @@ export function ServiceIntakeReviewInbox({
     [candidates, selected],
   );
 
+  /**
+   * Cuántos de los borradores que se van a crear seguirán con pendientes
+   * (venue, hora fin, personal, Job de Connecteam) después de guardarse.
+   */
+  const pendingAfterCreate = useMemo(
+    () =>
+      candidates.filter((c) => {
+        if (!creatableSelected.includes(c.id)) return false;
+        const r = getCandidateReadiness(c);
+        return r.publishGaps.length > 0 || r.exportGaps.length > 0;
+      }).length,
+    [candidates, creatableSelected],
+  );
+
+
   const allCreated = candidates.length > 0 && counts.ready === 0 && counts.created > 0;
 
   const toggle = (id: string) =>
@@ -292,6 +307,7 @@ export function ServiceIntakeReviewInbox({
     const created = c.reviewStatus === "created";
     const excluded = c.reviewStatus === "excluded";
     const missing = missingLabels(c);
+    const readiness = getCandidateReadiness(c);
     const showDetail = detailIds.includes(c.id);
     const notices = noticesByCandidate?.[c.id] ?? [];
     const approximateTime = notices.some((notice) => /hora es aproximada/i.test(notice));
@@ -360,18 +376,26 @@ export function ServiceIntakeReviewInbox({
             </div>
 
             {missing.length > 0 && (
-              <p className="text-sm text-destructive">Campos pendientes: {missing.join(", ")}</p>
+              <p className="text-sm text-muted-foreground">
+                Puedes guardarlo como borrador. Pendiente para después: {missing.join(", ")}
+              </p>
             )}
 
             <div className="flex flex-wrap gap-1.5">
               {created && <Badge variant="secondary">Borrador creado</Badge>}
               {excluded && <Badge variant="outline">Excluido</Badge>}
+              {readiness.pendingEntities.map((name) => (
+                <Badge key={`pending-${name}`} variant="outline">
+                  {name} — pendiente de vincular
+                </Badge>
+              ))}
               {c.duplicateStatus === "exact_duplicate" && (
                 <Badge variant="destructive">Ya existe</Badge>
               )}
               {c.duplicateStatus === "possible_duplicate" && (
                 <Badge variant="outline">Posible duplicado</Badge>
               )}
+
               {c.venueCandidate.matchOrigin === "dictionary" && (
                 <Badge variant="secondary">Aprendido: {c.venueCandidate.suggestedLabel}</Badge>
               )}
@@ -607,6 +631,14 @@ export function ServiceIntakeReviewInbox({
           {creatableSelected.length} seleccionados · {counts.needsReview} necesitan revisión
           {counts.created > 0 ? ` · ${counts.created} ya creados` : ""}
         </p>
+        {pendingAfterCreate > 0 && creatableSelected.length > 0 && (
+          <p className="pb-2 text-xs text-muted-foreground">
+            {creatableSelected.length}{" "}
+            {creatableSelected.length === 1 ? "borrador se creará" : "borradores se crearán"}.{" "}
+            {pendingAfterCreate === creatableSelected.length ? "Todos necesitan" : `${pendingAfterCreate} necesitan`}{" "}
+            completar información antes de exportar.
+          </p>
+        )}
         <Button
           className="h-14 w-full text-base"
           disabled={isBusy || submitting || creatableSelected.length === 0}
@@ -617,6 +649,7 @@ export function ServiceIntakeReviewInbox({
             : `Crear ${creatableSelected.length} ${creatableSelected.length === 1 ? "borrador" : "borradores"}`}
         </Button>
       </div>
+
 
       {companyId && resolving && (
         <EntityResolutionSheet

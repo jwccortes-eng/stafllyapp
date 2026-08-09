@@ -17,7 +17,7 @@ import {
 } from "@/lib/intake/text-parser";
 import { resolveCandidateEntities } from "@/lib/intake/text-intake";
 import { detectDuplicate, applyDuplicateVerdict, type ExistingServiceRow } from "@/lib/intake/duplicate";
-import { canCreateDraft, recomputeCandidate } from "@/lib/intake/candidate";
+import { canCreateDraft, getCandidateReadiness, recomputeCandidate } from "@/lib/intake/candidate";
 import { buildDraftPayload } from "@/lib/intake/create-draft-service";
 import { buildIntakeTelemetry } from "@/lib/intake/telemetry";
 
@@ -134,12 +134,12 @@ describe("Fase 2 — abreviaciones suggestion-only", () => {
 });
 
 describe("Fase 2 — D/E. información incompleta", () => {
-  it("D. fecha sin venue queda con lugar faltante y no se puede crear", () => {
+  it("D. fecha sin venue avisa el lugar faltante y no puede exportarse", () => {
     const { candidates, notices } = parseTextToCandidates("Oct 13", ctx);
     expect(candidates).toHaveLength(1);
     expect(candidates[0].venueCandidate.raw).toBe("");
     expect(notices.some((n) => n.kind === "missing_venue")).toBe(true);
-    expect(canCreateDraft(candidates[0]).ok).toBe(false);
+    expect(getCandidateReadiness(candidates[0]).exportGaps).toContain("connecteam_job");
   });
 
   it("E. venue sin fecha queda marcado como fecha faltante", () => {
@@ -157,7 +157,9 @@ describe("Fase 2 — F. typos y resolución de venue", () => {
     expect(resolved.venueCandidate.suggestedLabel).toBe("The Millennium Hall");
     expect(resolved.venueCandidate.resolvedId).toBeNull();
     expect(resolved.venueCandidate.requiresConfirmation).toBe(true);
-    expect(canCreateDraft(resolved).ok).toBe(false);
+    // Se puede guardar como borrador; el vínculo queda pendiente.
+    expect(canCreateDraft(resolved).ok).toBe(true);
+    expect(getCandidateReadiness(resolved).publishGaps).toContain("venue_link");
   });
 
   it("nunca crea cliente ni venue: sólo referencia catálogo existente", () => {

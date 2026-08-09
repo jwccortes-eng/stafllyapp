@@ -172,17 +172,96 @@ export function recomputeCandidate(c: ServiceCandidate): ServiceCandidate {
   return { ...c, missingFields: missing, reviewStatus: status };
 }
 
-/** ¿Se puede convertir en draft? Regla única compartida por UI y helper. */
-export function canCreateDraft(c: ServiceCandidate): { ok: boolean; reason?: string } {
-  if (c.reviewStatus === "excluded") return { ok: false, reason: "excluded" };
-  if (c.createdShiftId) return { ok: false, reason: "already_created" };
-  if (c.missingFields.length > 0) return { ok: false, reason: "missing_fields" };
-  if (c.duplicateStatus === "exact_duplicate") return { ok: false, reason: "exact_duplicate" };
-  if (c.duplicateStatus === "possible_duplicate" && c.reviewStatus !== "accepted") {
-    return { ok: false, reason: "possible_duplicate_needs_review" };
-  }
-  return { ok: true };
+/**
+ * TRES NIVELES DE READINESS — nunca se mezclan:
+ *
+ *   A. READY_TO_CREATE_DRAFT      → mínimo indispensable para representar el trabajo
+ *   B. READY_TO_PUBLISH           → información operativa completa
+ *   C. READY_TO_EXPORT_CONNECTEAM → además, Job/Sub item y horario real
+ *
+ * Un servicio con A=true, B=false y C=false es válido y debe poder guardarse.
+ */
+export interface CandidateReadiness {
+  readyToCreateDraft: boolean;
+  /** Razones que impiden guardar el borrador. Vacío = se puede crear. */
+  draftBlockers: string[];
+  /** Pendientes que impiden publicar (no bloquean el borrador). */
+  publishGaps: string[];
+  /** Pendientes que impiden exportar a Connecteam (no bloquean el borrador). */
+  exportGaps: string[];
+  /** Entidades detectadas sin vincular ("Imperial — pendiente de vincular"). */
+  pendingEntities: string[];
 }
+
+const clean = (v: string | null | undefined) => (v ?? "").trim();
+
+/** Referencia mínima que identifica el trabajo sin inventar datos. */
+export function candidateReference(c: ServiceCandidate): string {
+  return (
+    clean(c.clientCandidate.raw) ||
+    clean(c.venueCandidate.raw) ||
+    clean(c.locationCandidate.raw) ||
+    clean(c.serviceType) ||
+    clean(c.notes)
+  );
+}
+
+export function getCandidateReadiness(c: ServiceCandidate): CandidateReadiness {
+  const draftBlockers: string[] = [];
+  if (c.reviewStatus === "excluded") draftBlockers.push("excluded");
+  if (c.createdShiftId) draftBlockers.push("already_created");
+  if (!c.companyId) draftBlockers.push("missing_company");
+  if (!c.serviceDate) draftBlockers.push("missing_service_date");
+  if (!candidateReference(c)) draftBlockers.push("missing_reference");
+  if (c.duplicateStatus === "exact_duplicate") draftBlockers.push("exact_duplicate");
+  if (c.duplicateStatus === "possible_duplicate" && c.reviewStatus !== "accepted") {
+    draftBlockers.push("possible_duplicate_needs_review");
+  }
+
+  const publishGaps: string[] = [];
+  if (!c.startTime) publishGaps.push("start_time");
+  if (!c.endTime) publishGaps.push("end_time");
+  if (!c.requestedWorkers) publishGaps.push("requested_workers");
+  if (!c.clientCandidate.resolvedId && clean(c.clientCandidate.raw)) {
+    publishGaps.push("client_link");
+  }
+  if (!c.locationCandidate.resolvedId && clean(c.venueCandidate.raw)) {
+    publishGaps.push("venue_link");
+  }
+
+  const exportGaps: string[] = [...publishGaps.filter((g) => g !== "requested_workers")];
+  if (!c.clientCandidate.resolvedId && !c.locationCandidate.resolvedId) {
+    if (!exportGaps.includes("connecteam_job")) exportGaps.push("connecteam_job");
+  }
+
+  const pendingEntities: string[] = [];
+  if (clean(c.clientCandidate.raw) && !c.clientCandidate.resolvedId) {
+    pendingEntities.push(clean(c.clientCandidate.raw));
+  }
+  if (clean(c.venueCandidate.raw) && !c.locationCandidate.resolvedId) {
+    const raw = clean(c.venueCandidate.raw);
+    if (!pendingEntities.includes(raw)) pendingEntities.push(raw);
+  }
+
+  return {
+    readyToCreateDraft: draftBlockers.length === 0,
+    draftBlockers,
+    publishGaps,
+    exportGaps,
+    pendingEntities,
+  };
+}
+
+/**
+ * ¿Se puede convertir en draft? Regla única compartida por UI y helper.
+ * Sólo evalúa el nivel A: cliente/venue/hora fin/personal pendientes NO bloquean.
+ */
+export function canCreateDraft(c: ServiceCandidate): { ok: boolean; reason?: string } {
+  const { draftBlockers } = getCandidateReadiness(c);
+  if (draftBlockers.length === 0) return { ok: true };
+  return { ok: false, reason: draftBlockers[0] };
+}
+
 
 /** Título por defecto del draft. Nunca inventa cliente. */
 export function candidateTitle(c: ServiceCandidate): string {

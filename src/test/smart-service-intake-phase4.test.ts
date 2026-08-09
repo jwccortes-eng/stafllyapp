@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from "vitest";
 import { resolveAudioDate, normalizeAudioExtraction } from "@/lib/intake/audio-extraction";
-import { canCreateDraft } from "@/lib/intake/candidate";
+import { canCreateDraft, getCandidateReadiness } from "@/lib/intake/candidate";
 import { validateAudioFile } from "@/lib/intake/audio-intake";
 import type { RawVisualExtraction } from "@/lib/intake/visual-extraction";
 
@@ -111,12 +111,13 @@ describe("normalizeAudioExtraction", () => {
     expect(res.candidates.map((c) => c.serviceDate)).toEqual(["2026-03-11", "2026-03-14"]);
   });
 
-  it("no inventa hora: bloquea la creación y avisa", () => {
+  it("no inventa hora: la deja pendiente sin bloquear el borrador", () => {
     const res = normalize([service({ service_date: "mañana", venue_name: "Marina" })]);
     const c = res.candidates[0];
     expect(c.startTime).toBeNull();
     expect(c.missingFields).toContain("start_time");
-    expect(canCreateDraft(c).ok).toBe(false);
+    expect(canCreateDraft(c).ok).toBe(true);
+    expect(getCandidateReadiness(c).publishGaps).toContain("start_time");
   });
 
   it("no inventa personal ni cliente", () => {
