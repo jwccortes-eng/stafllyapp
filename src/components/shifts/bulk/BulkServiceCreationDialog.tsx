@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -309,6 +309,14 @@ export function BulkServiceCreationDialog({
   };
 
   const readyCount = plan.rows.length;
+  const blockedCount = plan.blocked.length;
+  const incompleteCount = useMemo(
+    () => rows.filter((r) => validateBulkRow(r).status === "incomplete").length,
+    [rows],
+  );
+  const scopeLabel = selected.size > 0
+    ? `${selected.size} fila${selected.size === 1 ? "" : "s"} seleccionada${selected.size === 1 ? "" : "s"}`
+    : "todas las filas";
 
   const rowStatusBadge = (row: BulkServiceRow) => {
     const v = validateBulkRow(row);
@@ -333,240 +341,318 @@ export function BulkServiceCreationDialog({
     );
   };
 
+  /** Error inline por campo: la fila y el campo exactos, nunca "búscalo tú". */
+  const fieldError = (row: BulkServiceRow, field: "date" | "identity") => {
+    const v = validateBulkRow(row);
+    if (field === "date" && v.blockers.includes("Fecha")) return "Falta la fecha";
+    if (field === "identity" && v.blockers.some((b) => b.startsWith("Cliente"))) {
+      return "Falta cliente, lugar o título";
+    }
+    return null;
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => { if (!submitting) onOpenChange(v); }}>
-        <DialogContent className="max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ClipboardList className="h-4 w-4 text-primary" />
-              Crear varios servicios
-            </DialogTitle>
-            <DialogDescription>
-              Escribe las filas y créalas como borradores. Lo que falte queda pendiente: no se
-              inventa nada y no se publica nada.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent
+          className={cn(
+            // Workspace operativo: usa el viewport, no una tarjeta centrada.
+            "w-[96vw] max-w-[1800px] sm:max-w-[96vw] lg:max-w-[96vw] xl:max-w-[96vw]",
+            "h-[94vh] max-h-[94vh] p-0 gap-0",
+            "overflow-hidden flex flex-col sm:rounded-2xl",
+          )}
+        >
+          {/* ── Header sticky ── */}
+          <div className="sticky top-0 z-30 shrink-0 border-b border-border bg-background/95 backdrop-blur px-5 py-4">
+            <DialogHeader className="space-y-1">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <ClipboardList className="h-4 w-4 text-primary" />
+                Crear varios servicios
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Organiza varios trabajos y guárdalos como borradores. Lo que falte queda pendiente:
+                no se inventa nada y no se publica nada.
+              </DialogDescription>
+            </DialogHeader>
 
-          {/* ── Acciones masivas ── */}
-          <div className="flex flex-wrap items-center gap-1.5 border-b border-border pb-3">
-            <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={addRow}>
-              <Plus className="h-3.5 w-3.5" /> Agregar fila
-            </Button>
-            <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={() => setPasteOpen(true)}>
-              <CalendarDays className="h-3.5 w-3.5" /> Pegar fechas
-            </Button>
-            <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={copyWeek}>
-              <Copy className="h-3.5 w-3.5" /> Copiar semana (+7 días)
-            </Button>
-            <span className="ml-auto text-[11px] text-muted-foreground">
-              {rows.length} fila{rows.length === 1 ? "" : "s"}
-              {selected.size > 0 ? ` · ${selected.size} seleccionada${selected.size === 1 ? "" : "s"}` : ""}
-            </span>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={addRow}>
+                <Plus className="h-3.5 w-3.5" /> Agregar fila
+              </Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={() => setPasteOpen(true)}>
+                <CalendarDays className="h-3.5 w-3.5" /> Pegar fechas
+              </Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={copyWeek}>
+                <Copy className="h-3.5 w-3.5" /> Copiar semana (+7 días)
+              </Button>
+              <span className="ml-auto text-[11px] text-muted-foreground">
+                {rows.length} fila{rows.length === 1 ? "" : "s"}
+                {selected.size > 0 ? ` · ${selected.size} seleccionada${selected.size === 1 ? "" : "s"}` : ""}
+              </span>
+            </div>
           </div>
 
-          {/* ── Aplicar a la selección ── */}
-          <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
-            <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
-              <Wand2 className="h-3.5 w-3.5" />
-              Aplicar a {selected.size > 0 ? `${selected.size} fila(s) seleccionadas` : "todas las filas"}
-            </p>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
-              <div className="lg:col-span-2">
-                <Label className="text-[10px] text-muted-foreground">Cliente</Label>
-                <EntityField
-                  value={applyClient.id}
-                  raw={applyClient.raw}
-                  catalog={clients}
-                  placeholder="Imperial…"
-                  onChange={setApplyClient}
-                />
+          {/* ── Cuerpo: scroll vertical interno del workspace ── */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
+            {/* ── Aplicar a la selección ── */}
+            <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Wand2 className="h-3.5 w-3.5" />
+                  Aplicar a
+                </p>
+                <Badge variant={selected.size > 0 ? "default" : "secondary"} className="text-[10px]">
+                  {scopeLabel}
+                </Badge>
+                {selected.size > 0 && (
+                  <Button
+                    variant="ghost" size="sm" className="h-6 px-2 text-[11px]"
+                    onClick={() => setSelected(new Set())}
+                  >
+                    Quitar selección
+                  </Button>
+                )}
               </div>
-              <div className="lg:col-span-2">
-                <Label className="text-[10px] text-muted-foreground">Lugar</Label>
-                <EntityField
-                  value={applyLocation.id}
-                  raw={applyLocation.raw}
-                  catalog={locations}
-                  placeholder="Salón, venue…"
-                  onChange={setApplyLocation}
-                />
-              </div>
-              <div className="flex gap-1">
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Inicio</Label>
-                  <Input type="time" value={applyStart} className="h-8 text-xs" onChange={(e) => setApplyStart(e.target.value)} />
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+                <div className="lg:col-span-2">
+                  <Label className="text-[10px] text-muted-foreground">Cliente</Label>
+                  <EntityField
+                    value={applyClient.id}
+                    raw={applyClient.raw}
+                    catalog={clients}
+                    placeholder="Imperial…"
+                    onChange={setApplyClient}
+                  />
+                </div>
+                <div className="lg:col-span-2">
+                  <Label className="text-[10px] text-muted-foreground">Lugar</Label>
+                  <EntityField
+                    value={applyLocation.id}
+                    raw={applyLocation.raw}
+                    catalog={locations}
+                    placeholder="Salón, venue…"
+                    onChange={setApplyLocation}
+                  />
+                </div>
+                <div className="flex gap-1">
+                  <div className="min-w-0 flex-1">
+                    <Label className="text-[10px] text-muted-foreground">Inicio</Label>
+                    <Input type="time" value={applyStart} className="h-8 text-xs" onChange={(e) => setApplyStart(e.target.value)} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <Label className="text-[10px] text-muted-foreground">Fin</Label>
+                    <Input type="time" value={applyEnd} className="h-8 text-xs" onChange={(e) => setApplyEnd(e.target.value)} />
+                  </div>
                 </div>
                 <div>
-                  <Label className="text-[10px] text-muted-foreground">Fin</Label>
-                  <Input type="time" value={applyEnd} className="h-8 text-xs" onChange={(e) => setApplyEnd(e.target.value)} />
+                  <Label className="text-[10px] text-muted-foreground">Personal</Label>
+                  <Input
+                    type="number" min={1} value={applyHeadcount} className="h-8 text-xs"
+                    onChange={(e) => setApplyHeadcount(e.target.value)}
+                  />
                 </div>
               </div>
-              <div>
-                <Label className="text-[10px] text-muted-foreground">Personal</Label>
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
                 <Input
-                  type="number" min={1} value={applyHeadcount} className="h-8 text-xs"
-                  onChange={(e) => setApplyHeadcount(e.target.value)}
+                  value={applyNotes}
+                  placeholder="Notas para copiar a la selección"
+                  className="h-8 text-xs"
+                  onChange={(e) => setApplyNotes(e.target.value)}
                 />
+                <div className="flex flex-wrap gap-1.5">
+                  <Button
+                    size="sm" variant="secondary" className="h-8 text-xs"
+                    onClick={() => applyToSelection({ clientId: applyClient.id, clientRaw: applyClient.raw })}
+                    disabled={!applyClient.id && !applyClient.raw.trim()}
+                  >
+                    Cliente
+                  </Button>
+                  <Button
+                    size="sm" variant="secondary" className="h-8 text-xs"
+                    onClick={() => applyToSelection({ locationId: applyLocation.id, locationRaw: applyLocation.raw })}
+                    disabled={!applyLocation.id && !applyLocation.raw.trim()}
+                  >
+                    Lugar
+                  </Button>
+                  <Button
+                    size="sm" variant="secondary" className="h-8 text-xs"
+                    onClick={() => applyToSelection({
+                      ...(applyStart ? { startTime: applyStart } : {}),
+                      ...(applyEnd ? { endTime: applyEnd } : {}),
+                    })}
+                    disabled={!applyStart && !applyEnd}
+                  >
+                    Horario
+                  </Button>
+                  <Button
+                    size="sm" variant="secondary" className="h-8 text-xs"
+                    onClick={() => applyToSelection({ headcount: applyHeadcount ? Number(applyHeadcount) : null })}
+                    disabled={!applyHeadcount}
+                  >
+                    Personal
+                  </Button>
+                  <Button
+                    size="sm" variant="secondary" className="h-8 text-xs"
+                    onClick={() => applyToSelection({ notes: applyNotes })}
+                    disabled={!applyNotes.trim()}
+                  >
+                    Notas
+                  </Button>
+                </div>
               </div>
             </div>
-            <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-              <Input
-                value={applyNotes}
-                placeholder="Notas para copiar a la selección"
-                className="h-8 text-xs"
-                onChange={(e) => setApplyNotes(e.target.value)}
-              />
-              <div className="flex flex-wrap gap-1.5">
-                <Button
-                  size="sm" variant="secondary" className="h-8 text-xs"
-                  onClick={() => applyToSelection({ clientId: applyClient.id, clientRaw: applyClient.raw })}
-                  disabled={!applyClient.id && !applyClient.raw.trim()}
-                >
-                  Cliente
-                </Button>
-                <Button
-                  size="sm" variant="secondary" className="h-8 text-xs"
-                  onClick={() => applyToSelection({ locationId: applyLocation.id, locationRaw: applyLocation.raw })}
-                  disabled={!applyLocation.id && !applyLocation.raw.trim()}
-                >
-                  Lugar
-                </Button>
-                <Button
-                  size="sm" variant="secondary" className="h-8 text-xs"
-                  onClick={() => applyToSelection({
-                    ...(applyStart ? { startTime: applyStart } : {}),
-                    ...(applyEnd ? { endTime: applyEnd } : {}),
-                  })}
-                  disabled={!applyStart && !applyEnd}
-                >
-                  Horario
-                </Button>
-                <Button
-                  size="sm" variant="secondary" className="h-8 text-xs"
-                  onClick={() => applyToSelection({ headcount: applyHeadcount ? Number(applyHeadcount) : null })}
-                  disabled={!applyHeadcount}
-                >
-                  Personal
-                </Button>
-                <Button
-                  size="sm" variant="secondary" className="h-8 text-xs"
-                  onClick={() => applyToSelection({ notes: applyNotes })}
-                  disabled={!applyNotes.trim()}
-                >
-                  Notas
-                </Button>
-              </div>
-            </div>
-          </div>
 
-          <ScrollArea className="flex-1 min-h-0 -mx-2 px-2">
-            {/* ── Desktop: grilla editable ── */}
-            <table className="hidden md:table w-full text-xs">
-              <thead className="sticky top-0 bg-background">
-                <tr className="text-left text-[10px] uppercase tracking-wide text-muted-foreground">
-                  <th className="w-8 py-2"><Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Seleccionar todas" /></th>
-                  <th className="py-2">Fecha</th>
-                  <th className="py-2">Cliente</th>
-                  <th className="py-2">Lugar</th>
-                  <th className="py-2">Inicio</th>
-                  <th className="py-2">Fin</th>
-                  <th className="py-2">Personal</th>
-                  <th className="py-2">Título</th>
-                  <th className="py-2">Estado</th>
-                  <th className="py-2 w-16" />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id} className="border-t border-border/60 align-top">
-                    <td className="py-1.5">
-                      <Checkbox checked={selected.has(row.id)} onCheckedChange={() => toggleSelected(row.id)} aria-label="Seleccionar fila" />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <Input type="date" value={row.date} className="h-8 text-xs w-[140px]"
-                        onChange={(e) => patchRow(row.id, { date: e.target.value })} />
-                    </td>
-                    <td className="py-1.5 pr-2 min-w-[150px]">
-                      <EntityField value={row.clientId} raw={row.clientRaw} catalog={clients} placeholder="Cliente"
-                        onChange={(v) => patchRow(row.id, { clientId: v.id, clientRaw: v.raw })} />
-                    </td>
-                    <td className="py-1.5 pr-2 min-w-[150px]">
-                      <EntityField value={row.locationId} raw={row.locationRaw} catalog={locations} placeholder="Lugar"
-                        onChange={(v) => patchRow(row.id, { locationId: v.id, locationRaw: v.raw })} />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <Input type="time" value={row.startTime} className="h-8 text-xs w-[110px]"
-                        onChange={(e) => patchRow(row.id, { startTime: e.target.value })} />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <Input type="time" value={row.endTime} className="h-8 text-xs w-[110px]"
-                        onChange={(e) => patchRow(row.id, { endTime: e.target.value })} />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <Input
-                        type="number" min={1} value={row.headcount ?? ""} placeholder="Pendiente"
-                        className="h-8 text-xs w-[100px]"
-                        onChange={(e) => patchRow(row.id, { headcount: e.target.value ? Number(e.target.value) : null })}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-2 min-w-[150px]">
-                      <Input value={row.title} placeholder="Tipo o título" className="h-8 text-xs"
-                        onChange={(e) => patchRow(row.id, { title: e.target.value })} />
-                    </td>
-                    <td className="py-1.5 pr-2">{rowStatusBadge(row)}</td>
-                    <td className="py-1.5">
-                      <div className="flex items-center gap-0.5">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateRow(row.id)} aria-label="Duplicar fila">
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeRow(row.id)} aria-label="Eliminar fila">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </td>
+            {/* ── Desktop: grilla amplia, cabecera sticky ── */}
+            <div className="hidden md:block rounded-xl border border-border">
+              <table className="w-full text-xs table-fixed">
+                <colgroup>
+                  <col className="w-10" />
+                  <col className="w-[150px]" />
+                  <col />
+                  <col />
+                  <col className="w-[110px]" />
+                  <col className="w-[110px]" />
+                  <col className="w-[96px]" />
+                  <col />
+                  <col className="w-[210px]" />
+                  <col className="w-[90px]" />
+
+                </colgroup>
+                <thead className="sticky top-0 z-20 bg-muted/60 backdrop-blur">
+                  <tr className="text-left text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <th className="px-2 py-2"><Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Seleccionar todas" /></th>
+                    <th className="px-2 py-2">Fecha</th>
+                    <th className="px-2 py-2">Cliente</th>
+                    <th className="px-2 py-2">Lugar</th>
+                    <th className="px-2 py-2">Inicio</th>
+                    <th className="px-2 py-2">Fin</th>
+                    <th className="px-2 py-2">Personal</th>
+                    <th className="px-2 py-2">Título</th>
+                    <th className="px-2 py-2">Estado</th>
+                    <th className="px-2 py-2" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows.map((row, index) => {
+                    const v = validateBulkRow(row);
+                    const dateError = fieldError(row, "date");
+                    const identityError = fieldError(row, "identity");
+                    return (
+                      <tr
+                        key={row.id}
+                        className={cn(
+                          "border-t border-border/60 align-top",
+                          v.status === "blocked" && "bg-destructive/5",
+                        )}
+                      >
+                        <td className="px-2 py-2">
+                          <div className="flex items-center gap-1.5">
+                            <Checkbox checked={selected.has(row.id)} onCheckedChange={() => toggleSelected(row.id)} aria-label={`Seleccionar fila ${index + 1}`} />
+                          </div>
+                          <span className="mt-1 block text-[10px] text-muted-foreground">{index + 1}</span>
+                        </td>
+                        <td className="px-2 py-2">
+                          <Input
+                            type="date" value={row.date}
+                            className={cn("h-8 text-xs w-full", dateError && "border-destructive")}
+                            onChange={(e) => patchRow(row.id, { date: e.target.value })}
+                          />
+                          {dateError && <p className="mt-1 text-[10px] text-destructive">{dateError}</p>}
+                        </td>
+                        <td className="px-2 py-2">
+                          <EntityField value={row.clientId} raw={row.clientRaw} catalog={clients} placeholder="Cliente"
+                            onChange={(v2) => patchRow(row.id, { clientId: v2.id, clientRaw: v2.raw })} />
+                          {identityError && <p className="mt-1 text-[10px] text-destructive">{identityError}</p>}
+                        </td>
+                        <td className="px-2 py-2">
+                          <EntityField value={row.locationId} raw={row.locationRaw} catalog={locations} placeholder="Lugar"
+                            onChange={(v2) => patchRow(row.id, { locationId: v2.id, locationRaw: v2.raw })} />
+                        </td>
+                        <td className="px-2 py-2">
+                          <Input type="time" value={row.startTime} className="h-8 text-xs w-full"
+                            onChange={(e) => patchRow(row.id, { startTime: e.target.value })} />
+                        </td>
+                        <td className="px-2 py-2">
+                          <Input type="time" value={row.endTime} className="h-8 text-xs w-full"
+                            onChange={(e) => patchRow(row.id, { endTime: e.target.value })} />
+                        </td>
+                        <td className="px-2 py-2">
+                          <Input
+                            type="number" min={1} value={row.headcount ?? ""} placeholder="—"
+                            className="h-8 text-xs w-full"
+                            onChange={(e) => patchRow(row.id, { headcount: e.target.value ? Number(e.target.value) : null })}
+                          />
+                        </td>
+                        <td className="px-2 py-2">
+                          <Input value={row.title} placeholder="Tipo o título" className="h-8 text-xs w-full"
+                            onChange={(e) => patchRow(row.id, { title: e.target.value })} />
+                        </td>
+                        <td className="px-2 py-2">{rowStatusBadge(row)}</td>
+                        <td className="px-2 py-2">
+                          <div className="flex items-center gap-0.5">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateRow(row.id)} aria-label="Duplicar fila">
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeRow(row.id)} aria-label="Eliminar fila">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
             {/* ── Mobile: una tarjeta por fila, sin scroll horizontal ── */}
             <div className="md:hidden space-y-3">
-              {rows.map((row) => (
-                <div key={row.id} className="rounded-xl border border-border bg-card p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Checkbox checked={selected.has(row.id)} onCheckedChange={() => toggleSelected(row.id)} aria-label="Seleccionar fila" />
-                      <span className="text-xs font-medium truncate">{dayLabel(row.date)}</span>
+              {rows.map((row, index) => {
+                const dateError = fieldError(row, "date");
+                const identityError = fieldError(row, "identity");
+                return (
+                  <div key={row.id} className="rounded-xl border border-border bg-card p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Checkbox checked={selected.has(row.id)} onCheckedChange={() => toggleSelected(row.id)} aria-label={`Seleccionar servicio ${index + 1}`} />
+                        <span className="text-xs font-medium truncate">
+                          Servicio {index + 1} · {dayLabel(row.date)}
+                        </span>
+                      </div>
+                      {rowStatusBadge(row)}
                     </div>
-                    {rowStatusBadge(row)}
+                    <Input
+                      type="date" value={row.date}
+                      className={cn("h-10 text-xs", dateError && "border-destructive")}
+                      onChange={(e) => patchRow(row.id, { date: e.target.value })}
+                    />
+                    {dateError && <p className="text-[11px] text-destructive">{dateError}</p>}
+                    <EntityField value={row.clientId} raw={row.clientRaw} catalog={clients} placeholder="Cliente"
+                      onChange={(v2) => patchRow(row.id, { clientId: v2.id, clientRaw: v2.raw })} />
+                    {identityError && <p className="text-[11px] text-destructive">{identityError}</p>}
+                    <EntityField value={row.locationId} raw={row.locationRaw} catalog={locations} placeholder="Lugar"
+                      onChange={(v2) => patchRow(row.id, { locationId: v2.id, locationRaw: v2.raw })} />
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input type="time" value={row.startTime} className="h-10 text-xs"
+                        onChange={(e) => patchRow(row.id, { startTime: e.target.value })} />
+                      <Input type="time" value={row.endTime} className="h-10 text-xs"
+                        onChange={(e) => patchRow(row.id, { endTime: e.target.value })} />
+                      <Input type="number" min={1} value={row.headcount ?? ""} placeholder="Personal" className="h-10 text-xs"
+                        onChange={(e) => patchRow(row.id, { headcount: e.target.value ? Number(e.target.value) : null })} />
+                    </div>
+                    <Input value={row.title} placeholder="Tipo o título" className="h-10 text-xs"
+                      onChange={(e) => patchRow(row.id, { title: e.target.value })} />
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" className="h-9 text-xs gap-1" onClick={() => duplicateRow(row.id)}>
+                        <Copy className="h-3.5 w-3.5" /> Duplicar
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-9 text-xs gap-1 text-destructive" onClick={() => removeRow(row.id)}>
+                        <Trash2 className="h-3.5 w-3.5" /> Eliminar
+                      </Button>
+                    </div>
                   </div>
-                  <Input type="date" value={row.date} className="h-9 text-xs"
-                    onChange={(e) => patchRow(row.id, { date: e.target.value })} />
-                  <EntityField value={row.clientId} raw={row.clientRaw} catalog={clients} placeholder="Cliente"
-                    onChange={(v) => patchRow(row.id, { clientId: v.id, clientRaw: v.raw })} />
-                  <EntityField value={row.locationId} raw={row.locationRaw} catalog={locations} placeholder="Lugar"
-                    onChange={(v) => patchRow(row.id, { locationId: v.id, locationRaw: v.raw })} />
-                  <div className="grid grid-cols-3 gap-2">
-                    <Input type="time" value={row.startTime} className="h-9 text-xs"
-                      onChange={(e) => patchRow(row.id, { startTime: e.target.value })} />
-                    <Input type="time" value={row.endTime} className="h-9 text-xs"
-                      onChange={(e) => patchRow(row.id, { endTime: e.target.value })} />
-                    <Input type="number" min={1} value={row.headcount ?? ""} placeholder="Personal" className="h-9 text-xs"
-                      onChange={(e) => patchRow(row.id, { headcount: e.target.value ? Number(e.target.value) : null })} />
-                  </div>
-                  <Input value={row.title} placeholder="Tipo o título" className="h-9 text-xs"
-                    onChange={(e) => patchRow(row.id, { title: e.target.value })} />
-                  <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => duplicateRow(row.id)}>
-                      <Copy className="h-3.5 w-3.5" /> Duplicar
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-destructive" onClick={() => removeRow(row.id)}>
-                      <Trash2 className="h-3.5 w-3.5" /> Eliminar
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {rows.length === 0 && (
@@ -574,27 +660,44 @@ export function BulkServiceCreationDialog({
                 Sin filas todavía. Agrega una o pega una lista de fechas.
               </p>
             )}
-          </ScrollArea>
+          </div>
 
-          <DialogFooter className="border-t border-border pt-3">
-            <div className="mr-auto text-[11px] text-muted-foreground flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5" />
-              Se crean como borradores. El personal pendiente no se completa solo.
-              {plan.blocked.length > 0 && (
-                <span className="text-destructive">
-                  {" "}· {plan.blocked.length} fila(s) sin información obligatoria no se crearán.
+          {/* ── Footer sticky ── */}
+          <div className="shrink-0 border-t border-border bg-background/95 backdrop-blur px-5 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5" />
+                  {rows.length} fila{rows.length === 1 ? "" : "s"}
                 </span>
-              )}
+                <span>{readyCount} lista{readyCount === 1 ? "" : "s"} para crear</span>
+                {incompleteCount > 0 && <span>{incompleteCount} con pendientes</span>}
+                {blockedCount > 0 && (
+                  <span className="text-destructive">
+                    {blockedCount} necesita{blockedCount === 1 ? "" : "n"} información
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline" className="min-h-[44px] flex-1 sm:flex-none"
+                  onClick={() => onOpenChange(false)} disabled={submitting}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="min-h-[44px] flex-1 sm:flex-none"
+                  onClick={() => setPreviewOpen(true)}
+                  disabled={readyCount === 0 || submitting || !companyId || !userId}
+                >
+                  Crear {readyCount} borrador{readyCount === 1 ? "" : "es"}
+                </Button>
+              </div>
             </div>
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-              Cerrar
-            </Button>
-            <Button onClick={() => setPreviewOpen(true)} disabled={readyCount === 0 || submitting || !companyId || !userId}>
-              Crear {readyCount} borrador{readyCount === 1 ? "" : "es"}
-            </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
+
 
       {/* ── Pegar fechas ── */}
       <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>

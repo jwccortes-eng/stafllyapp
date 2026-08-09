@@ -26,6 +26,7 @@ const MobileShiftOperationsSheet = lazy(() =>
 );
 import { MobileQuickCreateShiftSheet } from "@/components/shifts/mobile/MobileQuickCreateShiftSheet";
 import { MobileShiftEditSheet } from "@/components/shifts/mobile/MobileShiftEditSheet";
+import { BulkServiceCreationDialog } from "@/components/shifts/bulk/BulkServiceCreationDialog";
 
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { displayShiftRef } from "@/lib/shifts/shift-ref";
@@ -97,7 +98,7 @@ function dateGroupLabel(dateStr: string): string {
 export default function MobileShiftsView() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { role, hasModuleAccess } = useAuth();
+  const { role, hasModuleAccess, user } = useAuth();
   const { selectedCompanyId, selectedCompany } = useCompany();
   const queryClient = useQueryClient();
   const { config: shiftsConfig } = useShiftsConfig();
@@ -106,6 +107,7 @@ export default function MobileShiftsView() {
   const canEdit = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
   const [reloadKey, setReloadKey] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
+  const [bulkCreateOpen, setBulkCreateOpen] = useState(false);
 
   // Tab from URL (?tab=today) so back/forward works; fallback to "today"
   const initialTab = (searchParams.get("tab") as TabKey) || "today";
@@ -490,6 +492,17 @@ export default function MobileShiftsView() {
                   {ADMIN_LEX.create}
                 </Button>
               )}
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11 rounded-xl"
+                  onClick={() => setBulkCreateOpen(true)}
+                  aria-label="Crear varios servicios"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                </Button>
+              )}
             </>
           }
         />
@@ -717,6 +730,18 @@ export default function MobileShiftsView() {
         }}
       />
 
+
+      {/* Creación masiva — mismo motor canónico, tarjetas en móvil */}
+      <BulkServiceCreationDialog
+        open={bulkCreateOpen}
+        onOpenChange={setBulkCreateOpen}
+        companyId={selectedCompanyId}
+        userId={user?.id ?? null}
+        clients={clients}
+        locations={locations}
+        referenceDate={format(new Date(), "yyyy-MM-dd")}
+        onCreated={() => setReloadKey((k) => k + 1)}
+      />
 
       {/* Mobile Quick Create — writes to scheduled_shifts via same RLS as desktop */}
       <MobileQuickCreateShiftSheet
