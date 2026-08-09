@@ -50,6 +50,11 @@ export function PastedTextIntakePanel() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const { restored, save, clear } = useIntakeReviewPersistence<{
+    text: string;
+    notices: TextParseNotice[];
+  }>(selectedCompanyId, "pasted_text");
+
   const [text, setText] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -57,6 +62,19 @@ export function PastedTextIntakePanel() {
   const [candidates, setCandidates] = useState<ServiceCandidate[]>([]);
   const [notices, setNotices] = useState<TextParseNotice[]>([]);
   const corrections = useRef(0);
+
+  // Persistencia de revisión: volver de otra pestaña o refrescar no borra el lote.
+  useEffect(() => {
+    if (!restored) return;
+    setCandidates(restored.candidates);
+    setBatchId(restored.batchId);
+    setNotices(restored.extra?.notices ?? []);
+    setText((prev) => prev || restored.extra?.text || "");
+  }, [restored]);
+
+  useEffect(() => {
+    save({ batchId, candidates, extra: { text, notices } });
+  }, [batchId, candidates, notices, text, save]);
 
   const noticesByCandidate = useMemo(() => {
     const map: Record<string, string[]> = {};
