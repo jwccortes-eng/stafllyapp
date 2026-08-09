@@ -363,19 +363,69 @@ function detectHeaderRowOffset(rows: Record<string, unknown>[], maxScan = 5): nu
   return 0;
 }
 
-/** Pick first sheet with ≥3 recognized schedule headers; fallback to first sheet. */
-function pickScheduleSheet(wb: SafeWorkbook): string | null {
-  const names = getSheetNames(wb);
-  for (const name of names) {
-    const ws = getSheet(wb, name);
-    if (!ws) continue;
-    const rows = safeSheetToJson<Record<string, unknown>>(ws, { defval: "" });
-    if (!rows.length) continue;
-    const headerSource = Object.keys(rows[0] ?? {});
-    if (Object.keys(buildHeaderIndex(headerSource)).length >= 3) return name;
-  }
-  return names[0] ?? null;
+/** Estado explícito de cada hoja del archivo: ninguna se descarta en silencio. */
+export type SheetStatus = "procesada" | "vacía" | "no compatible" | "ignorada";
+export interface SheetAuditEntry {
+  fileName: string;
+  sheetName: string;
+  status: SheetStatus;
+  rowCount: number;
+  recognizedHeaders: number;
+  reason: string;
 }
+
+/**
+ * Audita TODAS las hojas del archivo y devuelve cuáles se procesan.
+ *
+ * Regla: se procesa toda hoja con ≥3 encabezados de horario reconocidos. Si
+ * ninguna califica, se usa la primera hoja con datos como intento y el resto
+ * queda registrado con motivo. Nunca se descarta una hoja sin dejar rastro.
+ */
+export function auditWorkbookSheets(wb: SafeWorkbook, fileName: string): SheetAuditEntry[] {
+  const entries: SheetAuditEntry[] = [];
+  for (const sheetName of getSheetNames(wb)) {
+    const ws = getSheet(wb, sheetName);
+    if (!ws) {
+      entries.push({
+        fileName, sheetName, status: "no compatible", rowCount: 0, recognizedHeaders: 0,
+        reason: "La hoja no se pudo leer.",
+      });
+      continue;
+    }
+    const rows = safeSheetToJson<Record<string, unknown>>(ws, { defval: "" });
+    if (!rows.length) {
+      entries.push({
+        fileName, sheetName, status: "vacía", rowCount: 0, recognizedHeaders: 0,
+        reason: "La hoja no tiene filas.",
+      });
+      continue;
+    }
+    const recognized = Object.keys(buildHeaderIndex(Object.keys(rows[0] ?? {}))).length;
+    entries.push(
+      recognized >= 3
+        ? {
+            fileName, sheetName, status: "procesada", rowCount: rows.length,
+            recognizedHeaders: recognized,
+            reason: `${recognized} columnas de horario reconocidas.`,
+          }
+        : {
+            fileName, sheetName, status: "no compatible", rowCount: rows.length,
+            recognizedHeaders: recognized,
+            reason: `Sólo ${recognized} columnas de horario reconocidas (se necesitan 3).`,
+          },
+    );
+  }
+
+  if (!entries.some((e) => e.status === "procesada")) {
+    const fallback = entries.find((e) => e.rowCount > 0);
+    if (fallback) {
+      fallback.status = "procesada";
+      fallback.reason = `Sin columnas claras: se intentó leer igualmente (${fallback.recognizedHeaders} reconocidas).`;
+    }
+  }
+  return entries;
+}
+
 
 export default function ImportSchedule() {
   const { selectedCompanyId } = useCompany();
@@ -419,6 +469,9 @@ export default function ImportSchedule() {
   const [deletePasswordOpen, setDeletePasswordOpen] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
   const [parsingFiles, setParsingFiles] = useState(false);
+  // Inventario de hojas: nada se descarta en silencio.
+  const [sheetAudit, setSheetAudit] = useState<SheetAuditEntry[]>([]);
+
   const [duplicateFileWarning, setDuplicateFileWarning] = useState<string[] | null>(null);
   // Optional auxiliary file: Connecteam Users export → enriches matching with phone/email/Connecteam ID
   const [auxUsers, setAuxUsers] = useState<AuxUserRecord[]>([]);
@@ -605,14 +658,21 @@ export default function ImportSchedule() {
     const loaded: Loaded[] = [];
     const dateSamples: string[] = [];
 
+    const audit: SheetAuditEntry[] = [];
+
     for (const f of validFiles) {
       const data = await f.arrayBuffer();
       const wb = await safeRead(data);
-      const sheetName = pickScheduleSheet(wb);
-      if (!sheetName) continue;
-      loaded.push({ wb, sheetName });
+      // Toda hoja queda inventariada: procesada, vacía, no compatible o ignorada.
+      const fileAudit = auditWorkbookSheets(wb, f.name);
+      audit.push(...fileAudit);
+      const processed = fileAudit.filter((e) => e.status === "procesada");
+      if (processed.length === 0) continue;
+      for (const entry of processed) loaded.push({ wb, sheetName: entry.sheetName });
+      const sheetName = processed[0].sheetName;
       const ws = getSheet(wb, sheetName);
       if (!ws) continue;
+
       const rows = safeSheetToJson<Record<string, unknown>>(ws, { defval: "" });
       const offset = detectHeaderRowOffset(rows);
       const sampleRows: Record<string, unknown>[] = offset === 0 ? rows : (() => {
@@ -633,7 +693,10 @@ export default function ImportSchedule() {
       }
     }
 
+    setSheetAudit(audit);
+
     const dateMode = detectDateFormat(dateSamples, "MDY");
+
 
     let allGroups: ShiftGroup[] = [];
     let allUnavail: { name: string; date: string }[] = [];
@@ -2311,6 +2374,27 @@ export default function ImportSchedule() {
                   <p className="text-muted-foreground">
                     Hoja: <strong className="text-foreground">{parseDiagnostics.sheetName || "—"}</strong>
                   </p>
+                  {sheetAudit.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-muted-foreground">
+                        Hojas del archivo ({sheetAudit.length}) — ninguna se descarta en silencio:
+                      </p>
+                      <ul className="space-y-0.5 pl-3">
+                        {sheetAudit.map((s) => (
+                          <li
+                            key={`${s.fileName}-${s.sheetName}`}
+                            className={
+                              s.status === "procesada" ? "text-foreground" : "text-muted-foreground"
+                            }
+                          >
+                            <strong>{s.sheetName}</strong> ({s.fileName}) — {s.status}
+                            {s.status === "procesada" ? ` · ${s.rowCount} filas` : ""} · {s.reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <p className="text-muted-foreground">
                     Headers detectados ({parseDiagnostics.detectedHeaders.length}): {parseDiagnostics.detectedHeaders.slice(0, 20).map(h => `"${h}"`).join(", ") || "—"}
                   </p>
