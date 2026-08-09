@@ -1547,7 +1547,7 @@ function DesktopShifts() {
       title: data.title, startTime: data.start_time, endTime: data.end_time, requestedHeadcount: data.slots,
       notes: null, specialInstructions: null, claimable: false, payType: "hourly", dayType: "full_day",
       payOverride: false, shiftAdminId: null, transportRequired: false, carCapacity: 0,
-      transportNotes: null, driverIds: [], clockMethod: "mobile", attendanceMode: "standard",
+      transportNotes: null, driverIds: [], clockMethod: "both", attendanceMode: "clock",
       meetingTime: null, employeeIds: [], publicationIntent: "draft",
     };
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert(

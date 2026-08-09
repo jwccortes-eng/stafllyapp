@@ -15,6 +15,9 @@
  * Este módulo es PURO: sin React, sin red, sin escrituras.
  */
 
+
+import type { ShiftAttendanceMode } from "@/lib/shift-attendance-mode";
+
 export const RECURRENCE_REF_PREFIX = "series";
 
 export interface RecurrenceOccurrencePlan {
@@ -68,7 +71,7 @@ export interface SeriesServiceSnapshot {
   transportNotes: string | null;
   driverIds: string[];
   clockMethod: "mobile" | "kiosk" | "both";
-  attendanceMode: string;
+  attendanceMode: ShiftAttendanceMode;
   meetingTime: string | null;
   employeeIds: string[];
   publicationIntent: "draft" | "publish_base";

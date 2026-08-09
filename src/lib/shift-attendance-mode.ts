@@ -90,3 +90,16 @@ export const PUNCTUALITY_LABELS: Record<Punctuality, string> = {
   late: "Tarde",
   very_late: "Muy tarde",
 };
+
+/**
+ * Normaliza un valor persistido/heredado al union canónico aceptado por la DB.
+ * Valores legados fuera del CHECK ('manual', 'standard', null) caen en 'clock',
+ * que es el modo por defecto de la creación individual.
+ */
+export function normalizeAttendanceMode(
+  value: string | null | undefined,
+): ShiftAttendanceMode {
+  return SHIFT_ATTENDANCE_MODES.includes(value as ShiftAttendanceMode)
+    ? (value as ShiftAttendanceMode)
+    : "clock";
+}
