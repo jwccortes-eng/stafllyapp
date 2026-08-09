@@ -48,11 +48,14 @@ async function findExisting(
   const needle = normalizeEntityName(name);
   if (!needle) return null;
 
-  let query = supabase.from(table).select("id, name").eq("company_id", companyId).limit(200);
-  if (table === "clients") query = query.is("deleted_at", null);
-  else query = query.eq("is_active", true);
+  const base = (supabase.from(table as any) as any)
+    .select("id, name")
+    .eq("company_id", companyId)
+    .limit(200);
+  const query = table === "clients" ? base.is("deleted_at", null) : base.eq("is_active", true);
 
   const { data, error } = await query;
+
   if (error || !data) return null;
   const hit = (data as any[]).find((row) => normalizeEntityName(row.name ?? "") === needle);
   return hit ? { id: hit.id as string, name: (hit.name ?? name) as string } : null;
