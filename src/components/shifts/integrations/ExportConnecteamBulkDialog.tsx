@@ -198,6 +198,30 @@ export function ExportConnecteamBulkDialog({
   const activeGroups = groups.filter((g) => g.items.length > 0);
   const singleCause = activeGroups.length === 1 ? activeGroups[0] : null;
 
+  // ── Destino Connecteam pendiente ────────────────────────────────────────
+  // Servicios bloqueados exclusivamente porque su cliente/lugar todavía no
+  // tiene Job/Sub item declarado en ESTA compañía. Se resuelve una vez por
+  // sujeto y se reutiliza; no se configura turno por turno.
+  const [mappingOpen, setMappingOpen] = useState(false);
+
+  const missingDestinationRows = useMemo(
+    () => rows.filter((r) => r.cause === "missing_destination"),
+    [rows],
+  );
+
+  /** Sujetos únicos (cliente/lugar/título) de los servicios sin destino. */
+  const missingDestinationSubjects = useMemo(() => {
+    const byKey = new Map<string, MappingSubject>();
+    for (const r of missingDestinationRows) {
+      for (const s of connecteamSubjectsForShift(r.shift, buildCtx)) {
+        byKey.set(mappingKey(s.kind, s.id), s);
+      }
+    }
+    return Array.from(byKey.values());
+  }, [missingDestinationRows, buildCtx]);
+
+
+
   const duplicateCount = useMemo(() => {
     const exportable = rows.filter((r) => r.validation.status !== "blocked");
     return findDuplicateRowSignatures(exportable.map((r) => r.row)).length;
