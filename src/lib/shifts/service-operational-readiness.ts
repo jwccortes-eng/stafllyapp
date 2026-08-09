@@ -153,12 +153,17 @@ export function getServiceOperationalReadiness(
     blockers.push({
       code: "export.missing_end",
       label: "Hora de fin",
-      reason: "Connecteam necesita una hora de fin para crear el turno.",
+      reason:
+        "Connecteam necesita una hora final para crear este turno. En Stafly la hora final todavía está pendiente.",
       field: "end_time",
-      action: { label: "Definir hora de fin", anchorId: SERVICE_CLIENT_ANCHOR },
+      action: {
+        label: "Definir dato provisional para exportar",
+        anchorId: SERVICE_CLIENT_ANCHOR,
+      },
       scope: "export",
     });
   } else if (start && start === end) {
+
     blockers.push({
       code: "export.zero_duration",
       label: "Duración del turno",
