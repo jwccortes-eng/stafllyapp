@@ -331,6 +331,41 @@ export function DuplicateShiftDialog({
       }
     }
 
+    // P0 FINAL — verificación automática: cliente, venue, horario, headcount,
+    // assignments, QK y referencia de serie. No corrige: reporta.
+    const { data: persistedRow } = await supabase
+      .from("scheduled_shifts")
+      .select("id, date, shift_ref, client_id, location_id, job_site_location_id, start_time, end_time, slots, reconciliation_hash")
+      .eq("id", newShiftId)
+      .maybeSingle();
+    const { count: assignCount } = await supabase
+      .from("shift_assignments")
+      .select("id", { count: "exact", head: true })
+      .eq("shift_id", newShiftId);
+    if (persistedRow) {
+      const r = persistedRow as any;
+      const verification = verifySeriesIntegrity({
+        intent,
+        persisted: [{
+          date: r.date,
+          shiftId: r.id,
+          ref: r.shift_ref ?? null,
+          clientId: r.client_id ?? null,
+          venueId: r.job_site_location_id ?? r.location_id ?? null,
+          startTime: r.start_time ?? null,
+          endTime: r.end_time ?? null,
+          headcount: r.slots ?? null,
+          assignmentCount: assignCount ?? 0,
+          seriesRef: r.reconciliation_hash ?? null,
+        }],
+      });
+      if (!verification.ok) {
+        toast.warning("Duplicado con diferencias", {
+          description: describeSeriesVerification(verification),
+        });
+      }
+    }
+
     setSubmitting(false);
     toast.success("Turno duplicado como borrador.", {
       description: copyWorkers
