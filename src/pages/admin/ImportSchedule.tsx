@@ -46,6 +46,10 @@ import { buildImportWarning, type ImportWarning } from "@/lib/import/import-warn
 import PastedTextIntakePanel from "@/components/intake/PastedTextIntakePanel";
 import VisualIntakePanel from "@/components/intake/VisualIntakePanel";
 import AudioIntakePanel from "@/components/intake/AudioIntakePanel";
+import AssistantSourceCards, {
+  type AssistantSourceKey,
+} from "@/components/intake/premium/AssistantSourceCards";
+
 
 
 type IntakeSource = "text" | "image" | "pdf" | "audio" | "excel";
