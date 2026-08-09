@@ -61,6 +61,13 @@ import { CrossCompanyShiftHint } from "@/components/shifts/CrossCompanyShiftHint
 import { WeeklySummaryBar } from "@/components/shifts/WeeklySummaryBar";
 import { EmployeeCombobox } from "@/components/shifts/EmployeeCombobox";
 import { ShiftRepeatSection, DEFAULT_REPEAT, computeRepeatDates, type RepeatConfig } from "@/components/shifts/ShiftRepeatSection";
+import {
+  newRecurrenceIntentId,
+  planRecurrenceOccurrences,
+  summarizeSeries,
+  seriesResultMessage,
+  type OccurrenceOutcome,
+} from "@/lib/shifts/recurrence";
 import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import EmergencyWorkerDialog, { type EmergencyWorkerCreated } from "@/components/employee/EmergencyWorkerDialog";
