@@ -139,6 +139,29 @@ export function getServiceOperationalReadiness(
       scope: "export",
     });
   }
+  // Evidencia real del importador: Connecteam descarta en silencio las filas
+  // sin hora de fin o con duración cero. Es blocker de EXPORT, no de borrador.
+  const start = txt(input.startTime).slice(0, 5);
+  const end = txt(input.endTime).slice(0, 5);
+  if (!end) {
+    blockers.push({
+      code: "export.missing_end",
+      label: "Hora de fin",
+      reason: "Connecteam necesita una hora de fin para crear el turno.",
+      field: "end_time",
+      action: { label: "Definir hora de fin", anchorId: SERVICE_CLIENT_ANCHOR },
+      scope: "export",
+    });
+  } else if (start && start === end) {
+    blockers.push({
+      code: "export.zero_duration",
+      label: "Duración del turno",
+      reason: `Inicio y fin son la misma hora (${start}); Connecteam descarta esas filas.`,
+      field: "end_time",
+      action: { label: "Corregir hora de fin", anchorId: SERVICE_CLIENT_ANCHOR },
+      scope: "export",
+    });
+  }
   if (!txt(input.timezone)) {
     blockers.push({
       code: "export.missing_timezone",

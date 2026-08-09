@@ -17,10 +17,8 @@
  */
 import { getShiftDisplayIdentity } from "./shift-identity";
 import { buildShiftCardTitle } from "./card-display";
-import {
-  getServiceOperationalReadiness,
-  type OperationalBlocker,
-} from "./service-operational-readiness";
+import { type OperationalBlocker } from "./service-operational-readiness";
+import { getServiceLifecycleReadiness } from "./service-lifecycle-readiness";
 
 export type ServiceStateCode = "draft" | "published" | "cancelled" | "archived";
 
@@ -77,6 +75,10 @@ export interface CalendarServiceIdentity {
     missing: number;
     complete: boolean;
     label: string;
+    /** ¿Se puede empezar a asignar personal? (independiente de publicar/exportar) */
+    readyToStaff: boolean;
+    staffBlockers: OperationalBlocker[];
+    staffStatusText: string;
   };
 
   time: {
@@ -163,8 +165,8 @@ export function getCalendarServiceIdentity(
       ? `Completo ${assigned}/${slots}`
       : `${assigned}/${slots} · faltan ${missing}`;
 
-  // ── Connecteam: se delega al validador canónico ─────────────────────────
-  const readiness = getServiceOperationalReadiness({
+  // ── Connecteam y staffing: se delega al ciclo de vida canónico ──────────
+  const lifecycle = getServiceLifecycleReadiness({
     date: txt(shift.date),
     startTime: txt(shift.start_time),
     endTime: endMissing ? "" : txt(shift.end_time),
@@ -184,10 +186,14 @@ export function getCalendarServiceIdentity(
     connecteamJobLabel:
       txt(ctx.clientName) || txt(ctx.locationName) || txt(shift.job_site_address) || null,
     addressLabel: txt(ctx.locationName) || txt(shift.job_site_address) || null,
+    referenceLabel: ref,
+    staffingPending: slotsPending,
+    approxStart,
   });
 
-  const exportBlockers = readiness.exportBlockers;
+  const exportBlockers = lifecycle.operational.exportBlockers;
   const missingCount = exportBlockers.length;
+  const staffGate = lifecycle.gates.staff;
 
   return {
     ref,
@@ -202,6 +208,13 @@ export function getCalendarServiceIdentity(
       missing,
       complete,
       label: staffingLabel,
+      readyToStaff: staffGate.ready,
+      staffBlockers: staffGate.blockers,
+      staffStatusText: staffGate.ready
+        ? complete
+          ? "Equipo completo"
+          : "Listo para empezar a asignar personal"
+        : "Este servicio todavía está en preparación",
     },
     time: { start, end, approxStart, endMissing, label: timeLabel },
     connecteam: {
@@ -215,6 +228,7 @@ export function getCalendarServiceIdentity(
     },
   };
 }
+
 
 /** Resumen de un lote seleccionado: nunca bloquea todo por los incompletos. */
 export function summarizeConnecteamSelection(items: CalendarServiceIdentity[]) {

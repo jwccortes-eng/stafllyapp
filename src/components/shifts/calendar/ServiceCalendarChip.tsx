@@ -97,10 +97,32 @@ export function ServiceCalendarChip({
 
         <div className="rounded-lg border border-border/50 p-2 space-y-1.5">
           <p className="flex items-center gap-1.5 font-medium">
+            Staffing:
+            {identity.staffing.readyToStaff ? (
+              <span className="text-earning flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" /> {identity.staffing.staffStatusText}
+              </span>
+            ) : (
+              <span className="text-warning flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" /> {identity.staffing.staffStatusText}
+              </span>
+            )}
+          </p>
+          {identity.staffing.staffBlockers.length > 0 && (
+            <ul className="space-y-0.5 text-[11px] text-muted-foreground">
+              {identity.staffing.staffBlockers.map((b) => (
+                <li key={b.code}>· {b.reason}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="rounded-lg border border-border/50 p-2 space-y-1.5">
+          <p className="flex items-center gap-1.5 font-medium">
             Connecteam:
             {identity.connecteam.ready ? (
               <span className="text-earning flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" /> Listo
+                <CheckCircle2 className="h-3 w-3" /> Listo para crear turno
               </span>
             ) : (
               <span className="text-warning flex items-center gap-1">
@@ -117,10 +139,23 @@ export function ServiceCalendarChip({
           )}
         </div>
 
-        <Button size="sm" className="w-full h-8 text-xs" onClick={onOpenService}>
-          {identity.connecteam.ready ? "Abrir servicio" : "Completar para Connecteam"}
-        </Button>
+        <div className="space-y-1.5">
+          {!identity.staffing.readyToStaff && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full h-8 text-xs"
+              onClick={onOpenService}
+            >
+              Completar para staffing
+            </Button>
+          )}
+          <Button size="sm" className="w-full h-8 text-xs" onClick={onOpenService}>
+            {identity.connecteam.ready ? "Abrir servicio" : "Completar para Connecteam"}
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );
 }
+

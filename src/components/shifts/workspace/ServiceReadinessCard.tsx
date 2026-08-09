@@ -1,24 +1,25 @@
 /**
- * ServiceReadinessCard — separa visualmente las dos preguntas operativas:
+ * ServiceReadinessCard — separa visualmente las preguntas operativas del ciclo
+ * de vida de un Servicio:
  *
- *   "Listo para publicar"  ≠  "Listo para exportar a Connecteam"
+ *   "Listo para staffing" ≠ "Listo para publicar" ≠ "Listo para Connecteam"
  *
- * UI-only. Lee de `getServiceOperationalReadiness` y no muta nada.
+ * UI-only. Lee de `getServiceLifecycleReadiness` y no muta nada.
  * Cada blocker se muestra con su motivo exacto y una acción que enfoca la
  * sección del mismo editor (nunca navegación a /clients o /locations).
  */
 import { memo } from "react";
-import { CheckCircle2, AlertTriangle, Send, FileDown } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Send, FileDown, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { focusServiceSection } from "@/lib/shifts/service-publish-readiness";
-import {
-  READINESS_COPY,
-  type OperationalBlocker,
-  type ServiceOperationalReadiness,
-} from "@/lib/shifts/service-operational-readiness";
+import type { OperationalBlocker } from "@/lib/shifts/service-operational-readiness";
+import type {
+  GateResult,
+  ServiceLifecycleReadiness,
+} from "@/lib/shifts/service-lifecycle-readiness";
 
 interface Props {
-  readiness: ServiceOperationalReadiness;
+  lifecycle: ServiceLifecycleReadiness;
 }
 
 function BlockerRow({ b }: { b: OperationalBlocker }) {
@@ -39,73 +40,61 @@ function BlockerRow({ b }: { b: OperationalBlocker }) {
   );
 }
 
-function ServiceReadinessCardImpl({ readiness }: Props) {
-  const pubBlockers = readiness.publishBlockers;
-  const expBlockers = readiness.exportBlockers;
+function GateBlock({
+  gate,
+  icon,
+  last,
+}: {
+  gate: GateResult;
+  icon: React.ReactNode;
+  last?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "px-3 py-2.5",
+        !last && "border-b border-border/30",
+        gate.ready
+          ? "bg-[hsl(142_76%_36%/0.06)]"
+          : "bg-[hsl(var(--status-pending)/0.06)]",
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <span className="opacity-80 shrink-0">{icon}</span>
+        <span className="text-[12px] font-semibold">{gate.statusText}</span>
+        {gate.ready && (
+          <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(142_76%_36%)] ml-auto" />
+        )}
+      </div>
+      {gate.blockers.length > 0 && (
+        <div className="space-y-1 mt-2">
+          {gate.blockers.map((b) => (
+            <BlockerRow key={b.code} b={b} />
+          ))}
+        </div>
+      )}
+      {gate.warnings.map((w) => (
+        <p key={w.code} className="text-[10px] text-muted-foreground mt-1.5">
+          {w.message}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function ServiceReadinessCardImpl({ lifecycle }: Props) {
+  const { staff, publish, export_connecteam: exportGate } = lifecycle.gates;
 
   return (
     <div className="rounded-2xl border border-border/40 bg-card overflow-hidden">
-      {/* Publicar */}
-      <div
-        className={cn(
-          "px-3 py-2.5 border-b border-border/30",
-          readiness.readyToPublish
-            ? "bg-[hsl(142_76%_36%/0.06)]"
-            : "bg-[hsl(var(--status-pending)/0.06)]",
-        )}
-      >
-        <div className="flex items-center gap-2">
-          <Send className="h-3.5 w-3.5 opacity-80 shrink-0" />
-          <span className="text-[12px] font-semibold">
-            {readiness.readyToPublish
-              ? READINESS_COPY.publishReady
-              : READINESS_COPY.publishBlocked(pubBlockers.length)}
-          </span>
-          {readiness.readyToPublish && (
-            <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(142_76%_36%)] ml-auto" />
-          )}
-        </div>
-        {pubBlockers.length > 0 && (
-          <div className="space-y-1 mt-2">
-            {pubBlockers.map((b) => (
-              <BlockerRow key={b.code} b={b} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Exportar a Connecteam */}
-      <div className="px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <FileDown className="h-3.5 w-3.5 opacity-80 shrink-0" />
-          <span className="text-[12px] font-semibold">
-            {readiness.readyToExportConnecteam
-              ? READINESS_COPY.exportReady
-              : READINESS_COPY.exportBlocked(expBlockers.length)}
-          </span>
-          {readiness.readyToExportConnecteam && (
-            <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(142_76%_36%)] ml-auto" />
-          )}
-        </div>
-        {expBlockers.length > 0 ? (
-          <div className="space-y-1 mt-2">
-            {expBlockers.map((b) => (
-              <BlockerRow key={b.code} b={b} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Connecteam recibirá fecha, horario, título, Job y plazas de este servicio.
-          </p>
-        )}
-        {readiness.warnings
-          .filter((w) => w.scope === "export")
-          .map((w) => (
-            <p key={w.code} className="text-[10px] text-muted-foreground mt-1.5">
-              {w.message}
-            </p>
-          ))}
-      </div>
+      <GateBlock gate={staff} icon={<Users className="h-3.5 w-3.5" />} />
+      <GateBlock gate={publish} icon={<Send className="h-3.5 w-3.5" />} />
+      <GateBlock gate={exportGate} icon={<FileDown className="h-3.5 w-3.5" />} last />
+      {exportGate.ready && (
+        <p className="px-3 pb-2.5 -mt-1 text-[10px] text-muted-foreground">
+          Connecteam recibirá fecha, horario, título, Job y plazas de este servicio.
+        </p>
+      )}
     </div>
   );
 }
