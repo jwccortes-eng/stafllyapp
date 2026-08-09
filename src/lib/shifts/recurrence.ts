@@ -17,6 +17,7 @@
 
 
 import type { ShiftAttendanceMode } from "@/lib/shift-attendance-mode";
+
 export const RECURRENCE_REF_PREFIX = "series";
 
 export interface RecurrenceOccurrencePlan {
