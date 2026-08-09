@@ -576,3 +576,34 @@ export function bulkExportFilename(today: Date = new Date()): string {
   const d = String(today.getDate()).padStart(2, "0");
   return `stafly-connecteam-shifts-${y}-${m}-${d}.csv`;
 }
+
+// ── Colisiones de filas (Connecteam fusiona duplicados) ────────────────────
+
+/**
+ * Firma de una fila tal y como Connecteam la interpreta: fecha + horas +
+ * título + Job + Sub item. Dos filas con la misma firma se importan como un
+ * único turno, aunque en Stafly sean dos servicios distintos.
+ */
+export function connecteamRowSignature(row: ConnecteamRow): string {
+  return [
+    row.Date, row.Start, row.End, row["Shift title"], row.Job, row["Sub item"],
+  ].join("|").toLowerCase();
+}
+
+/** Firmas repetidas dentro de una exportación en bloque. Vacío = sin colisión. */
+export function findDuplicateRowSignatures(rows: ConnecteamRow[]): string[] {
+  const seen = new Map<string, number>();
+  for (const r of rows) {
+    const sig = connecteamRowSignature(r);
+    seen.set(sig, (seen.get(sig) ?? 0) + 1);
+  }
+  return [...seen.entries()].filter(([, n]) => n > 1).map(([sig]) => sig);
+}
+
+/** Nº de filas de datos de un CSV serializado (excluye el encabezado). */
+export function countCsvDataRows(csv: string): number {
+  const body = csv.replace(/^\uFEFF/, "").trim();
+  if (!body) return 0;
+  const lines = body.split(/\r?\n/);
+  return Math.max(0, lines.length - 1);
+}
