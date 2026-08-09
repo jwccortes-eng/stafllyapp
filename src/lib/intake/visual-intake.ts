@@ -103,7 +103,16 @@ export interface VisualIntakeResult {
   failures: VisualExtractionFailure[];
   /** true = el análisis no se completó; NUNCA decir "no encontramos servicios". */
   analysisIncomplete: boolean;
+  /** Clasificación técnica del fallo (telemetría/admin, nunca UX principal). */
+  failureKind: ProviderFailureKind | null;
+  /** Los tres resultados posibles del análisis. */
+  outcome: IntakeAnalysisOutcome;
+  /** Recuperación estructural cuando la IA falló pero hay evidencia. */
+  recovery: RecoveryResult | null;
+  /** Texto seguro disponible para recuperación (respuesta parcial del modelo). */
+  recoveryText: string | null;
   latencyMs: number;
+
 }
 
 const FAILURE_COPY: Record<string, string> = {
