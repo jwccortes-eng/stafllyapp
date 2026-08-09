@@ -1,3 +1,14 @@
+/**
+ * Preparar semana para Connecteam
+ * ================================
+ *
+ * Rediseño UX del puente Stafly → Connecteam. La pantalla no administra un
+ * CSV: ayuda a preparar una semana de operación. Responde en segundos qué
+ * sale, qué no sale, por qué y cómo resolverlo por lote.
+ *
+ * UI-only: mismo motor de exportación, mismo CSV, mismas reglas. No toca
+ * payroll, time_entries, assignments ni scheduled_shifts.
+ */
 import { useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuditLog } from "@/hooks/useAuditLog";
@@ -10,13 +21,22 @@ import {
   PROVISIONAL_COPY,
   type ProvisionalEndDecision,
 } from "@/lib/integrations/connecteam-provisional";
+import {
+  getProvisionalSuggestion,
+  rememberProvisionalUse,
+} from "@/lib/integrations/connecteam-provisional-memory";
+import {
+  groupByCause,
+  primaryCauseFor,
+  causeShortLabel,
+  type ExportCauseKey,
+} from "@/lib/integrations/connecteam-export-groups";
 import { ProvisionalEndPanel } from "./ProvisionalEndPanel";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, AlertTriangle, CheckCircle2, ShieldX, Info } from "lucide-react";
+import { Download, AlertTriangle, CheckCircle2, ShieldX, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -28,15 +48,12 @@ import {
   CSV_UTF8_BOM,
   countCsvDataRows,
   findDuplicateRowSignatures,
-
   type ValidationResult,
   type ConnecteamRow,
 } from "@/lib/integrations/connecteam-export";
 import { downloadCsv } from "@/lib/import-review/csv-export";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
-import { ADMIN_LEX } from "@/lib/ox/lexicon";
 import { useCanExportConnecteam, EXPORT_PERMISSION_DENIED_COPY } from "@/lib/integrations/connecteam-export-permission";
-import { ExportStateBadges } from "./ExportStateBadges";
 import { useConnecteamMapping } from "@/hooks/useConnecteamMapping";
 import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 
@@ -61,26 +78,38 @@ interface Row {
   openSlots: number;
   /** Hora final provisional aplicada solo a esta exportación ("" = ninguna). */
   provisionalEnd: string;
+  cause: ExportCauseKey | null;
+  clientName: string;
+  ref: string;
+}
 
+const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+function shortDate(iso: string | null | undefined): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso ?? ""));
+  if (!m) return "—";
+  return `${Number(m[3])} ${MONTHS[Number(m[2]) - 1] ?? ""}`;
 }
 
 export function ExportConnecteamBulkDialog({
   open, onOpenChange, shifts, assignments, employees, clients, locations, categories,
   selectedCompanyId, defaultTimezone,
 }: Props) {
-  // Canonical, tenant-aware authorization — same policy on every entry point.
   const canExport = useCanExportConnecteam();
   const { user } = useAuth();
   const { logAudit } = useAuditLog();
 
-  // Mapping Job/Sub item declarado por ESTA compañía (fuente canónica).
   const { mapping } = useConnecteamMapping();
   const buildCtx = useMemo(() => ({
     clients, locations, employees, assignments, categories, defaultTimezone, mapping,
   }), [clients, locations, employees, assignments, categories, defaultTimezone, mapping]);
 
-  // ── Dato provisional para Connecteam (NO cambia el Servicio) ────────────
   const [provisional, setProvisional] = useState<ProvisionalEndDecision | null>(null);
+
+  const suggestion = useMemo(
+    () => (open ? getProvisionalSuggestion(selectedCompanyId) : null),
+    [open, selectedCompanyId],
+  );
 
   /** Servicios cuya hora final todavía no existe en Stafly. */
   const pendingEnd = useMemo(
@@ -112,6 +141,12 @@ export function ExportConnecteamBulkDialog({
     });
   }, [shifts, provisional]);
 
+  const clientNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of clients) map.set(c.id, c.name);
+    return map;
+  }, [clients]);
+
   const rows: Row[] = useMemo(() => {
     return effectiveShifts.map(({ shift, provisionalEnd }) => {
       const validation = validateShiftForExport(shift, buildCtx, {
@@ -123,30 +158,45 @@ export function ExportConnecteamBulkDialog({
       const assigned = effectiveAssignmentsForExport(shift.id, assignments).length;
       const capacity = Number(shift.slots ?? 0);
       const openSlots = Math.max(0, capacity - assigned);
-      return { shift, validation, row, assigned, openSlots, provisionalEnd };
+      const clientName = shift.client_id ? clientNameById.get(shift.client_id) ?? "" : "";
+      return {
+        shift,
+        validation,
+        row,
+        assigned,
+        openSlots,
+        provisionalEnd,
+        cause: primaryCauseFor(validation, { hasClient: !!clientName }),
+        clientName: clientName || "Sin cliente",
+        ref: getShiftDisplayIdentity(shift as any).primaryRef,
+      };
     });
-  }, [effectiveShifts, buildCtx, canExport, selectedCompanyId, assignments]);
+  }, [effectiveShifts, buildCtx, canExport, selectedCompanyId, assignments, clientNameById]);
 
   const summary = useMemo(() => {
     const total = rows.length;
-    const ready = rows.filter(r => r.validation.status === "ready").length;
-    const review = rows.filter(r => r.validation.status === "needs_review").length;
-    const blocked = rows.filter(r => r.validation.status === "blocked").length;
-    const assigned = rows.reduce((sum, r) => sum + r.assigned, 0);
-    const open = rows.reduce((sum, r) => sum + r.openSlots, 0);
-    const exportable = total - blocked;
-    return { total, ready, review, blocked, assigned, open, exportable };
+    const exportable = rows.filter((r) => r.validation.status !== "blocked").length;
+    return { total, exportable, attention: total - exportable };
   }, [rows]);
 
-  const warningRows = useMemo(
-    () => rows.filter(r => r.validation.warnings.some(w => w.severity !== "info")),
+  const weekLabel = useMemo(() => {
+    const dates = rows.map((r) => r.shift.date).filter(Boolean).sort();
+    if (dates.length === 0) return "—";
+    const first = shortDate(dates[0]);
+    const last = shortDate(dates[dates.length - 1]);
+    return first === last ? first : `${first} → ${last}`;
+  }, [rows]);
+
+  const groups = useMemo(
+    () => groupByCause(rows.filter((r) => r.cause), (r) => r.cause),
     [rows],
   );
+  const activeGroups = groups.filter((g) => g.items.length > 0);
+  const singleCause = activeGroups.length === 1 ? activeGroups[0] : null;
 
-  // Colisiones: filas que Connecteam vería como el MISMO turno y fusionaría.
   const duplicateCount = useMemo(() => {
-    const exportable = rows.filter(r => r.validation.status !== "blocked");
-    return findDuplicateRowSignatures(exportable.map(r => r.row)).length;
+    const exportable = rows.filter((r) => r.validation.status !== "blocked");
+    return findDuplicateRowSignatures(exportable.map((r) => r.row)).length;
   }, [rows]);
 
   const handleDownload = () => {
@@ -154,25 +204,25 @@ export function ExportConnecteamBulkDialog({
       toast.error(EXPORT_PERMISSION_DENIED_COPY);
       return;
     }
-    const exportable = rows.filter(r => r.validation.status !== "blocked");
+    const exportable = rows.filter((r) => r.validation.status !== "blocked");
     if (exportable.length === 0) {
-      toast.error("No hay turnos exportables. Revisa los bloqueos.");
+      toast.error("Todavía no hay servicios listos. Resuelve los datos pendientes y vuelve aquí.");
       return;
     }
-    const csvBody = serializeConnecteamCsv(exportable.map(r => r.row));
+    const csvBody = serializeConnecteamCsv(exportable.map((r) => r.row));
     const csv = CSV_UTF8_BOM + csvBody;
     const dataRows = countCsvDataRows(csv);
     const filename = bulkExportFilename();
     downloadCsv(filename, csv);
 
-    // Trazabilidad: una entrada por fila exportada con dato provisional.
     if (provisional) {
+      rememberProvisionalUse(selectedCompanyId, provisional);
       const traces = exportable
         .filter((r) => r.provisionalEnd)
         .map((r) =>
           buildProvisionalTrace({
             shift: r.shift,
-            ref: getShiftDisplayIdentity(r.shift as any).primaryRef,
+            ref: r.ref,
             provisionalEnd: r.provisionalEnd,
             decision: provisional,
             confirmedBy: user?.id ?? null,
@@ -195,17 +245,15 @@ export function ExportConnecteamBulkDialog({
     }
 
     toast.success(
-      `CSV descargado — ${dataRows} fila${dataRows === 1 ? "" : "s"} para ${exportable.length} ${ADMIN_LEX.EntityPlural.toLowerCase()}.`,
+      `Archivo listo — ${dataRows} servicio${dataRows === 1 ? "" : "s"} para Connecteam.`,
       {
         description: provisional
           ? PROVISIONAL_COPY.exportWarning
-          : "Una fila por servicio. Verifica el mismo número en el Overview de Connecteam.",
+          : "Los servicios se siguen administrando desde Stafly.",
       },
     );
     onOpenChange(false);
   };
-
-
 
   const canDownload = canExport && summary.exportable > 0;
 
@@ -215,11 +263,11 @@ export function ExportConnecteamBulkDialog({
         <DialogHeader className="p-5 pb-3 border-b border-border/30">
           <DialogTitle className="text-base flex items-center gap-2">
             <Download className="h-4 w-4" />
-            Exportar {ADMIN_LEX.EntityPlural} → Connecteam (.csv)
+            Preparar semana para Connecteam
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Exporta los turnos del rango/filtros actuales al formato oficial de importación de Connecteam.
-            Read-only — no modifica turnos, asignaciones, time entries ni payroll.
+            Los servicios seguirán administrándose desde Stafly. Aquí solo prepararemos el archivo
+            que Connecteam necesita.
           </DialogDescription>
         </DialogHeader>
 
@@ -235,89 +283,127 @@ export function ExportConnecteamBulkDialog({
               </div>
             )}
 
-            {/* Summary */}
+            {/* Resumen operativo */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <SummaryTile label="Turnos" value={summary.total} />
-              <SummaryTile label="Empleados asignados" value={summary.assigned} />
-              <SummaryTile label="Cupos abiertos" value={summary.open} />
-              <SummaryTile label="Exportables" value={summary.exportable} tone={canDownload ? "ok" : "danger"} />
+              <SummaryTile label="Semana" text={weekLabel} />
+              <SummaryTile label="Servicios seleccionados" value={summary.total} />
+              <SummaryTile label="Listos" value={summary.exportable} tone="ok" />
+              <SummaryTile
+                label="Necesitan atención"
+                value={summary.attention}
+                tone={summary.attention > 0 ? "warn" : undefined}
+              />
             </div>
 
-            {/* Completar mínimo para Connecteam — dato provisional explícito */}
-            <ProvisionalEndPanel
-              pending={pendingEnd}
-              applied={provisional}
-              onApply={setProvisional}
-              onClear={() => setProvisional(null)}
-            />
-
-            {/* Status breakdown */}
-
-            <div className="flex items-center gap-2 flex-wrap text-xs">
-              <Badge variant="outline" className="gap-1 border-earning/40 text-earning">
-                <CheckCircle2 className="h-3 w-3" /> {summary.ready} listos
-              </Badge>
-              <Badge variant="outline" className="gap-1 border-warning/40 text-warning">
-                <AlertTriangle className="h-3 w-3" /> {summary.review} para revisar
-              </Badge>
-              <Badge variant="outline" className="gap-1 border-destructive/40 text-destructive">
-                <ShieldX className="h-3 w-3" /> {summary.blocked} bloqueados
-              </Badge>
-            </div>
-
-            {/* Lectura del lote: los incompletos NO bloquean a los listos. */}
-            <p className="text-xs text-muted-foreground">
-              {summary.total} seleccionados · {summary.exportable} listos para Connecteam ·{" "}
-              {summary.blocked} necesitan completar. Se exportan sólo los listos.
-            </p>
-
-
-
-            {summary.blocked > 0 && (
-              <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-xs text-destructive flex items-start gap-2">
-                <ShieldX className="h-4 w-4 mt-0.5 shrink-0" />
-                <p>
-                  Los turnos bloqueados no se incluirán en el CSV. Resuélvelos (fecha/hora/título/permisos)
-                  y vuelve a exportar cuando estén listos.
-                </p>
-              </div>
+            {summary.attention > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {summary.attention} necesitan un dato antes de exportarse. Los listos se exportan igual.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-earning" />
+                Todos los servicios de esta semana están listos para Connecteam.
+              </p>
             )}
 
-            {/* Estado Stafly vs estado Connecteam — un borrador completo sí exporta */}
+            {/* Una sola causa → una sola tarjeta con resolución por lote */}
+            {singleCause && singleCause.meta.key === "pending_end" ? (
+              <ProvisionalEndPanel
+                pending={pendingEnd}
+                applied={provisional}
+                onApply={setProvisional}
+                onClear={() => setProvisional(null)}
+                suggestion={suggestion}
+              />
+            ) : (
+              activeGroups.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Qué falta
+                  </p>
+                  <div className="rounded-xl border border-border/30 divide-y divide-border/30 bg-card">
+                    {groups.map((g) => (
+                      <div
+                        key={g.meta.key}
+                        className="px-3 py-2.5 flex items-start gap-3 text-xs"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-foreground">{g.meta.label}</p>
+                          <p className="text-muted-foreground mt-0.5">
+                            {g.items.length} servicio{g.items.length === 1 ? "" : "s"}
+                            {g.items.length > 0 && ` · ${g.meta.explanation}`}
+                          </p>
+                        </div>
+                        {g.items.length > 0 && g.meta.batchActionLabel && (
+                          <span className="text-[11px] text-muted-foreground shrink-0">
+                            {g.meta.batchActionLabel} abajo
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {groups.some((g) => g.meta.key === "pending_end" && g.items.length > 0) && (
+                    <ProvisionalEndPanel
+                      pending={pendingEnd}
+                      applied={provisional}
+                      onApply={setProvisional}
+                      onClear={() => setProvisional(null)}
+                      suggestion={suggestion}
+                    />
+                  )}
+                </div>
+              )
+            )}
+
+            {/* Tabla operativa: QK · Cliente · Fecha · Estado · Problema */}
             {rows.length > 0 && (
               <div className="space-y-1.5">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Estado por servicio
+                  Servicios de la semana
                 </p>
-                <ul className="rounded-xl border border-border/30 divide-y divide-border/30 bg-card">
-                  {rows.slice(0, 30).map((r) => (
-                    <li key={r.shift.id} className="px-3 py-2 text-xs">
-                      <p className="font-medium text-foreground truncate">
-                        <span className="font-mono text-[10px] text-muted-foreground mr-1.5">
-                          {getShiftDisplayIdentity(r.shift as any).primaryRef}
+                <div className="rounded-xl border border-border/30 divide-y divide-border/30 bg-card overflow-hidden">
+                  <div className="hidden sm:grid grid-cols-[92px_1fr_72px_150px] gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/30">
+                    <span>QK</span>
+                    <span>Cliente</span>
+                    <span>Fecha</span>
+                    <span>Estado</span>
+                  </div>
+                  {rows.slice(0, 40).map((r) => {
+                    const ready = r.validation.status !== "blocked";
+                    return (
+                      <div
+                        key={r.shift.id}
+                        className="grid grid-cols-2 sm:grid-cols-[92px_1fr_72px_150px] gap-2 px-3 py-2 text-xs items-center"
+                      >
+                        <span className="font-mono text-[11px] text-muted-foreground">{r.ref}</span>
+                        <span className="truncate text-foreground">{r.clientName}</span>
+                        <span className="text-muted-foreground">{shortDate(r.shift.date)}</span>
+                        <span
+                          className={cn(
+                            "flex items-center gap-1.5",
+                            ready ? "text-earning" : "text-warning",
+                          )}
+                        >
+                          {ready ? (
+                            <>
+                              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                              <span>
+                                Listo{r.provisionalEnd ? " (hora provisional)" : ""}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{causeShortLabel(r.cause)}</span>
+                            </>
+                          )}
                         </span>
-                        {r.shift.date} · {r.shift.title || "Sin título"}
-                      </p>
-
-                      <ExportStateBadges
-                        className="mt-1"
-                        publicationStatus={(r.shift as any).publication_status}
-                        status={r.validation.status}
-                      />
-                      {r.validation.status === "blocked" && (
-                        <ul className="mt-1 space-y-0.5 text-muted-foreground">
-                          {r.validation.warnings
-                            .filter((w) => w.severity === "block")
-                            .map((w, i) => (
-                              <li key={`${w.code}-${i}`}>· {w.message}</li>
-                            ))}
-                        </ul>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-                {rows.length > 30 && (
-                  <p className="text-[10px] text-muted-foreground">…y {rows.length - 30} más.</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                {rows.length > 40 && (
+                  <p className="text-[10px] text-muted-foreground">…y {rows.length - 40} más.</p>
                 )}
               </div>
             )}
@@ -327,79 +413,20 @@ export function ExportConnecteamBulkDialog({
                 <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                 <div>
                   <p className="font-semibold">
-                    {duplicateCount} combinación{duplicateCount === 1 ? "" : "es"} de filas idénticas
+                    {duplicateCount} combinación{duplicateCount === 1 ? "" : "es"} de servicios idénticos
                   </p>
                   <p className="mt-0.5 opacity-90">
-                    Connecteam fusiona filas con la misma fecha, horario, título y Job:
-                    importaría menos turnos de los que estás exportando. Diferencia el título
-                    o el horario antes de importar.
+                    Connecteam fusiona turnos con la misma fecha, horario, título y Job: importaría
+                    menos servicios de los que estás exportando. Diferencia el título o el horario.
                   </p>
                 </div>
               </div>
             )}
 
             <p className="text-[11px] text-muted-foreground">
-              El CSV genera una fila por servicio exportable. Exportar un borrador genera solo
-              el CSV: no lo publica, no notifica a nadie y no cambia asignaciones, horas ni payroll.
+              Preparar el archivo no publica servicios, no notifica a nadie y no cambia
+              asignaciones, horas ni payroll.
             </p>
-
-
-
-            {/* Warnings list — top 20 shifts with issues */}
-            {warningRows.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Advertencias · {warningRows.length} turno{warningRows.length === 1 ? "" : "s"}
-                </p>
-                <ul className="rounded-xl border border-border/30 divide-y divide-border/30 bg-card">
-                  {warningRows.slice(0, 20).map((r) => {
-                    const worst = r.validation.warnings.reduce<"info" | "warn" | "block">((acc, w) => {
-                      if (w.severity === "block") return "block";
-                      if (w.severity === "warn" && acc !== "block") return "warn";
-                      return acc;
-                    }, "info");
-                    const Icon = worst === "block" ? ShieldX : worst === "warn" ? AlertTriangle : Info;
-                    const tone = worst === "block"
-                      ? "text-destructive"
-                      : worst === "warn"
-                      ? "text-warning"
-                      : "text-muted-foreground";
-                    return (
-                      <li key={r.shift.id} className="px-3 py-2 text-xs">
-                        <div className="flex items-start gap-2">
-                          <Icon className={cn("h-3.5 w-3.5 mt-0.5 shrink-0", tone)} />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-foreground truncate">
-                              {r.shift.date} · {(r.shift.title || "Sin título")}
-                            </p>
-                            <ul className="mt-0.5 space-y-0.5 text-muted-foreground">
-                              {r.validation.warnings
-                                .filter(w => w.severity !== "info")
-                                .slice(0, 3)
-                                .map((w, i) => (
-                                  <li key={`${w.code}-${i}`}>· {w.message}</li>
-                                ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-                {warningRows.length > 20 && (
-                  <p className="text-[10px] text-muted-foreground">
-                    …y {warningRows.length - 20} más. Descarga el CSV para revisar todo en Excel/Numbers.
-                  </p>
-                )}
-              </div>
-            )}
-
-            <ul className="text-[10px] text-muted-foreground space-y-1 list-disc pl-4">
-              <li>El CSV usa las 16 columnas oficiales del importador de Connecteam, en orden.</li>
-              <li><strong>Users</strong> viaja vacío por default — Connecteam requiere identificadores exactos. Asigna workers dentro de Connecteam. <strong>Number of users</strong> mantiene los slots.</li>
-              <li>Codificación UTF-8 con BOM — abre correctamente en Excel con acentos.</li>
-              <li>Puente temporal: no reemplaza Stafly ni sincroniza payroll.</li>
-            </ul>
           </div>
         </ScrollArea>
 
@@ -412,7 +439,7 @@ export function ExportConnecteamBulkDialog({
             onClick={handleDownload}
             disabled={!canDownload}
             className="gap-1.5"
-            title={!canExport ? EXPORT_PERMISSION_DENIED_COPY : !canDownload ? "No hay turnos exportables" : undefined}
+            title={!canExport ? EXPORT_PERMISSION_DENIED_COPY : !canDownload ? "Todavía no hay servicios listos" : undefined}
           >
             <Download className="h-3.5 w-3.5" />
             Descargar CSV ({summary.exportable})
@@ -423,18 +450,22 @@ export function ExportConnecteamBulkDialog({
   );
 }
 
-function SummaryTile({ label, value, tone }: { label: string; value: number; tone?: "ok" | "danger" }) {
+function SummaryTile({
+  label, value, text, tone,
+}: { label: string; value?: number; text?: string; tone?: "ok" | "warn" }) {
   return (
     <div
       className={cn(
         "rounded-xl border px-3 py-2",
         tone === "ok" && "border-earning/30 bg-earning/5",
-        tone === "danger" && "border-destructive/30 bg-destructive/5",
+        tone === "warn" && "border-warning/30 bg-warning/5",
         !tone && "border-border/30 bg-muted/20",
       )}
     >
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="text-lg font-semibold text-foreground tabular-nums">{value}</p>
+      <p className={cn("font-semibold text-foreground tabular-nums", text ? "text-sm" : "text-lg")}>
+        {text ?? value}
+      </p>
     </div>
   );
 }

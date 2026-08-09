@@ -12,7 +12,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Clock, CheckCircle2, AlertTriangle, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   PROVISIONAL_COPY,
@@ -20,6 +20,10 @@ import {
   type ProvisionalEndDecision,
   type ProvisionalMode,
 } from "@/lib/integrations/connecteam-provisional";
+import {
+  suggestionSentence,
+  type ProvisionalSuggestion,
+} from "@/lib/integrations/connecteam-provisional-memory";
 import type { Shift } from "@/components/shifts/types";
 
 interface Props {
@@ -29,14 +33,18 @@ interface Props {
   applied: ProvisionalEndDecision | null;
   onApply: (decision: ProvisionalEndDecision) => void;
   onClear: () => void;
+  /** Patrón aprendido de exportaciones anteriores. Nunca se aplica solo. */
+  suggestion?: ProvisionalSuggestion | null;
 }
 
 const hhmm = (v: unknown) => (typeof v === "string" ? v.slice(0, 5) : "");
 
-export function ProvisionalEndPanel({ pending, applied, onApply, onClear }: Props) {
-  const [mode, setMode] = useState<ProvisionalMode>("duration");
-  const [hours, setHours] = useState("6");
-  const [endTime, setEndTime] = useState("23:00");
+export function ProvisionalEndPanel({ pending, applied, onApply, onClear, suggestion }: Props) {
+  const [mode, setMode] = useState<ProvisionalMode>(suggestion?.mode ?? "end_time");
+  const [hours, setHours] = useState(suggestion?.mode === "duration" ? suggestion.value : "6");
+  const [endTime, setEndTime] = useState(
+    suggestion?.mode === "end_time" ? suggestion.value : "22:00",
+  );
   const [reason, setReason] = useState("");
   const [previewing, setPreviewing] = useState(false);
 
@@ -60,14 +68,14 @@ export function ProvisionalEndPanel({ pending, applied, onApply, onClear }: Prop
       <div className="rounded-xl border border-warning/30 bg-warning/5 px-3.5 py-3 text-xs space-y-1.5">
         <p className="font-semibold text-warning flex items-center gap-1.5">
           <AlertTriangle className="h-3.5 w-3.5" />
-          {PROVISIONAL_COPY.exportWarning}
+          Se actualizarán temporalmente {pending.length} servicio
+          {pending.length === 1 ? "" : "s"}. Solo para generar el CSV.
         </p>
         <p className="text-muted-foreground">
-          {pending.length} servicio{pending.length === 1 ? "" : "s"} exportan con hora final
-          provisional{" "}
+          Hora provisional{" "}
           {applied.mode === "duration"
-            ? `(duración de ${applied.durationHours}h)`
-            : `(${applied.endTime})`}
+            ? `por duración de ${applied.durationHours}h`
+            : applied.endTime}
           . {PROVISIONAL_COPY.doesNotChangeService}
         </p>
         <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={onClear}>
@@ -84,11 +92,39 @@ export function ProvisionalEndPanel({ pending, applied, onApply, onClear }: Prop
         <div className="text-xs">
           <p className="font-semibold text-foreground">{PROVISIONAL_COPY.needTitle}</p>
           <p className="text-muted-foreground mt-0.5">{PROVISIONAL_COPY.needBody}</p>
-          <p className="text-muted-foreground mt-0.5">
+          <p className="text-muted-foreground mt-1">Puedes:</p>
+          <ul className="text-muted-foreground mt-0.5 space-y-0.5">
+            <li>· Completar cada servicio en su editor.</li>
+            <li>· Usar una hora provisional solo para exportar.</li>
+          </ul>
+          <p className="text-muted-foreground mt-1">
             {pending.length} servicio{pending.length === 1 ? "" : "s"} con hora final pendiente.
           </p>
         </div>
       </div>
+
+      {suggestion && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-2 text-[11px] flex items-start gap-2">
+          <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
+          <div className="min-w-0">
+            <p className="font-semibold text-foreground">Sugerencia</p>
+            <p className="text-muted-foreground">{suggestionSentence(suggestion)}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 mt-1 text-[11px] text-primary"
+              onClick={() => {
+                setMode(suggestion.mode);
+                if (suggestion.mode === "end_time") setEndTime(suggestion.value);
+                else setHours(suggestion.value);
+                setPreviewing(true);
+              }}
+            >
+              Usar nuevamente
+            </Button>
+          </div>
+        </div>
+      )}
 
       {!previewing ? (
         <Button size="sm" className="h-8 text-xs" onClick={() => setPreviewing(true)}>
@@ -97,11 +133,11 @@ export function ProvisionalEndPanel({ pending, applied, onApply, onClear }: Prop
       ) : (
         <div className="space-y-3">
           <div className="flex gap-1.5">
-            <ModeChip active={mode === "duration"} onClick={() => setMode("duration")}>
-              Duración provisional
-            </ModeChip>
             <ModeChip active={mode === "end_time"} onClick={() => setMode("end_time")}>
               Hora final provisional
+            </ModeChip>
+            <ModeChip active={mode === "duration"} onClick={() => setMode("duration")}>
+              Duración provisional
             </ModeChip>
           </div>
 
@@ -174,7 +210,7 @@ export function ProvisionalEndPanel({ pending, applied, onApply, onClear }: Prop
               onClick={() => onApply(draft)}
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Aplicar provisionalmente a los {pending.length}
+              Resolver los {pending.length} temporalmente
             </Button>
             <Button
               variant="ghost"
