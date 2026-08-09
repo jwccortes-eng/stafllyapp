@@ -5,8 +5,8 @@
  * No se crea una bandeja distinta por source y no se escribe en base de datos:
  * el componente emite intenciones y el contenedor llama al helper canónico.
  *
- * Semántica compartida mobile/desktop: cada candidato es un "trabajo detectado
- * por IA" con fecha protagonista, confianza humana y edición contextual.
+ * Semántica compartida mobile/desktop: cada fila representa un servicio real
+ * que el operador quiere preparar, todavía pendiente de revisión y creación.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -293,6 +293,9 @@ export function ServiceIntakeReviewInbox({
     const excluded = c.reviewStatus === "excluded";
     const missing = missingLabels(c);
     const showDetail = detailIds.includes(c.id);
+    const notices = noticesByCandidate?.[c.id] ?? [];
+    const approximateTime = notices.some((notice) => /hora es aproximada/i.test(notice));
+    const pendingWorkers = notices.some((notice) => /cantidad de personal está pendiente/i.test(notice));
 
     return (
       <Card
@@ -344,13 +347,15 @@ export function ServiceIntakeReviewInbox({
                 <p className="text-xs text-muted-foreground">Hora</p>
                 <p className="font-medium">
                   {c.startTime
-                    ? `${c.startTime}${c.endTime ? `–${c.endTime}` : ""}`
+                    ? `${approximateTime ? "Aprox. " : ""}${c.startTime}${c.endTime ? `–${c.endTime}` : ""}`
                     : "Por completar"}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Personal</p>
-                <p className="font-medium">{c.requestedWorkers ?? "Por completar"}</p>
+                <p className="font-medium">
+                  {c.requestedWorkers ?? (pendingWorkers ? "Pendiente" : "Por completar")}
+                </p>
               </div>
             </div>
 
@@ -441,9 +446,9 @@ export function ServiceIntakeReviewInbox({
               </Button>
             )}
 
-            {(noticesByCandidate?.[c.id]?.length ?? 0) > 0 && (
+            {notices.length > 0 && (
               <ul className="space-y-1 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-                {noticesByCandidate![c.id].map((n, i) => (
+                {notices.map((n, i) => (
                   <li key={i}>{n}</li>
                 ))}
               </ul>
@@ -523,10 +528,12 @@ export function ServiceIntakeReviewInbox({
   return (
     <section className="space-y-4" aria-label="Bandeja de revisión de intake">
       <div className="space-y-1">
-        <p className="text-sm font-medium">Trabajos detectados</p>
+        <p className="text-sm font-medium">
+          {candidates.length} {candidates.length === 1 ? "servicio detectado" : "servicios detectados"}
+        </p>
         <p className="text-xs text-muted-foreground">
-          {candidates.length} detectados{sourceLabel ? ` · ${sourceLabel}` : ""} · nada se crea sin
-          tu confirmación
+          Un servicio por fecha{sourceLabel ? ` · ${sourceLabel}` : ""} · quedan para revisión y
+          nada se crea sin tu confirmación
         </p>
       </div>
 
