@@ -372,7 +372,6 @@ describe("connecteam-export: safety boundary", () => {
       "exportFilename",
       "findDuplicateRowSignatures",
 
-      "exportFilename",
       "resolveAddress",
       "resolveJob",
       "serializeConnecteamCsv",
