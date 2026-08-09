@@ -26,4 +26,5 @@ export * from "./dictionary";
 export * from "./dictionary-store";
 export * from "./entity-linking";
 export * from "./assisted-creation";
+export * from "./entity-metrics";
 
