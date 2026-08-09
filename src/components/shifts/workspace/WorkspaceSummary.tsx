@@ -16,7 +16,7 @@ import { ShiftSummaryPanel } from "../form/ShiftSummaryPanel";
 import { PendingBadgeRow } from "./PendingBadgeRow";
 import { WorkerPreviewCard } from "./WorkerPreviewCard";
 import { ServiceReadinessCard } from "./ServiceReadinessCard";
-import { getServiceOperationalReadiness } from "@/lib/shifts/service-operational-readiness";
+import { getServiceLifecycleReadiness } from "@/lib/shifts/service-lifecycle-readiness";
 import {
   computeShiftPendingFlags,
   describePublishState,
@@ -102,7 +102,7 @@ function WorkspaceSummaryImpl(p: Props) {
   // Readiness canónico: publicar ≠ exportar a Connecteam.
   const operational = useMemo(
     () =>
-      getServiceOperationalReadiness({
+      getServiceLifecycleReadiness({
         title: p.title,
         date: p.date,
         startTime: p.startTime,
@@ -122,6 +122,8 @@ function WorkspaceSummaryImpl(p: Props) {
         timezone: p.timezone ?? "America/New_York",
         connecteamJobLabel: p.clientName ?? p.jobSiteLabel ?? null,
         addressLabel: (p.jobSiteAddress ?? "").trim() || p.jobSiteLabel || null,
+        referenceLabel: p.title,
+        staffingPending: !p.slotsNum,
       }),
     [
       p.title, p.date, p.startTime, p.endTime, p.clientId, p.locationId,
@@ -161,7 +163,7 @@ function WorkspaceSummaryImpl(p: Props) {
       </div>
 
       {/* 3) Publicar ≠ Exportar a Connecteam */}
-      <ServiceReadinessCard readiness={operational} />
+      <ServiceReadinessCard lifecycle={operational} />
 
       {/* 4) Existing ops summary (unchanged) */}
       <ShiftSummaryPanel
