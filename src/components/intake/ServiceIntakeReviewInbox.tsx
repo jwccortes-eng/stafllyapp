@@ -291,13 +291,16 @@ export function ServiceIntakeReviewInbox({
         )}
       >
         <div className="flex items-start gap-3">
-          <Checkbox
-            className="mt-1 h-5 w-5"
-            checked={selected.includes(c.id)}
-            disabled={created || excluded}
-            onCheckedChange={() => toggle(c.id)}
-            aria-label={`Incluir ${c.venueCandidate.raw || c.id}`}
-          />
+          {/* Área táctil de 44px alrededor del control de inclusión. */}
+          <span className="-m-2 flex h-11 w-11 shrink-0 items-center justify-center">
+            <Checkbox
+              className="h-6 w-6"
+              checked={selected.includes(c.id)}
+              disabled={created || excluded}
+              onCheckedChange={() => toggle(c.id)}
+              aria-label={`Incluir ${c.venueCandidate.raw || c.id}`}
+            />
+          </span>
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -545,7 +548,7 @@ export function ServiceIntakeReviewInbox({
         </div>
       )}
 
-      <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur sm:mx-0 sm:px-0">
+      <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+5rem)] backdrop-blur sm:mx-0 sm:px-0 sm:pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
         <p className="pb-2 text-xs text-muted-foreground">
           {creatableSelected.length} seleccionados · {counts.needsReview} necesitan revisión
           {counts.created > 0 ? ` · ${counts.created} ya creados` : ""}
