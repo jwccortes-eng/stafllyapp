@@ -331,10 +331,7 @@ export function detectRecurrenceSignal(text: string): { raw: string; times: numb
 }
 
 /**
- * Convierte evidencia estructural en candidatos revisables usando el parser
- * canónico ya existente. No hay OCR nuevo, ni segundo LLM, ni segundo modelo.
- */
-/**
+
  * Normaliza texto con forma de captura (etiquetas en líneas sueltas) al formato
  * de una línea por servicio que el parser canónico ya entiende.
  * No agrega información: sólo reordena lo que la fuente ya dice.
