@@ -13,6 +13,8 @@
  * No toca payroll, time entries, Connecteam export, ELDM, auth ni RLS.
  */
 
+import { normalizeAttendanceMode } from "@/lib/shift-attendance-mode";
+
 import {
   buildSeriesIntent,
   freezeRecurrenceSubmit,

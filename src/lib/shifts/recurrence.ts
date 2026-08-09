@@ -15,6 +15,8 @@
  * Este módulo es PURO: sin React, sin red, sin escrituras.
  */
 
+
+import type { ShiftAttendanceMode } from "@/lib/shift-attendance-mode";
 export const RECURRENCE_REF_PREFIX = "series";
 
 export interface RecurrenceOccurrencePlan {
