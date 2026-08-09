@@ -160,6 +160,47 @@ export function ExportConnecteamBulkDialog({
               </div>
             )}
 
+            {/* Estado Stafly vs estado Connecteam — un borrador completo sí exporta */}
+            {rows.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Estado por servicio
+                </p>
+                <ul className="rounded-xl border border-border/30 divide-y divide-border/30 bg-card">
+                  {rows.slice(0, 30).map((r) => (
+                    <li key={r.shift.id} className="px-3 py-2 text-xs">
+                      <p className="font-medium text-foreground truncate">
+                        {r.shift.date} · {r.shift.title || "Sin título"}
+                      </p>
+                      <ExportStateBadges
+                        className="mt-1"
+                        publicationStatus={(r.shift as any).publication_status}
+                        status={r.validation.status}
+                      />
+                      {r.validation.status === "blocked" && (
+                        <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                          {r.validation.warnings
+                            .filter((w) => w.severity === "block")
+                            .map((w, i) => (
+                              <li key={`${w.code}-${i}`}>· {w.message}</li>
+                            ))}
+                        </ul>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {rows.length > 30 && (
+                  <p className="text-[10px] text-muted-foreground">…y {rows.length - 30} más.</p>
+                )}
+              </div>
+            )}
+
+            <p className="text-[11px] text-muted-foreground">
+              Exportar un borrador genera solo el CSV: no lo publica, no notifica a nadie
+              y no cambia asignaciones, horas ni payroll.
+            </p>
+
+
             {/* Warnings list — top 20 shifts with issues */}
             {warningRows.length > 0 && (
               <div className="space-y-1.5">
