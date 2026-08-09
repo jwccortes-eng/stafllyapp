@@ -11,8 +11,10 @@ import { notifySuccess, notifyWarning } from "@/lib/feedback/notify";
 import { useConnecteamMapping } from "@/hooks/useConnecteamMapping";
 import {
   CONNECTEAM_MAPPING_COPY,
+  mappingKey,
   type MappingSubject,
 } from "@/lib/integrations/connecteam-mapping";
+
 
 interface Props {
   open: boolean;
