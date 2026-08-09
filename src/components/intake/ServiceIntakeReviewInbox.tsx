@@ -19,7 +19,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { canCreateDraft, type ServiceCandidate } from "@/lib/intake/candidate";
 import type { ConfidenceLevel, UnresolvedElement } from "@/lib/intake/visual-extraction";
 import CandidateQuickEditSheet from "@/components/intake/CandidateQuickEditSheet";
-import { CalendarDays, ChevronDown, Eye, Pencil, X } from "lucide-react";
+import EntityResolutionSheet from "@/components/intake/EntityResolutionSheet";
+import { confirmRef } from "@/lib/intake/entity-resolution";
+import { CalendarDays, ChevronDown, Eye, Link2, Pencil, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -46,6 +48,14 @@ export interface ServiceIntakeReviewInboxProps {
   unresolvedElements?: UnresolvedElement[];
   /** Ver la fuente original del candidato (texto, imagen, PDF o transcripción). */
   onReviewSource?: (candidateId: string) => void;
+  /**
+   * Ecosystem Intake Engine — resolución inline de cliente y lugar.
+   * Con `companyId` presente, la bandeja ofrece buscar, vincular o crear
+   * la entidad sin salir de la revisión. Nunca crea nada en silencio.
+   */
+  companyId?: string | null;
+  /** Origen del intake, sólo para trazabilidad del aprendizaje por empresa. */
+  intakeSource?: string;
 }
 
 const FIELD_LABELS: Record<string, string> = {
@@ -154,6 +164,8 @@ export function ServiceIntakeReviewInbox({
   confidenceByCandidate,
   unresolvedElements,
   onReviewSource,
+  companyId,
+  intakeSource,
 }: ServiceIntakeReviewInboxProps) {
   const isMobile = useIsMobile();
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -162,6 +174,7 @@ export function ServiceIntakeReviewInbox({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [detailIds, setDetailIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [resolving, setResolving] = useState<{ id: string; kind: "client" | "venue" } | null>(null);
 
   /**
    * Selección inicial: todo lo que ya está listo, nunca duplicados exactos.
@@ -373,7 +386,7 @@ export function ServiceIntakeReviewInbox({
               </Button>
             )}
 
-            {c.clientCandidate.requiresConfirmation && onConfirmMatch && (
+            {c.clientCandidate.requiresConfirmation && c.clientCandidate.suggestedLabel && onConfirmMatch && (
               <Button
                 variant="outline"
                 className="min-h-11 w-full justify-start"
@@ -382,7 +395,7 @@ export function ServiceIntakeReviewInbox({
                 Confirmar cliente: {c.clientCandidate.suggestedLabel}
               </Button>
             )}
-            {c.venueCandidate.requiresConfirmation && onConfirmMatch && (
+            {c.venueCandidate.requiresConfirmation && c.venueCandidate.suggestedLabel && onConfirmMatch && (
               <Button
                 variant="outline"
                 className="min-h-11 w-full justify-start"
@@ -390,6 +403,32 @@ export function ServiceIntakeReviewInbox({
               >
                 Confirmar lugar: {c.venueCandidate.suggestedLabel}
               </Button>
+            )}
+
+            {/* Ecosystem Intake Engine: buscar, vincular o crear sin salir. */}
+            {companyId && !created && (
+              <div className="flex flex-wrap gap-2">
+                {!c.clientCandidate.resolvedId && (
+                  <Button
+                    variant="secondary"
+                    className="min-h-11 flex-1 justify-start"
+                    onClick={() => setResolving({ id: c.id, kind: "client" })}
+                  >
+                    <Link2 className="mr-2 h-4 w-4" />
+                    Resolver cliente
+                  </Button>
+                )}
+                {!c.locationCandidate.resolvedId && (
+                  <Button
+                    variant="secondary"
+                    className="min-h-11 flex-1 justify-start"
+                    onClick={() => setResolving({ id: c.id, kind: "venue" })}
+                  >
+                    <Link2 className="mr-2 h-4 w-4" />
+                    Resolver lugar
+                  </Button>
+                )}
+              </div>
             )}
 
             {c.duplicateStatus === "possible_duplicate" && c.reviewStatus !== "accepted" && !created && (
@@ -563,6 +602,36 @@ export function ServiceIntakeReviewInbox({
             : `Crear ${creatableSelected.length} ${creatableSelected.length === 1 ? "borrador" : "borradores"}`}
         </Button>
       </div>
+
+      {companyId && resolving && (
+        <EntityResolutionSheet
+          open
+          onOpenChange={(open) => { if (!open) setResolving(null); }}
+          kind={resolving.kind}
+          companyId={companyId}
+          source={intakeSource}
+          raw={
+            resolving.kind === "client"
+              ? candidates.find((c) => c.id === resolving.id)?.clientCandidate.raw ?? ""
+              : candidates.find((c) => c.id === resolving.id)?.venueCandidate.raw ?? ""
+          }
+          onResolved={(kind, entity) => {
+            const target = candidates.find((c) => c.id === resolving.id);
+            if (!target) return;
+            if (kind === "client") {
+              onPatch(target.id, {
+                clientCandidate: confirmRef(target.clientCandidate, entity.id, entity.name),
+              });
+            } else {
+              onPatch(target.id, {
+                venueCandidate: confirmRef(target.venueCandidate, entity.id, entity.name),
+                locationCandidate: confirmRef(target.locationCandidate, entity.id, entity.name),
+              });
+            }
+            setResolving(null);
+          }}
+        />
+      )}
 
       <CandidateQuickEditSheet
         candidate={editing}
