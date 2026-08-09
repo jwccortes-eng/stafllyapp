@@ -41,6 +41,80 @@ export interface RecurrenceSubmitSnapshot {
 }
 
 /**
+ * Verdad confirmada del Servicio que se repetirá. Usa nombres de dominio y no
+ * depende de estado React, presets, drafts locales ni valores por defecto.
+ */
+export interface SeriesServiceSnapshot {
+  companyId: string;
+  clientId: string | null;
+  locationId: string | null;
+  jobSiteLocationId: string | null;
+  jobSiteAddress: string | null;
+  meetingPoint: string | null;
+  meetingPointLocationId: string | null;
+  title: string;
+  startTime: string;
+  endTime: string;
+  requestedHeadcount: number;
+  notes: string | null;
+  specialInstructions: string | null;
+  claimable: boolean;
+  payType: "hourly" | "daily";
+  dayType: "full_day" | "half_day";
+  payOverride: boolean;
+  shiftAdminId: string | null;
+  transportRequired: boolean;
+  carCapacity: number;
+  transportNotes: string | null;
+  driverIds: string[];
+  clockMethod: "mobile" | "kiosk" | "both";
+  attendanceMode: string;
+  meetingTime: string | null;
+  employeeIds: string[];
+  publicationIntent: "draft" | "publish_base";
+}
+
+export interface SeriesIntent {
+  recurrence: RecurrenceSubmitSnapshot;
+  service: Readonly<SeriesServiceSnapshot>;
+}
+
+/** Captura defensiva: los arrays quedan desligados del formulario mutable. */
+export function buildSeriesIntent(input: {
+  recurrence: RecurrenceSubmitSnapshot;
+  service: SeriesServiceSnapshot;
+}): SeriesIntent {
+  return {
+    recurrence: {
+      ...input.recurrence,
+      selectedDays: [...input.recurrence.selectedDays],
+      occurrences: input.recurrence.occurrences.map((occurrence) => ({ ...occurrence })),
+    },
+    service: {
+      ...input.service,
+      driverIds: [...input.service.driverIds],
+      employeeIds: [...input.service.employeeIds],
+    },
+  };
+}
+
+export function generateOccurrences(intent: SeriesIntent): Array<{
+  occurrence: RecurrenceOccurrencePlan;
+  service: SeriesServiceSnapshot;
+  employeeIds: string[];
+}> {
+  const isSeries = intent.recurrence.occurrences.length > 1;
+  return intent.recurrence.occurrences.map((occurrence) => ({
+    occurrence: { ...occurrence },
+    service: { ...intent.service, driverIds: [...intent.service.driverIds], employeeIds: [...intent.service.employeeIds] },
+    employeeIds:
+      !isSeries || occurrence.isBase || intent.recurrence.copyAssignments
+        ? [...intent.service.employeeIds]
+        : [],
+  }));
+}
+
+/**
  * Foto inmutable tomada al pulsar Guardar/Publicar. Evita que una recuperación
  * local o los diálogos intermedios degraden una serie a una sola fecha.
  */
