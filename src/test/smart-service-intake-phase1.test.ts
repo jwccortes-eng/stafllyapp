@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   createCandidate,
   canCreateDraft,
+  getCandidateReadiness,
   recomputeCandidate,
   SERVICE_INTAKE_BATCH_TYPE,
   INTAKE_SOURCES,
