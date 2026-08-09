@@ -13,6 +13,12 @@ export interface IntakeSuccessSummary {
   reusedClients: number;
   reusedVenues: number;
   aliasesLearned: number;
+  /** Borradores que aún necesitan venue/mapping antes de exportar. */
+  pendingVenue?: number;
+  /** Borradores sin hora de fin confirmada. */
+  pendingEndTime?: number;
+  /** Borradores sin cantidad de personal. */
+  pendingWorkers?: number;
 }
 
 export function IntakeSuccessPanel({
@@ -31,6 +37,12 @@ export function IntakeSuccessPanel({
     summary.aliasesLearned > 0 ? "Alias aprendido" : null,
   ].filter(Boolean) as string[];
 
+  const pending = [
+    summary.pendingVenue ? `${summary.pendingVenue} necesitan completar venue/mapping` : null,
+    summary.pendingEndTime ? `${summary.pendingEndTime} necesitan hora final` : null,
+    summary.pendingWorkers ? `${summary.pendingWorkers} necesitan cantidad de personal` : null,
+  ].filter(Boolean) as string[];
+
   return (
     <section className="rounded-2xl border border-primary/30 bg-primary/5 p-5 text-center animate-scale-in">
       <PartyPopper className="mx-auto h-7 w-7 text-primary" />
@@ -44,12 +56,21 @@ export function IntakeSuccessPanel({
           </li>
         ))}
       </ul>
+      {pending.length > 0 && (
+        <ul className="mx-auto mt-3 inline-flex flex-col items-start gap-1">
+          {pending.map((l) => (
+            <li key={l} className="text-xs text-muted-foreground">
+              {l}
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="mt-3 text-xs text-muted-foreground">
         Todo quedó como borrador. Nada fue publicado.
       </p>
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
         <Button className="min-h-11" onClick={onViewDrafts}>
-          Ver borradores
+          Revisar borradores
         </Button>
         <Button variant="ghost" className="min-h-11" onClick={onStartOver}>
           Traer más trabajo
