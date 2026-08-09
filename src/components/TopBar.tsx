@@ -56,7 +56,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
     <header
       className={cn(
         "sticky top-0 z-20 h-16 flex items-center justify-between gap-4 px-7 lg:px-10 border-b border-border/50 bg-background/85 backdrop-blur-xl transition-all duration-300",
-        collapsed ? "ms-[68px]" : "ms-[256px]"
+        collapsed ? "ms-[68px]" : "ms-[240px]"
       )}
     >
       {/* Izquierda: identidad sólo cuando el sidebar está colapsado (fuente única) + búsqueda */}
