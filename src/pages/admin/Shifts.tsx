@@ -1292,9 +1292,9 @@ function DesktopShifts() {
         .in("id", ids),
       supabase.from("shift_assignments").select("shift_id").in("shift_id", ids),
     ]);
-    const counts = new Map<string, number>();
+    const counts: Record<string, number> = {};
     for (const a of (assignRows ?? []) as Array<{ shift_id: string }>) {
-      counts.set(a.shift_id, (counts.get(a.shift_id) ?? 0) + 1);
+      counts[a.shift_id] = (counts[a.shift_id] ?? 0) + 1;
     }
     const persisted: PersistedOccurrence[] = ((rows ?? []) as any[]).map((r) => ({
       date: r.date,
