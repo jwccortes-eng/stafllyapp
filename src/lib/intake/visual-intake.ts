@@ -26,6 +26,15 @@ import {
   type VisualCandidateMeta,
   type VisualNotice,
 } from "./visual-extraction";
+import {
+  classifyAnalysisOutcome,
+  classifyProviderFailure,
+  runStructuralRecovery,
+  type IntakeAnalysisOutcome,
+  type ProviderFailureKind,
+  type RecoveryResult,
+} from "./recovery";
+
 
 export const VISUAL_INTAKE_BUCKET = "service-intake-files";
 
@@ -94,7 +103,16 @@ export interface VisualIntakeResult {
   failures: VisualExtractionFailure[];
   /** true = el análisis no se completó; NUNCA decir "no encontramos servicios". */
   analysisIncomplete: boolean;
+  /** Clasificación técnica del fallo (telemetría/admin, nunca UX principal). */
+  failureKind: ProviderFailureKind | null;
+  /** Los tres resultados posibles del análisis. */
+  outcome: IntakeAnalysisOutcome;
+  /** Recuperación estructural cuando la IA falló pero hay evidencia. */
+  recovery: RecoveryResult | null;
+  /** Texto seguro disponible para recuperación (respuesta parcial del modelo). */
+  recoveryText: string | null;
   latencyMs: number;
+
 }
 
 const FAILURE_COPY: Record<string, string> = {
@@ -169,29 +187,44 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
       })),
     },
   });
+  let requestFailure: { code: string; detail: string } | null = null;
   if (error) {
     // El cuerpo del error trae el motivo real (créditos, límite, rechazo).
     let detail = "";
+    let code = "";
     try {
       const ctx = (error as { context?: Response }).context;
       if (ctx && typeof ctx.json === "function") {
         const body = await ctx.clone().json();
         detail = String(body?.error ?? "");
+        code = String(body?.code ?? "");
       }
     } catch {
       /* noop */
     }
-    throw new Error(detail || (error as Error).message || "El análisis visual no se completó");
+    requestFailure = {
+      code: code || "ai_error",
+      detail: detail || (error as Error).message || "El análisis visual no se completó",
+    };
+  } else if ((data as any)?.error) {
+    requestFailure = {
+      code: String((data as any).code ?? "ai_error"),
+      detail: String((data as any).error),
+    };
   }
-  if ((data as any)?.error) throw new Error(String((data as any).error));
-
 
   const results: Array<{
     file_name?: string;
     storage_path?: string;
     error?: string;
+    raw_text?: string;
     extraction?: RawVisualExtraction;
-  }> = Array.isArray((data as any)?.extractions) ? (data as any).extractions : [];
+  }> = requestFailure
+    ? input.files.map((f) => ({ file_name: f.name, error: requestFailure!.code }))
+    : Array.isArray((data as any)?.extractions)
+      ? (data as any).extractions
+      : [];
+
 
   // 4. Normalización pura (nada se inventa; lo ambiguo va a "Necesitan revisión").
   let candidates: ServiceCandidate[] = [];
@@ -201,6 +234,7 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
   let pageCount = 0;
   let extractionFailures = 0;
   const failures: VisualExtractionFailure[] = [];
+  const recoveryTexts: string[] = [];
 
   results.forEach((entry, index) => {
     if (entry.error || !entry.extraction) {
@@ -211,11 +245,13 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
         code,
         detail: (entry as { error_detail?: string }).error_detail ?? null,
       });
+      if (entry.raw_text) recoveryTexts.push(entry.raw_text);
       warnings.push(
         `${entry.file_name ?? "Un archivo"}: ${describeVisualFailure(code)}.`,
       );
       return;
     }
+
 
     const normalized = normalizeVisualExtraction({
       extraction: entry.extraction,
@@ -289,6 +325,31 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
     );
   }
 
+  // 9. Capa de recuperación operativa: un fallo técnico nunca es "0 servicios".
+  const failureKind = classifyProviderFailure({
+    code: requestFailure?.code ?? failures[0]?.code ?? null,
+    message: requestFailure?.detail ?? failures[0]?.detail ?? null,
+  });
+  const recoveryText = recoveryTexts.join("\n").trim();
+  const recovery =
+    candidates.length === 0 && extractionFailures > 0 && recoveryText
+      ? runStructuralRecovery({
+          text: recoveryText,
+          companyId: input.companyId, // SIEMPRE del contexto autenticado
+          batchId,
+          source,
+          referenceDate: input.referenceDate,
+          sourceReference: "recuperación estructural",
+          failureKind,
+        })
+      : null;
+
+  const outcome = classifyAnalysisOutcome({
+    candidateCount: candidates.length + (recovery?.candidates.length ?? 0),
+    technicalFailure: extractionFailures > 0,
+    evidence: recovery?.evidence ?? null,
+  });
+
   return {
     batchId,
     candidates,
@@ -303,10 +364,17 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
     extractionFailures,
     failures,
     analysisIncomplete: extractionFailures > 0,
+    failureKind: extractionFailures > 0 ? failureKind : null,
+    outcome:
+      candidates.length > 0 && extractionFailures > 0 && recovery === null
+        ? "ANALYSIS_SUCCESS"
+        : outcome,
+    recovery,
+    recoveryText: recoveryText || null,
     latencyMs: Date.now() - startedAt,
-
   };
 }
+
 
 /** Fingerprint no sensible del lote para telemetría y correlación de reintentos. */
 export function fingerprintFiles(files: File[]): string {

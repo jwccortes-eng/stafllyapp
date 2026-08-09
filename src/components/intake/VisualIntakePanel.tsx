@@ -24,6 +24,9 @@ import UnderstoodPanel from "@/components/intake/premium/UnderstoodPanel";
 import ServiceIntakeReviewInbox from "@/components/intake/ServiceIntakeReviewInbox";
 import { useRememberCorrection } from "@/components/intake/RememberCorrectionPrompt";
 import { confirmRef, recomputeCandidate, type ServiceCandidate } from "@/lib/intake";
+import IntakeRecoveryPanel from "@/components/intake/IntakeRecoveryPanel";
+import { describeOutcome, reconcileAfterRetry } from "@/lib/intake/recovery";
+
 import { createDraftServicesFromCandidates, applyOutcome } from "@/lib/intake/create-draft-service";
 import { closeServiceIntakeBatch, summarizeCandidates } from "@/lib/intake/batch";
 import { buildIntakeTelemetry, logIntakeTelemetry } from "@/lib/intake/telemetry";
@@ -57,6 +60,9 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const corrections = useRef(0);
+  /** Ids con corrección humana: prioridad máxima al reconciliar reintentos. */
+  const humanEdited = useRef<Set<string>>(new Set());
+
 
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<Record<string, string>>({});
@@ -145,6 +151,8 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
     setResult(null);
     setCandidates([]);
     corrections.current = 0;
+    humanEdited.current = new Set();
+
   }, [previews]);
 
   const handleAnalyze = useCallback(async () => {
@@ -167,7 +175,19 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
         referenceDate: new Date().toISOString().slice(0, 10),
       });
       setResult(run);
-      setCandidates(run.candidates);
+      // Reintento: reconciliar sin pisar correcciones humanas ni duplicar.
+      setCandidates((prev) => {
+        if (prev.length === 0) return run.candidates;
+        const merged = reconcileAfterRetry(prev, run.candidates, humanEdited.current);
+        if (merged.conflicts.length > 0) {
+          notifyWarning({
+            title: "Mantuve tus correcciones",
+            fact: `${merged.conflicts.length} dato(s) del nuevo análisis no coinciden con lo que ya revisaste.`,
+            consequence: "Se conservó tu versión. Puedes cambiarla a mano si quieres.",
+          });
+        }
+        return merged.candidates;
+      });
       corrections.current = 0;
 
       logIntakeTelemetry(
@@ -181,38 +201,15 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
         }),
       );
 
-      if (run.candidates.length === 0 && run.analysisIncomplete) {
-        // Un fallo técnico NUNCA se traduce en "no hay servicios".
-        notifyError({
-          title: "No pudimos completar el análisis",
-          fact:
-            run.failures[0]?.code === "unparseable_extraction"
-              ? "La respuesta del análisis llegó incompleta."
-              : "El análisis de la imagen no terminó.",
-          consequence: "No se creó nada. Puedes reintentar o pegar el texto del turno.",
-        });
-      } else if (run.candidates.length === 0) {
-        notifyWarning({
-          title: "No encontramos servicios",
-          fact: "El archivo no muestra fechas ni eventos que podamos leer.",
-          consequence: "No se creó nada. Prueba con una imagen más nítida o pega el texto.",
-        });
-      } else if (run.analysisIncomplete) {
-        notifyWarning({
-          title: "Encontré un posible turno, pero necesito que revises algunos datos",
-          fact: `${run.candidates.length} servicio(s) detectado(s); ${run.extractionFailures} archivo(s) no se pudieron analizar.`,
-          consequence: "Revisa lo detectado: nada se crea sin tu aprobación.",
-        });
-      } else {
-        notifyInfo({
-          title: `${run.candidates.length} servicios detectados`,
-          fact:
-            run.unresolved.length > 0
-              ? `${run.unresolved.length} elementos necesitan tu revisión.`
-              : "Todos los bloques se interpretaron.",
-          consequence: "Revisa y confirma: nada se crea sin tu aprobación.",
-        });
-      }
+      // Tres resultados distintos, tres mensajes distintos.
+      const copy = describeOutcome(run.outcome, {
+        candidateCount: run.candidates.length,
+        failureKind: run.failureKind ?? "unknown",
+      });
+      const notify =
+        copy.tone === "error" ? notifyError : copy.tone === "warning" ? notifyWarning : notifyInfo;
+      notify({ title: copy.title, fact: copy.fact, consequence: copy.consequence });
+
 
     } catch (error) {
       notifyError({
@@ -228,10 +225,12 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
 
   const handlePatch = useCallback((candidateId: string, patch: Partial<ServiceCandidate>) => {
     corrections.current += 1;
+    humanEdited.current.add(candidateId);
     setCandidates((prev) =>
       prev.map((c) => (c.id === candidateId ? recomputeCandidate({ ...c, ...patch }) : c)),
     );
   }, []);
+
 
   const handleConfirmMatch = useCallback(
     (candidateId: string, field: "client" | "venue") => {
@@ -524,6 +523,22 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
             ))}
           </ul>
         )}
+
+        {result && candidates.length === 0 && result.analysisIncomplete && selectedCompanyId && (
+          <IntakeRecoveryPanel
+            companyId={selectedCompanyId}
+            source={result.source}
+            referenceDate={new Date().toISOString().slice(0, 10)}
+            batchId={result.batchId}
+            failureKind={result.failureKind}
+            recovery={result.recovery}
+            onRecovered={(recovered) => setCandidates(recovered)}
+            onRetry={handleAnalyze}
+            onReset={reset}
+            isBusy={isProcessing}
+          />
+        )}
+
 
         {result && (candidates.length > 0 || result.unresolved.length > 0) && (
           <>
