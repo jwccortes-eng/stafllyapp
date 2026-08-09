@@ -54,14 +54,6 @@ import AssistantSourceCards, {
 
 type IntakeSource = "text" | "image" | "pdf" | "audio" | "excel";
 
-/** Mobile-first: primero los canales que un coordinador usa con una mano. */
-const SOURCE_OPTIONS: { key: IntakeSource; label: string; icon: any }[] = [
-  { key: "audio", label: "Audio", icon: Mic },
-  { key: "image", label: "Imagen", icon: ImagePlus },
-  { key: "text", label: "Texto", icon: MessageSquareText },
-  { key: "pdf", label: "PDF", icon: FileText },
-  { key: "excel", label: "Excel / CSV", icon: FileSpreadsheet },
-];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
