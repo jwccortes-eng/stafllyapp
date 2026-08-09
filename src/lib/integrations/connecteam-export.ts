@@ -394,19 +394,35 @@ export function validateShiftForExport(
     };
   }
 
-  // BLOCK — publication lifecycle.
-  const pub = shift.publication_status;
-  if (pub && pub !== "published") {
+  // CONTEXT — publication lifecycle.
+  //
+  // `publication_status` NO es un requisito del archivo Connecteam: un borrador
+  // completo contiene exactamente la misma información que un publicado.
+  // Exportar un borrador NO lo publica, no notifica y no cambia su estado.
+  // Solo los estados terminales (cancelado/archivado) siguen bloqueando, porque
+  // el turno ya no debe existir en el calendario de Connecteam.
+  const pub = (shift.publication_status ?? "").trim();
+  const TERMINAL = ["cancelled", "canceled", "archived"];
+  if (pub && TERMINAL.includes(pub.toLowerCase())) {
     return {
       status: "blocked",
       meta,
       warnings: [{
-        code: "not_published",
+        code: "terminal_status",
         severity: "block",
-        message: `El turno está en estado "${pub}". Publica antes de exportar.`,
+        message: `El turno está en estado "${pub}" — no debe importarse a Connecteam.`,
       }],
     };
   }
+  if (pub && pub !== "published") {
+    warnings.push({
+      code: "draft_export_context",
+      severity: "info",
+      message: `Stafly: borrador (${pub}). Exportar no lo publica ni notifica a nadie.`,
+    });
+  }
+
+
 
   // BLOCK — mandatory minimum fields.
   if (!shift.date) {
