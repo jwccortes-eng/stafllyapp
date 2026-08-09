@@ -1305,7 +1305,7 @@ function DesktopShifts() {
       startTime: r.start_time ?? null,
       endTime: r.end_time ?? null,
       headcount: r.slots ?? null,
-      assignmentCount: counts.get(r.id) ?? 0,
+      assignmentCount: counts[r.id] ?? 0,
       seriesRef: r.reconciliation_hash ?? null,
     }));
     const result = verifySeriesIntegrity({ intent, persisted });
