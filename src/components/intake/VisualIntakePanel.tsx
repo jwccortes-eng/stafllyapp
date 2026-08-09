@@ -181,11 +181,27 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
         }),
       );
 
-      if (run.candidates.length === 0) {
+      if (run.candidates.length === 0 && run.analysisIncomplete) {
+        // Un fallo técnico NUNCA se traduce en "no hay servicios".
+        notifyError({
+          title: "No pudimos completar el análisis",
+          fact:
+            run.failures[0]?.code === "unparseable_extraction"
+              ? "La respuesta del análisis llegó incompleta."
+              : "El análisis de la imagen no terminó.",
+          consequence: "No se creó nada. Puedes reintentar o pegar el texto del turno.",
+        });
+      } else if (run.candidates.length === 0) {
         notifyWarning({
           title: "No encontramos servicios",
           fact: "El archivo no muestra fechas ni eventos que podamos leer.",
           consequence: "No se creó nada. Prueba con una imagen más nítida o pega el texto.",
+        });
+      } else if (run.analysisIncomplete) {
+        notifyWarning({
+          title: "Encontré un posible turno, pero necesito que revises algunos datos",
+          fact: `${run.candidates.length} servicio(s) detectado(s); ${run.extractionFailures} archivo(s) no se pudieron analizar.`,
+          consequence: "Revisa lo detectado: nada se crea sin tu aprobación.",
         });
       } else {
         notifyInfo({
@@ -197,6 +213,7 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
           consequence: "Revisa y confirma: nada se crea sin tu aprobación.",
         });
       }
+
     } catch (error) {
       notifyError({
         title: "No pudimos analizar el archivo",

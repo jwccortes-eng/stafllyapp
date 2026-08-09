@@ -257,7 +257,36 @@ function conf(
   return Math.max(0, Math.min(1, value));
 }
 
-/** ¿Este servicio propuesto tiene evidencia suficiente para ser candidato? */
+/**
+ * Recurrencia detectada en el texto visual ("Every day for 4 times",
+ * "cada día por 4 veces"). No crea ocurrencias: sólo conserva la señal.
+ */
+export function detectVisualRecurrence(
+  ...texts: Array<string | null | undefined>
+): { raw: string; times: number | null } | null {
+  for (const t of texts) {
+    const text = String(t ?? "").trim();
+    if (!text) continue;
+    const m =
+      /((?:every|each|cada)\s+[a-záéíóúñ]+(?:\s+(?:for|por|durante)\s+(\d{1,3})\s*(?:times|veces|x)?)?)/i.exec(
+        text,
+      ) ?? /(repeat[s]?\s+[^.,\n]{0,40})/i.exec(text);
+    if (m) {
+      const times = m[2] ? Number(m[2]) : null;
+      return { raw: m[1].trim(), times: Number.isFinite(times as number) ? times : null };
+    }
+  }
+  return null;
+}
+
+/**
+ * MÍNIMO DE SERVICIO VISUAL.
+ *
+ * Un bloque es candidato revisable cuando tiene fecha y, además, al menos una
+ * de estas señales estructurales: identidad (lugar / cliente / tipo), horario
+ * o dirección. Una captura de "Shift details" con fecha + horario ya es un
+ * servicio, aunque el Job quede pendiente de confirmar.
+ */
 export function hasMinimumEvidence(service: RawVisualService): boolean {
   const hasDate = !!cleanText(service.service_date);
   const hasIdentity = !!(
@@ -265,8 +294,11 @@ export function hasMinimumEvidence(service: RawVisualService): boolean {
     cleanText(service.client_name) ||
     cleanText(service.service_type)
   );
-  return hasDate && hasIdentity;
+  const hasSchedule = !!(cleanText(service.start_time) || cleanText(service.end_time));
+  const hasAddress = !!cleanText(service.location_text);
+  return hasDate && (hasIdentity || hasSchedule || hasAddress);
 }
+
 
 export function normalizeVisualExtraction(
   input: NormalizeVisualInput,
@@ -311,8 +343,9 @@ export function normalizeVisualExtraction(
             "Bloque detectado sin datos suficientes"),
 
         reason: cleanText(service.service_date)
-          ? "No identificamos lugar, cliente ni tipo de servicio."
+          ? "No identificamos lugar, cliente, tipo de servicio, horario ni dirección."
           : "No identificamos una fecha en este bloque.",
+
         suggestion: cleanText(service.extraction_notes),
         region: {
           page: positiveInt(service.page_number),
@@ -438,7 +471,27 @@ export function normalizeVisualExtraction(
         message: `Agrupado por color (${meta[candidateId].colorGroup}). El color no define el lugar: confirma con el texto.`,
       });
     }
+    if (!venueRaw && !clientRaw) {
+      notices.push({
+        candidateId,
+        message: "Encontré un posible turno, pero falta confirmar el lugar o el cliente.",
+      });
+    }
+    const recurrence = detectVisualRecurrence(
+      service.notes,
+      service.extraction_notes,
+      service.source_excerpt,
+    );
+    if (recurrence) {
+      notices.push({
+        candidateId,
+        message: recurrence.times
+          ? `La imagen indica recurrencia ("${recurrence.raw}"): ${recurrence.times} ocurrencias. Se conserva como dato detectado; aquí sólo se prepara este servicio.`
+          : `La imagen indica recurrencia ("${recurrence.raw}"). Se conserva como dato detectado; aquí sólo se prepara este servicio.`,
+      });
+    }
   });
+
 
   if (services.length === 0) {
     warnings.push("No encontramos servicios legibles en el archivo.");

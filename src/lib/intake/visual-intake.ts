@@ -71,6 +71,13 @@ export interface VisualIntakeInput {
   referenceDate: string;
 }
 
+/** Por qué un archivo no produjo resultado. Distingue fallo de "sin servicios". */
+export interface VisualExtractionFailure {
+  fileName: string;
+  code: string;
+  detail: string | null;
+}
+
 export interface VisualIntakeResult {
   batchId: string | null;
   candidates: ServiceCandidate[];
@@ -83,8 +90,25 @@ export interface VisualIntakeResult {
   pageCount: number;
   duplicatePagesRemoved: number;
   extractionFailures: number;
+  /** Detalle de los fallos técnicos (403/429/parse/descarga). */
+  failures: VisualExtractionFailure[];
+  /** true = el análisis no se completó; NUNCA decir "no encontramos servicios". */
+  analysisIncomplete: boolean;
   latencyMs: number;
 }
+
+const FAILURE_COPY: Record<string, string> = {
+  ai_error: "el análisis no se completó",
+  unparseable_extraction: "la respuesta del análisis no se pudo leer",
+  file_unreadable: "no pudimos abrir el archivo",
+  file_download_failed: "no pudimos descargar el archivo",
+  tenant_path_mismatch: "el archivo no pertenece a esta empresa",
+};
+
+export function describeVisualFailure(code: string): string {
+  return FAILURE_COPY[code] ?? "el análisis no se completó";
+}
+
 
 /**
  * Procesa imágenes / PDFs de punta a punta hasta dejar candidatos listos para
@@ -145,8 +169,22 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
       })),
     },
   });
-  if (error) throw error;
+  if (error) {
+    // El cuerpo del error trae el motivo real (créditos, límite, rechazo).
+    let detail = "";
+    try {
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === "function") {
+        const body = await ctx.clone().json();
+        detail = String(body?.error ?? "");
+      }
+    } catch {
+      /* noop */
+    }
+    throw new Error(detail || (error as Error).message || "El análisis visual no se completó");
+  }
   if ((data as any)?.error) throw new Error(String((data as any).error));
+
 
   const results: Array<{
     file_name?: string;
@@ -162,15 +200,23 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
   const notices: VisualNotice[] = [];
   let pageCount = 0;
   let extractionFailures = 0;
+  const failures: VisualExtractionFailure[] = [];
 
   results.forEach((entry, index) => {
     if (entry.error || !entry.extraction) {
       extractionFailures += 1;
+      const code = entry.error ?? "ai_error";
+      failures.push({
+        fileName: entry.file_name ?? "archivo",
+        code,
+        detail: (entry as { error_detail?: string }).error_detail ?? null,
+      });
       warnings.push(
-        `No pudimos leer ${entry.file_name ?? "un archivo"} (${entry.error ?? "sin resultado"}).`,
+        `${entry.file_name ?? "Un archivo"}: ${describeVisualFailure(code)}.`,
       );
       return;
     }
+
     const normalized = normalizeVisualExtraction({
       extraction: entry.extraction,
       companyId: input.companyId,
@@ -255,7 +301,10 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
     pageCount: pageCount || uploaded.length,
     duplicatePagesRemoved: deduped.removed,
     extractionFailures,
+    failures,
+    analysisIncomplete: extractionFailures > 0,
     latencyMs: Date.now() - startedAt,
+
   };
 }
 
