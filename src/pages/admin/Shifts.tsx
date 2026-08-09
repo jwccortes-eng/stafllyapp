@@ -1211,15 +1211,126 @@ function DesktopShifts() {
     }
     setDraftSaving(true);
     try {
-      const baseShift = await createSingleShift(date, /* skipNotifications */ true, /* forceDraft */ true, /* publishNow */ false);
-      if (!baseShift) return;
-      toast.success("Borrador guardado");
+      // P0 recurrencia: guardar borrador también respeta la serie configurada.
+      // Antes la recurrencia sólo se aplicaba al publicar, así que un borrador
+      // recurrente creaba UNA sola ocurrencia (caso QK-001590).
+      const outcomes = await createServiceSeries({ publishBase: false });
+      const summary = summarizeSeries(outcomes);
+      if (summary.created + summary.reused === 0) return;
+      reportSeriesOutcome(outcomes, summary, /* publishedBase */ false);
       createSession.endSession(); // P0.4 — borrador en BD guardado → sesión local limpia
       setCreateOpen(false);
       resetForm();
       loadData();
     } finally {
       setDraftSaving(false);
+    }
+  };
+
+  /**
+   * P0 — RECURRING SERVICE CREATION.
+   *
+   * Crea la serie completa como Servicios independientes. Garantías:
+   *  - la ocurrencia origen y las repeticiones usan el MISMO camino de escritura;
+   *  - cada ocurrencia lleva su propia referencia estable → retry/doble tap
+   *    reutilizan la fila en vez de duplicarla;
+   *  - copiar workers es opcional y NUNCA condiciona la creación del Servicio;
+   *  - un fallo de assignment no borra ni aborta el resto de la serie.
+   */
+  const createServiceSeries = async (
+    opts: { publishBase: boolean },
+  ): Promise<OccurrenceOutcome[]> => {
+    if (!selectedCompanyId || !date) return [];
+
+    if (!recurrenceIntentRef.current) recurrenceIntentRef.current = newRecurrenceIntentId();
+    const intentId = recurrenceIntentRef.current;
+
+    const repeatDates = repeatConfig.enabled ? computeRepeatDates(date, repeatConfig) : [];
+    const plan = planRecurrenceOccurrences(date, repeatDates, intentId);
+    const isSeries = plan.length > 1;
+
+    // Copiar workers es una decisión explícita. Fuera de la serie se mantiene
+    // el comportamiento actual (el equipo elegido va al turno creado).
+    const baseEmployees = [...selectedEmployees];
+    const copyWorkers = !isSeries || repeatConfig.copyAssignments;
+
+    const outcomes: OccurrenceOutcome[] = [];
+    for (const occ of plan) {
+      const employeeIds = occ.isBase || copyWorkers ? baseEmployees : [];
+      let workersCopied = employeeIds.length;
+      let assignError: unknown = null;
+      try {
+        const shift = await createSingleShift(
+          occ.date,
+          /* skipNotifications */ !occ.isBase || isSeries || !opts.publishBase,
+          /* forceDraft */ !(occ.isBase && opts.publishBase),
+          /* publishNow */ occ.isBase && opts.publishBase,
+          {
+            employeeIds,
+            // Sólo las series necesitan clave de idempotencia: un Servicio
+            // suelto conserva exactamente el comportamiento anterior.
+            sourceRef: isSeries ? occ.sourceRef : null,
+            onAssignError: (e) => { assignError = e; workersCopied = 0; },
+          },
+        );
+        outcomes.push({
+          date: occ.date,
+          isBase: occ.isBase,
+          status: shift ? "created" : "failed",
+          shiftId: shift?.id ?? null,
+          ref: (shift as any)?.shift_ref ?? null,
+          workersRequested: employeeIds.length,
+          workersCopied: shift ? workersCopied : 0,
+          error: assignError ? String((assignError as any)?.message ?? assignError) : null,
+        });
+      } catch (e) {
+        outcomes.push({
+          date: occ.date,
+          isBase: occ.isBase,
+          status: "failed",
+          shiftId: null,
+          ref: null,
+          workersRequested: employeeIds.length,
+          workersCopied: 0,
+          error: String((e as any)?.message ?? e),
+        });
+      }
+    }
+    return outcomes;
+  };
+
+  /** Feedback único de la serie: qué se creó, qué falló y qué hacer. */
+  const reportSeriesOutcome = (
+    outcomes: OccurrenceOutcome[],
+    summary: ReturnType<typeof summarizeSeries>,
+    publishedBase: boolean,
+  ) => {
+    const persisted = summary.created + summary.reused;
+    if (summary.total === 1) {
+      toast.success(publishedBase ? "Turno publicado" : "Borrador guardado");
+    } else {
+      toast.success(seriesResultMessage(summary), {
+        description: publishedBase
+          ? "La fecha original queda publicada; las repeticiones quedan en borrador para revisarlas."
+          : "Todas las ocurrencias quedan en borrador, cada una con su propia referencia.",
+      });
+    }
+    if (summary.failed > 0) {
+      const failedDates = outcomes.filter((o) => o.status === "failed").map((o) => o.date).join(", ");
+      notifyWarning({
+        key: "shift-series-failed",
+        title: "Algunas fechas de la serie no se crearon",
+        fact: `No pudimos crear: ${failedDates}.`,
+        consequence: "Los Servicios ya creados se conservan. Vuelve a guardar para completar sólo las fechas faltantes.",
+      });
+    }
+    if (summary.workerFailures > 0) {
+      notifyWarning({
+        key: "shift-series-workers",
+        title: "Los Servicios se crearon, pero falta equipo",
+        fact: `${summary.workerFailures} fecha(s) quedaron sin trabajadores copiados.`,
+        consequence: "Abre cada Servicio y asigna el equipo para no duplicar asignaciones.",
+      });
     }
   };
 
