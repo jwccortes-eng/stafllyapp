@@ -88,6 +88,12 @@ export function ExportConnecteamBulkDialog({
     [rows],
   );
 
+  // Colisiones: filas que Connecteam vería como el MISMO turno y fusionaría.
+  const duplicateCount = useMemo(() => {
+    const exportable = rows.filter(r => r.validation.status !== "blocked");
+    return findDuplicateRowSignatures(exportable.map(r => r.row)).length;
+  }, [rows]);
+
   const handleDownload = () => {
     if (!canExport) {
       toast.error(EXPORT_PERMISSION_DENIED_COPY);
@@ -100,10 +106,15 @@ export function ExportConnecteamBulkDialog({
     }
     const csvBody = serializeConnecteamCsv(exportable.map(r => r.row));
     const csv = CSV_UTF8_BOM + csvBody;
+    const dataRows = countCsvDataRows(csv);
     downloadCsv(bulkExportFilename(), csv);
-    toast.success(`CSV descargado — ${exportable.length} turno${exportable.length === 1 ? "" : "s"}.`);
+    toast.success(
+      `CSV descargado — ${dataRows} fila${dataRows === 1 ? "" : "s"} para ${exportable.length} ${ADMIN_LEX.EntityPlural.toLowerCase()}.`,
+      { description: "Una fila por servicio. Verifica el mismo número en el Overview de Connecteam." },
+    );
     onOpenChange(false);
   };
+
 
   const canDownload = canExport && summary.exportable > 0;
 
