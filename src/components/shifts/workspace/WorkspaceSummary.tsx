@@ -9,12 +9,14 @@
  *
  * Phase 2: UI-only. No DB writes, no notifications, no portal touches.
  */
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShiftSummaryPanel } from "../form/ShiftSummaryPanel";
 import { PendingBadgeRow } from "./PendingBadgeRow";
 import { WorkerPreviewCard } from "./WorkerPreviewCard";
+import { ServiceReadinessCard } from "./ServiceReadinessCard";
+import { getServiceOperationalReadiness } from "@/lib/shifts/service-operational-readiness";
 import {
   computeShiftPendingFlags,
   describePublishState,
@@ -61,6 +63,8 @@ interface Props {
   payOverrideActive: boolean;
   // Edit-only: real publication_status from DB if present
   publicationStatus?: string | null;
+  /** Timezone efectiva del turno (opcional; default tenant). */
+  timezone?: string | null;
   /** Bloqueos canónicos de publicación. */
   publishBlockers?: ReadinessBlocker[];
 }
@@ -95,6 +99,39 @@ function WorkspaceSummaryImpl(p: Props) {
     isReady: pending.isReady && blockers.length === 0,
   });
 
+  // Readiness canónico: publicar ≠ exportar a Connecteam.
+  const operational = useMemo(
+    () =>
+      getServiceOperationalReadiness({
+        title: p.title,
+        date: p.date,
+        startTime: p.startTime,
+        endTime: p.endTime,
+        clientId: p.clientId,
+        locationId: p.locationId,
+        jobSiteLocationId: p.jobSiteLocationId,
+        jobSiteAddress: p.jobSiteAddress,
+        meetingPoint: p.meetingPoint,
+        meetingPointLocationId: p.meetingPointLocationId,
+        transportRequired: p.transportRequired,
+        driverIds: Array.from({ length: p.driversInTeam }, (_, i) => String(i)),
+        assignedCount: p.assignedCount,
+        claimable: p.claimable,
+        publicationStatus: p.publicationStatus ?? null,
+        slots: p.slotsNum,
+        timezone: p.timezone ?? "America/New_York",
+        connecteamJobLabel: p.clientName ?? p.jobSiteLabel ?? null,
+        addressLabel: (p.jobSiteAddress ?? "").trim() || p.jobSiteLabel || null,
+      }),
+    [
+      p.title, p.date, p.startTime, p.endTime, p.clientId, p.locationId,
+      p.jobSiteLocationId, p.jobSiteAddress, p.meetingPoint, p.meetingPointLocationId,
+      p.transportRequired, p.driversInTeam, p.assignedCount, p.claimable,
+      p.publicationStatus, p.slotsNum, p.timezone, p.clientName, p.jobSiteLabel,
+    ],
+  );
+
+
   const hasManualAddress = !!(p.jobSiteAddress && p.jobSiteAddress.trim());
   const jobsiteMissing = !p.locationId && !p.jobSiteLocationId && !hasManualAddress;
   const meetingMissing =
@@ -123,7 +160,10 @@ function WorkspaceSummaryImpl(p: Props) {
         </div>
       </div>
 
-      {/* 3) Existing ops summary (unchanged) */}
+      {/* 3) Publicar ≠ Exportar a Connecteam */}
+      <ServiceReadinessCard readiness={operational} />
+
+      {/* 4) Existing ops summary (unchanged) */}
       <ShiftSummaryPanel
         mode={p.mode}
         title={p.title}
