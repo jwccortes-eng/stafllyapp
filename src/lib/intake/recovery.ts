@@ -377,12 +377,15 @@ export function normalizeStructuralText(text: string): string {
   return joined || text;
 }
 
+/**
+ * Convierte evidencia estructural en candidatos revisables usando el parser
+ * canónico ya existente. No hay OCR nuevo, ni segundo LLM, ni segundo modelo.
+ */
 export function runStructuralRecovery(input: RecoveryInput): RecoveryResult {
   const failureKind = input.failureKind ?? "unknown";
   const evidence = detectStructuralEvidence(input.text);
   const notices: string[] = [];
   const recurrence = detectRecurrenceSignal(input.text);
-
 
   if (!evidence.hasMinimumServiceEvidence) {
     return {
@@ -396,7 +399,8 @@ export function runStructuralRecovery(input: RecoveryInput): RecoveryResult {
     };
   }
 
-  const parsed = parseTextToCandidates(input.text, {
+  const parsed = parseTextToCandidates(normalizeStructuralText(input.text), {
+
     companyId: input.companyId, // SIEMPRE del contexto autenticado
     batchId: input.batchId ?? null,
     source: input.source,
