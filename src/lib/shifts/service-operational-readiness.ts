@@ -195,16 +195,26 @@ export function getServiceOperationalReadiness(
     });
   }
   const slots = Number(input.slots ?? 0);
-  if (slots <= 0 && input.assignedCount === 0) {
+  if (input.slotsPending) {
+    // PENDIENTE ≠ 0. Connecteam no exige `Number of users`: la columna viaja
+    // vacía y el turno se crea igual. No bloquea el export.
+    warnings.push({
+      code: "export.headcount_pending",
+      message:
+        "Cantidad de personal pendiente — Number of users viaja vacío. No se inventa 0 ni 1.",
+      scope: "export",
+    });
+  } else if (slots <= 0 && input.assignedCount === 0) {
     blockers.push({
       code: "export.no_capacity",
       label: "Plazas",
-      reason: "Sin plazas declaradas ni personal asignado no hay nada que importar.",
+      reason: "Capacidad declarada en 0 y sin personal asignado: no hay nada que importar.",
       field: "slots",
       action: { label: "Definir plazas", anchorId: SERVICE_CLIENT_ANCHOR },
       scope: "export",
     });
   }
+
   if (!txt(input.addressLabel)) {
     warnings.push({
       code: "export.address_missing",
