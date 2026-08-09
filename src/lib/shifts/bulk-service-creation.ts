@@ -224,7 +224,7 @@ export function bulkRowToSnapshot(row: BulkServiceRow, companyId: string): Serie
     transportNotes: null,
     driverIds: [],
     clockMethod: "both",
-    attendanceMode: "manual",
+    attendanceMode: "clock",
     meetingTime: null,
     employeeIds: [],
     publicationIntent: "draft",

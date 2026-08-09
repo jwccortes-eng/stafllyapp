@@ -68,7 +68,7 @@ export interface SeriesServiceSnapshot {
   transportNotes: string | null;
   driverIds: string[];
   clockMethod: "mobile" | "kiosk" | "both";
-  attendanceMode: string;
+  attendanceMode: ShiftAttendanceMode;
   meetingTime: string | null;
   employeeIds: string[];
   publicationIntent: "draft" | "publish_base";

@@ -97,7 +97,7 @@ export function snapshotFromServiceRow(
     transportNotes: row.transportation_notes ?? null,
     driverIds: [...(opts.driverIds ?? [])],
     clockMethod,
-    attendanceMode: row.attendance_mode ?? "manual",
+    attendanceMode: normalizeAttendanceMode(row.attendance_mode),
     meetingTime: row.meeting_time ?? null,
     employeeIds: [...(opts.employeeIds ?? [])],
     publicationIntent: opts.publicationIntent ?? "draft",
