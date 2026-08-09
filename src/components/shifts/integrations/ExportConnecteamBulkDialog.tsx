@@ -21,6 +21,7 @@ import type { Shift, Assignment, Employee, SelectOption } from "@/components/shi
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
 import { useCanExportConnecteam, EXPORT_PERMISSION_DENIED_COPY } from "@/lib/integrations/connecteam-export-permission";
 import { ExportStateBadges } from "./ExportStateBadges";
+import { useConnecteamMapping } from "@/hooks/useConnecteamMapping";
 
 interface Props {
   open: boolean;
