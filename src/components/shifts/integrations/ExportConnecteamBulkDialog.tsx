@@ -70,6 +70,9 @@ export function ExportConnecteamBulkDialog({
 }: Props) {
   // Canonical, tenant-aware authorization — same policy on every entry point.
   const canExport = useCanExportConnecteam();
+  const { user } = useAuth();
+  const { logAudit } = useAuditLog();
+
   // Mapping Job/Sub item declarado por ESTA compañía (fuente canónica).
   const { mapping } = useConnecteamMapping();
   const buildCtx = useMemo(() => ({
