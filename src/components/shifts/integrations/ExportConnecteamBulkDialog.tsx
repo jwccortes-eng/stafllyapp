@@ -362,11 +362,25 @@ export function ExportConnecteamBulkDialog({
                             {g.items.length > 0 && ` · ${g.meta.explanation}`}
                           </p>
                         </div>
-                        {g.items.length > 0 && g.meta.batchActionLabel && (
-                          <span className="text-[11px] text-muted-foreground shrink-0">
-                            {g.meta.batchActionLabel} abajo
-                          </span>
+                        {g.items.length > 0 && g.meta.key === "missing_destination" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0 h-8 text-[11px]"
+                            onClick={() => setMappingOpen(true)}
+                            disabled={missingDestinationSubjects.length === 0}
+                          >
+                            {g.meta.batchActionLabel}
+                          </Button>
                         )}
+                        {g.items.length > 0 &&
+                          g.meta.batchActionLabel &&
+                          g.meta.key !== "missing_destination" && (
+                            <span className="text-[11px] text-muted-foreground shrink-0">
+                              {g.meta.batchActionLabel} abajo
+                            </span>
+                          )}
+
                       </div>
                     ))}
                   </div>
