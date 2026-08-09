@@ -346,7 +346,10 @@ export default function AdminLayout() {
         <main className={cn(
           "transition-all duration-300 ease-in-out min-h-[calc(100vh-3.5rem)] min-w-0",
           collapsed ? "ms-[68px]" : "ms-[240px]",
-          "p-3 sm:p-4 lg:p-6 xl:p-8 pt-4"
+          // Gutters canónicos del shell: 16 (mobile) · 20–24 (tablet) · 32 (desktop)
+          SHELL_GUTTER_X,
+          "py-6 lg:py-8"
+
         )}>
           <div className="animate-fade-in w-full max-w-[1600px] 2xl:max-w-[1760px] mx-auto min-w-0">
             <Outlet />
