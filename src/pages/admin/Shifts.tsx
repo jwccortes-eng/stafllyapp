@@ -552,6 +552,10 @@ function DesktopShifts() {
   // Identidad estable de la intención de recurrencia: sobrevive al retry del
   // mismo formulario y se limpia al resetear. Sin ella, doble tap duplicaría.
   const recurrenceIntentRef = useRef<string | null>(null);
+  // La intención se congela antes de abrir cualquier confirmación. El helper
+  // nunca vuelve a leer estado React mutable mientras persiste la serie.
+  const pendingRecurrenceSubmitRef = useRef<RecurrenceSubmitSnapshot | null>(null);
+  const seriesSubmitLockRef = useRef(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   // Phase 2C-A — Emergency Worker create flow (admin-only). Owned here so
   // roster refresh + pre-select can be applied for both entry points
@@ -830,6 +834,8 @@ function DesktopShifts() {
     setNewLocationName(""); setNewLocationAddress(""); setShowAddLocation(false);
     setRepeatConfig(DEFAULT_REPEAT);
     recurrenceIntentRef.current = null;
+    pendingRecurrenceSubmitRef.current = null;
+    seriesSubmitLockRef.current = false;
   };
 
   // ── S3 — Local autosave for the create-shift form (NO DB writes) ──
@@ -1230,10 +1236,11 @@ function DesktopShifts() {
     }
     setDraftSaving(true);
     try {
+      const submit = captureRecurrenceSubmit();
       // P0 recurrencia: guardar borrador también respeta la serie configurada.
       // Antes la recurrencia sólo se aplicaba al publicar, así que un borrador
       // recurrente creaba UNA sola ocurrencia (caso QK-001590).
-      const outcomes = await createServiceSeries({ publishBase: false });
+      const outcomes = await createServiceSeries({ publishBase: false }, submit);
       const summary = summarizeSeries(outcomes);
       if (summary.created + summary.reused === 0) return;
       reportSeriesOutcome(outcomes, summary, /* publishedBase */ false);
@@ -1244,6 +1251,28 @@ function DesktopShifts() {
     } finally {
       setDraftSaving(false);
     }
+  };
+
+  const captureRecurrenceSubmit = (): RecurrenceSubmitSnapshot => {
+    if (!recurrenceIntentRef.current) recurrenceIntentRef.current = newRecurrenceIntentId();
+    const intentId = recurrenceIntentRef.current;
+    const repeatDates = repeatConfig.enabled ? computeRepeatDates(date, repeatConfig) : [];
+    const submit = freezeRecurrenceSubmit({
+      intentId,
+      baseDate: date,
+      repeatDates,
+      config: {
+        enabled: repeatConfig.enabled,
+        mode: repeatConfig.mode,
+        selectedDays: repeatConfig.selectedDays,
+        rangeStart: repeatConfig.rangeStart,
+        rangeEnd: repeatConfig.rangeEnd,
+        nextNDays: repeatConfig.nextNDays,
+        copyAssignments: repeatConfig.copyAssignments,
+      },
+    });
+    pendingRecurrenceSubmitRef.current = submit;
+    return submit;
   };
 
   /**
@@ -1258,28 +1287,26 @@ function DesktopShifts() {
    */
   const createServiceSeries = async (
     opts: { publishBase: boolean },
+    submit: RecurrenceSubmitSnapshot,
   ): Promise<OccurrenceOutcome[]> => {
-    if (!selectedCompanyId || !date) return [];
-
-    if (!recurrenceIntentRef.current) recurrenceIntentRef.current = newRecurrenceIntentId();
-    const intentId = recurrenceIntentRef.current;
-
-    const repeatDates = repeatConfig.enabled ? computeRepeatDates(date, repeatConfig) : [];
-    const plan = planRecurrenceOccurrences(date, repeatDates, intentId);
+    if (!selectedCompanyId || !submit.baseDate || seriesSubmitLockRef.current) return [];
+    seriesSubmitLockRef.current = true;
+    const plan = submit.occurrences;
     const isSeries = plan.length > 1;
 
     // Copiar workers es una decisión explícita. Fuera de la serie se mantiene
     // el comportamiento actual (el equipo elegido va al turno creado).
     const baseEmployees = [...selectedEmployees];
-    const copyWorkers = !isSeries || repeatConfig.copyAssignments;
+    const copyWorkers = !isSeries || submit.copyAssignments;
 
     const outcomes: OccurrenceOutcome[] = [];
-    for (const occ of plan) {
-      const employeeIds = occ.isBase || copyWorkers ? baseEmployees : [];
-      let workersCopied = employeeIds.length;
-      let assignError: unknown = null;
-      try {
-        const shift = await createSingleShift(
+    try {
+      for (const occ of plan) {
+        const employeeIds = occ.isBase || copyWorkers ? baseEmployees : [];
+        let workersCopied = employeeIds.length;
+        let assignError: unknown = null;
+        try {
+          const shift = await createSingleShift(
           occ.date,
           /* skipNotifications */ !occ.isBase || isSeries || !opts.publishBase,
           /* forceDraft */ !(occ.isBase && opts.publishBase),
@@ -1292,30 +1319,35 @@ function DesktopShifts() {
             onAssignError: (e) => { assignError = e; workersCopied = 0; },
           },
         );
-        outcomes.push({
-          date: occ.date,
-          isBase: occ.isBase,
-          status: shift ? "created" : "failed",
-          shiftId: shift?.id ?? null,
-          ref: (shift as any)?.shift_ref ?? null,
-          workersRequested: employeeIds.length,
-          workersCopied: shift ? workersCopied : 0,
-          error: assignError ? String((assignError as any)?.message ?? assignError) : null,
-        });
-      } catch (e) {
-        outcomes.push({
-          date: occ.date,
-          isBase: occ.isBase,
-          status: "failed",
-          shiftId: null,
-          ref: null,
-          workersRequested: employeeIds.length,
-          workersCopied: 0,
-          error: String((e as any)?.message ?? e),
-        });
+          outcomes.push({
+            date: occ.date,
+            isBase: occ.isBase,
+            status: shift ? "created" : "failed",
+            shiftId: shift?.id ?? null,
+            ref: (shift as any)?.shift_ref ?? null,
+            workersRequested: employeeIds.length,
+            workersCopied: shift ? workersCopied : 0,
+            error: assignError ? String((assignError as any)?.message ?? assignError) : null,
+            sourceRef: occ.sourceRef,
+          });
+        } catch (e) {
+          outcomes.push({
+            date: occ.date,
+            isBase: occ.isBase,
+            status: "failed",
+            shiftId: null,
+            ref: null,
+            workersRequested: employeeIds.length,
+            workersCopied: 0,
+            error: String((e as any)?.message ?? e),
+            sourceRef: occ.sourceRef,
+          });
+        }
       }
+      return outcomes;
+    } finally {
+      seriesSubmitLockRef.current = false;
     }
-    return outcomes;
   };
 
   /** Feedback único de la serie: qué se creó, qué falló y qué hacer. */
@@ -1379,7 +1411,8 @@ function DesktopShifts() {
 
     setSaving(true);
     try {
-      const outcomes = await createServiceSeries({ publishBase: true });
+      const submit = pendingRecurrenceSubmitRef.current ?? captureRecurrenceSubmit();
+      const outcomes = await createServiceSeries({ publishBase: true }, submit);
       const summary = summarizeSeries(outcomes);
       if (summary.created + summary.reused === 0) { setSaving(false); return; }
       reportSeriesOutcome(outcomes, summary, /* publishedBase */ true);
@@ -2778,7 +2811,7 @@ function DesktopShifts() {
         isDirty={Boolean(title.trim() || selectedEmployees.length > 0 || notes.trim() || clientId || locationId)}
         repeatConfig={repeatConfig}
         onRepeatChange={setRepeatConfig}
-        onRequestSave={() => setConfirmOpen(true)}
+        onRequestSave={() => { captureRecurrenceSubmit(); setConfirmOpen(true); }}
         onSaveDraft={handleSaveDraft}
         onAddNewEmployee={() => setQuickAddOpen(true)}
         onAddEmergencyWorker={() => {

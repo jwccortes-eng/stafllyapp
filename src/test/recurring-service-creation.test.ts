@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   newRecurrenceIntentId,
+  freezeRecurrenceSubmit,
   parseRecurrenceRef,
   planRecurrenceOccurrences,
   recurrenceOccurrenceRef,
@@ -53,6 +54,43 @@ describe("recurrence — modelo de serie", () => {
     ]);
     expect(plan[0].isBase).toBe(true);
     expect(new Set(plan.map((p) => p.sourceRef)).size).toBe(4);
+  });
+
+  it("QK-001592: congela el payload real antes de las confirmaciones", () => {
+    const config = {
+      ...DEFAULT_REPEAT,
+      enabled: true,
+      mode: "next_n" as const,
+      nextNDays: 3,
+      copyAssignments: true,
+    };
+    const repeatDates = computeRepeatDates("2026-08-10", config);
+    const submit = freezeRecurrenceSubmit({
+      intentId: "qk-001592-submit",
+      baseDate: "2026-08-10",
+      repeatDates,
+      config,
+    });
+
+    // Payload operacional observado en QK-001592: publicado, 16:00–21:00,
+    // 6 plazas y 6 workers. La recurrencia debe sobrevivir como parte del submit.
+    const payload = {
+      company_id: "00000000-0000-0000-0000-000000000001",
+      title: "Evento",
+      date: submit.baseDate,
+      start_time: "16:00",
+      end_time: "21:00",
+      slots: 6,
+      publication_status: "published",
+      employee_ids: Array.from({ length: 6 }, (_, i) => `worker-${i + 1}`),
+      recurrence: submit,
+    };
+
+    expect(payload.recurrence.occurrences.map((o) => o.date)).toEqual([
+      "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13",
+    ]);
+    expect(new Set(payload.recurrence.occurrences.map((o) => o.sourceRef)).size).toBe(4);
+    expect(payload.employee_ids).toHaveLength(6);
   });
 
   it("nunca duplica la fecha origen ni fechas repetidas", () => {
