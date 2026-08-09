@@ -1339,7 +1339,7 @@ function DesktopShifts() {
         try {
           const shift = await createSingleShift(
           occ.date,
-          /* skipNotifications */ !occ.isBase || isSeries || !opts.publishBase,
+          /* skipNotifications */ !occ.isBase || isSeries || service.publicationIntent !== "publish_base",
           /* forceDraft */ !(occ.isBase && service.publicationIntent === "publish_base"),
           /* publishNow */ occ.isBase && service.publicationIntent === "publish_base",
           {
