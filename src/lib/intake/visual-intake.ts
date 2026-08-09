@@ -26,6 +26,15 @@ import {
   type VisualCandidateMeta,
   type VisualNotice,
 } from "./visual-extraction";
+import {
+  classifyAnalysisOutcome,
+  classifyProviderFailure,
+  runStructuralRecovery,
+  type IntakeAnalysisOutcome,
+  type ProviderFailureKind,
+  type RecoveryResult,
+} from "./recovery";
+
 
 export const VISUAL_INTAKE_BUCKET = "service-intake-files";
 
