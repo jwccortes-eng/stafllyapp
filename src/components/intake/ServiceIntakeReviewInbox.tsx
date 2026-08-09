@@ -227,6 +227,21 @@ export function ServiceIntakeReviewInbox({
     [candidates, selected],
   );
 
+  /**
+   * Cuántos de los borradores que se van a crear seguirán con pendientes
+   * (venue, hora fin, personal, Job de Connecteam) después de guardarse.
+   */
+  const pendingAfterCreate = useMemo(
+    () =>
+      candidates.filter((c) => {
+        if (!creatableSelected.includes(c.id)) return false;
+        const r = getCandidateReadiness(c);
+        return r.publishGaps.length > 0 || r.exportGaps.length > 0;
+      }).length,
+    [candidates, creatableSelected],
+  );
+
+
   const allCreated = candidates.length > 0 && counts.ready === 0 && counts.created > 0;
 
   const toggle = (id: string) =>
