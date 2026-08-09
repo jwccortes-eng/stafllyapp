@@ -50,13 +50,12 @@ export function ConnecteamMappingSheet({ open, onOpenChange, subjects }: Props) 
     if (!open) return;
     const first = subjects[0];
     setSubjectKey(first ? `${first.kind}:${first.id}` : "");
-    const existing = first
-      ? mapping.entries[first.kind === "title" ? "" : `${first.kind}:${first.id}`]
-      : undefined;
+    const existing = first ? mapping.entries[mappingKey(first.kind, first.id)] : undefined;
     setJob(existing?.job ?? "");
     setSubItem(existing?.subItem ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, subjects]);
+
 
   const handleSave = () => {
     if (!subject) {
