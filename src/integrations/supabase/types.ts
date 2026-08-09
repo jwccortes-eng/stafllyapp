@@ -3461,6 +3461,83 @@ export type Database = {
         }
         Relationships: []
       }
+      eldm_signals: {
+        Row: {
+          attributes: Json
+          client_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          domain: string
+          evidence_ref: string | null
+          id: string
+          knowledge_kind: string
+          occurred_at: string
+          person_id: string | null
+          scope_level: string
+          service_type: string | null
+          source_reference: string
+          subject_role: string | null
+          superseded_at: string | null
+          superseded_by: string | null
+          superseded_reason: string | null
+          venue_id: string | null
+          verb: string
+        }
+        Insert: {
+          attributes?: Json
+          client_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          domain: string
+          evidence_ref?: string | null
+          id?: string
+          knowledge_kind: string
+          occurred_at: string
+          person_id?: string | null
+          scope_level?: string
+          service_type?: string | null
+          source_reference: string
+          subject_role?: string | null
+          superseded_at?: string | null
+          superseded_by?: string | null
+          superseded_reason?: string | null
+          venue_id?: string | null
+          verb: string
+        }
+        Update: {
+          attributes?: Json
+          client_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          domain?: string
+          evidence_ref?: string | null
+          id?: string
+          knowledge_kind?: string
+          occurred_at?: string
+          person_id?: string | null
+          scope_level?: string
+          service_type?: string | null
+          source_reference?: string
+          subject_role?: string | null
+          superseded_at?: string | null
+          superseded_by?: string | null
+          superseded_reason?: string | null
+          venue_id?: string | null
+          verb?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eldm_signals_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "eldm_signals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
