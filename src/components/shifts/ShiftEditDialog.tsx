@@ -17,6 +17,7 @@ import { useShiftDraftAutosave } from "@/hooks/useShiftDraftAutosave";
 import { syncShiftDriverRoles, driverIdsFromAssignments } from "@/lib/shifts/driver-sync";
 import { notifyWarning } from "@/lib/feedback/notify";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import type { Shift, SelectOption, Employee, Assignment } from "./types";
 
 interface ShiftEditDialogProps {
