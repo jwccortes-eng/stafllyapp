@@ -343,8 +343,9 @@ export function normalizeVisualExtraction(
             "Bloque detectado sin datos suficientes"),
 
         reason: cleanText(service.service_date)
-          ? "No identificamos lugar, cliente ni tipo de servicio."
+          ? "No identificamos lugar, cliente, tipo de servicio, horario ni dirección."
           : "No identificamos una fecha en este bloque.",
+
         suggestion: cleanText(service.extraction_notes),
         region: {
           page: positiveInt(service.page_number),
