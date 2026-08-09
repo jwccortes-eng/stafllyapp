@@ -607,6 +607,14 @@ export function ServiceIntakeReviewInbox({
           {creatableSelected.length} seleccionados · {counts.needsReview} necesitan revisión
           {counts.created > 0 ? ` · ${counts.created} ya creados` : ""}
         </p>
+        {pendingAfterCreate > 0 && creatableSelected.length > 0 && (
+          <p className="pb-2 text-xs text-muted-foreground">
+            {creatableSelected.length}{" "}
+            {creatableSelected.length === 1 ? "borrador se creará" : "borradores se crearán"}.{" "}
+            {pendingAfterCreate === creatableSelected.length ? "Todos necesitan" : `${pendingAfterCreate} necesitan`}{" "}
+            completar información antes de exportar.
+          </p>
+        )}
         <Button
           className="h-14 w-full text-base"
           disabled={isBusy || submitting || creatableSelected.length === 0}
@@ -617,6 +625,7 @@ export function ServiceIntakeReviewInbox({
             : `Crear ${creatableSelected.length} ${creatableSelected.length === 1 ? "borrador" : "borradores"}`}
         </Button>
       </div>
+
 
       {companyId && resolving && (
         <EntityResolutionSheet
