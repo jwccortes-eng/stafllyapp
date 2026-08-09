@@ -2060,7 +2060,7 @@ export default function ImportSchedule() {
   return (
     <div className="space-y-6">
       <OperationalScreenHeader
-        title="✨ Smart Operations Assistant"
+        title="Smart Operations Assistant"
         context="Cuéntame qué recibiste hoy y yo organizaré el trabajo contigo."
         action={
           <Button asChild variant="outline" className="min-h-11">

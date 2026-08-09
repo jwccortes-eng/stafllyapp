@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardPaste, Loader2 } from "lucide-react";
+import { ClipboardPaste, Loader2, Sparkles } from "lucide-react";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { notifyError, notifyInfo, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
@@ -339,7 +339,8 @@ export function PastedTextIntakePanel() {
             className="min-h-11 w-full sm:w-auto"
           >
             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            ✨ Analizar
+            {!isProcessing && <Sparkles className="mr-2 h-4 w-4" />}
+            Analizar
           </Button>
           {candidates.length > 0 && (
             <Button
