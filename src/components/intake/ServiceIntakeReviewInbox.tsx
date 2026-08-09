@@ -307,6 +307,7 @@ export function ServiceIntakeReviewInbox({
     const created = c.reviewStatus === "created";
     const excluded = c.reviewStatus === "excluded";
     const missing = missingLabels(c);
+    const readiness = getCandidateReadiness(c);
     const showDetail = detailIds.includes(c.id);
     const notices = noticesByCandidate?.[c.id] ?? [];
     const approximateTime = notices.some((notice) => /hora es aproximada/i.test(notice));
