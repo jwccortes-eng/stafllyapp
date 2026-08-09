@@ -27,6 +27,7 @@ import {
   recomputeCandidate,
   type ServiceCandidate,
 } from "@/lib/intake";
+import { getCandidateReadiness } from "@/lib/intake/candidate";
 import { createDraftServicesFromCandidates, applyOutcome } from "@/lib/intake/create-draft-service";
 import { runPastedTextIntake, refreshDuplicateStatus } from "@/lib/intake/text-intake";
 import { closeServiceIntakeBatch, summarizeCandidates } from "@/lib/intake/batch";
