@@ -182,6 +182,8 @@ export function getCalendarServiceIdentity(
     claimable: !!shift.claimable,
     publicationStatus: code,
     slots: slots ?? 0,
+    slotsPending,
+
     timezone: ctx.defaultTimezone ?? null,
     connecteamJobLabel:
       txt(ctx.clientName) || txt(ctx.locationName) || txt(shift.job_site_address) || null,
