@@ -71,6 +71,13 @@ export interface VisualIntakeInput {
   referenceDate: string;
 }
 
+/** Por qué un archivo no produjo resultado. Distingue fallo de "sin servicios". */
+export interface VisualExtractionFailure {
+  fileName: string;
+  code: string;
+  detail: string | null;
+}
+
 export interface VisualIntakeResult {
   batchId: string | null;
   candidates: ServiceCandidate[];
@@ -83,8 +90,25 @@ export interface VisualIntakeResult {
   pageCount: number;
   duplicatePagesRemoved: number;
   extractionFailures: number;
+  /** Detalle de los fallos técnicos (403/429/parse/descarga). */
+  failures: VisualExtractionFailure[];
+  /** true = el análisis no se completó; NUNCA decir "no encontramos servicios". */
+  analysisIncomplete: boolean;
   latencyMs: number;
 }
+
+const FAILURE_COPY: Record<string, string> = {
+  ai_error: "el análisis no se completó",
+  unparseable_extraction: "la respuesta del análisis no se pudo leer",
+  file_unreadable: "no pudimos abrir el archivo",
+  file_download_failed: "no pudimos descargar el archivo",
+  tenant_path_mismatch: "el archivo no pertenece a esta empresa",
+};
+
+export function describeVisualFailure(code: string): string {
+  return FAILURE_COPY[code] ?? "el análisis no se completó";
+}
+
 
 /**
  * Procesa imágenes / PDFs de punta a punta hasta dejar candidatos listos para
