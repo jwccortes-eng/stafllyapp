@@ -170,9 +170,18 @@ export function ExportConnecteamPreviewDialog({
                     <Badge variant="outline" className="text-[10px] border-warning/40 text-warning">Fallback — puede mostrar "Select" en Connecteam</Badge>
                   )}
                   {validation.meta.jobConfidence === "exact" && (
-                    <Badge variant="outline" className="text-[10px] border-earning/40 text-earning">Hint explícito</Badge>
+                    <Badge variant="outline" className="text-[10px] border-earning/40 text-earning">Mapping de la compañía</Badge>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() => setMappingOpen(true)}
+                  >
+                    Cambiar destino
+                  </Button>
                 </div>
+
               </div>
             )}
 
