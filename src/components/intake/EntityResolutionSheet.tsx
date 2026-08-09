@@ -288,7 +288,7 @@ export function EntityResolutionSheet({
           <SheetHeader className="text-left">
             <SheetTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4 text-primary" />
-              Resolver {KIND_LABEL[kind]}
+              Solo necesito confirmar: {KIND_LABEL[kind]}
             </SheetTitle>
             <SheetDescription className="text-sm leading-snug">
               {decision.explanation}
