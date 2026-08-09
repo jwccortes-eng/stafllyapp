@@ -134,9 +134,20 @@ export function ExportConnecteamPreviewDialog({
               </div>
             )}
 
+            {/* Falta de mapping — bloqueo explícito y resoluble aquí mismo */}
+            {needsMapping && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-3 text-xs space-y-2">
+                <p className="font-semibold text-destructive">{CONNECTEAM_MAPPING_COPY.missingTitle}</p>
+                <p className="text-foreground/85">{CONNECTEAM_MAPPING_COPY.missingReason}</p>
+                <Button size="sm" variant="outline" onClick={() => setMappingOpen(true)}>
+                  {CONNECTEAM_MAPPING_COPY.resolveCta}
+                </Button>
+              </div>
+            )}
 
             {/* v1.2: Job/Sub item resolution badge */}
             {validation?.meta && (
+
               <div className="rounded-xl border border-border/30 bg-muted/20 px-3.5 py-2.5 text-xs space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold">Job:</span>
