@@ -318,7 +318,14 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
                 ? `${created} creados y ${reused} ya existían de un intento anterior.`
                 : "Quedaron guardados como borrador, sin publicar.",
             consequence: "Nadie fue asignado ni notificado. Publícalos desde Servicios.",
-            action: { label: "Ver servicios", onClick: () => navigate("/app/shifts") },
+            action: {
+              label: "Ver borradores",
+              // Contexto: llevamos al día del primer borrador creado, no al listado genérico.
+              onClick: () => {
+                const firstDate = next.find((c) => c.reviewStatus === "created")?.serviceDate;
+                navigate(firstDate ? `/app/shifts?date=${firstDate}&view=week` : "/app/shifts");
+              },
+            },
           });
         }
         if (blocked.length > 0) {
