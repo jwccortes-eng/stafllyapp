@@ -24,6 +24,9 @@ import UnderstoodPanel from "@/components/intake/premium/UnderstoodPanel";
 import ServiceIntakeReviewInbox from "@/components/intake/ServiceIntakeReviewInbox";
 import { useRememberCorrection } from "@/components/intake/RememberCorrectionPrompt";
 import { confirmRef, recomputeCandidate, type ServiceCandidate } from "@/lib/intake";
+import IntakeRecoveryPanel from "@/components/intake/IntakeRecoveryPanel";
+import { describeOutcome, reconcileAfterRetry } from "@/lib/intake/recovery";
+
 import { createDraftServicesFromCandidates, applyOutcome } from "@/lib/intake/create-draft-service";
 import { closeServiceIntakeBatch, summarizeCandidates } from "@/lib/intake/batch";
 import { buildIntakeTelemetry, logIntakeTelemetry } from "@/lib/intake/telemetry";
