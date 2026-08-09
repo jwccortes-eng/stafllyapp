@@ -2617,6 +2617,17 @@ function DesktopShifts() {
         </div>
         {canEdit && (
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Creación masiva nativa — no es importación de archivos */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-[11px] px-3 gap-1.5 rounded-xl"
+              onClick={() => setBulkCreateOpen(true)}
+              title="Crea varios Servicios como borradores desde una grilla editable"
+            >
+              <CalendarRange className="h-3.5 w-3.5" />
+              Crear varios servicios
+            </Button>
             {/* Primary action — scope-explicit */}
             <Button
               variant="default"
