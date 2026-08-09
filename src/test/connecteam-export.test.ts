@@ -258,8 +258,15 @@ describe("connecteam-export: validateShiftForExport", () => {
       adminCtx,
     );
     expect(r.status).toBe("blocked");
-    expect(r.warnings.some(w => w.code === "missing_job_context")).toBe(true);
+    // Fase 2: sin mapping explícito por compañía el bloqueo es de mapping,
+    // no un fallback silencioso a "Select".
+    expect(
+      r.warnings.some(
+        w => w.code === "missing_job_context" || w.code === "missing_job_mapping",
+      ),
+    ).toBe(true);
   });
+
 
   it("v1.1: 0 accepted assignments does NOT block when capacity-only mode has slots", () => {
     const r = validateShiftForExport(mkShift({ slots: 3 }), {
