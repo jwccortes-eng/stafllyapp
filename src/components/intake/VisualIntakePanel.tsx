@@ -10,7 +10,7 @@
  *  - `company_id` sale del contexto autenticado, jamás del contenido visual.
  */
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ import {
   type VisualIntakeResult,
 } from "@/lib/intake/visual-intake";
 import type { ConfidenceLevel } from "@/lib/intake/visual-extraction";
+import { useIntakeReviewPersistence } from "@/lib/intake/review-persistence";
 import { cn } from "@/lib/utils";
 
 /**
@@ -62,6 +63,20 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
   const [isCreating, setIsCreating] = useState(false);
   const [result, setResult] = useState<VisualIntakeResult | null>(null);
   const [candidates, setCandidates] = useState<ServiceCandidate[]>([]);
+
+  // Persistencia de revisión (UI-only): refrescar o cambiar de pestaña no pierde el lote.
+  const { restored, save } = useIntakeReviewPersistence<VisualIntakeResult | null>(
+    selectedCompanyId,
+    "image",
+  );
+  useEffect(() => {
+    if (!restored) return;
+    setCandidates(restored.candidates);
+    if (restored.extra) setResult(restored.extra);
+  }, [restored]);
+  useEffect(() => {
+    save({ batchId: result?.batchId ?? null, candidates, extra: result });
+  }, [candidates, result, save]);
 
   const noticesByCandidate = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -318,7 +333,14 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
                 ? `${created} creados y ${reused} ya existían de un intento anterior.`
                 : "Quedaron guardados como borrador, sin publicar.",
             consequence: "Nadie fue asignado ni notificado. Publícalos desde Servicios.",
-            action: { label: "Ver servicios", onClick: () => navigate("/app/shifts") },
+            action: {
+              label: "Ver borradores",
+              // Contexto: llevamos al día del primer borrador creado, no al listado genérico.
+              onClick: () => {
+                const firstDate = next.find((c) => c.reviewStatus === "created")?.serviceDate;
+                navigate(firstDate ? `/app/shifts?date=${firstDate}&view=week` : "/app/shifts");
+              },
+            },
           });
         }
         if (blocked.length > 0) {

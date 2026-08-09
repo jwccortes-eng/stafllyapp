@@ -35,6 +35,7 @@ import {
   type AudioIntakeResult,
 } from "@/lib/intake/audio-intake";
 import type { ConfidenceLevel } from "@/lib/intake/visual-extraction";
+import { useIntakeReviewPersistence } from "@/lib/intake/review-persistence";
 
 function formatSeconds(total: number): string {
   const m = Math.floor(total / 60);
@@ -65,6 +66,20 @@ export function AudioIntakePanel() {
   const [isCreating, setIsCreating] = useState(false);
   const [result, setResult] = useState<AudioIntakeResult | null>(null);
   const [candidates, setCandidates] = useState<ServiceCandidate[]>([]);
+
+  // Persistencia de revisión (UI-only): refrescar o cambiar de pestaña no pierde el lote.
+  const { restored, save } = useIntakeReviewPersistence<AudioIntakeResult | null>(
+    selectedCompanyId,
+    "voice_note",
+  );
+  useEffect(() => {
+    if (!restored) return;
+    setCandidates(restored.candidates);
+    if (restored.extra) setResult(restored.extra);
+  }, [restored]);
+  useEffect(() => {
+    save({ batchId: result?.batchId ?? null, candidates, extra: result });
+  }, [candidates, result, save]);
 
   useEffect(() => {
     return () => {
@@ -356,7 +371,14 @@ export function AudioIntakePanel() {
                 ? `${created} creados y ${reused} ya existían de un intento anterior.`
                 : "Quedaron guardados como borrador, sin publicar.",
             consequence: "Nadie fue asignado ni notificado. Publícalos desde Servicios.",
-            action: { label: "Ver servicios", onClick: () => navigate("/app/shifts") },
+            action: {
+              label: "Ver borradores",
+              // Contexto: llevamos al día del primer borrador creado, no al listado genérico.
+              onClick: () => {
+                const firstDate = next.find((c) => c.reviewStatus === "created")?.serviceDate;
+                navigate(firstDate ? `/app/shifts?date=${firstDate}&view=week` : "/app/shifts");
+              },
+            },
           });
         }
         if (blocked.length > 0) {

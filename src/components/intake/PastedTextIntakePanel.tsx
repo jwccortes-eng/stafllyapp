@@ -10,7 +10,7 @@
  *  - `company_id` sale del contexto autenticado, jamás del mensaje.
  */
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ import { runPastedTextIntake, refreshDuplicateStatus } from "@/lib/intake/text-i
 import { closeServiceIntakeBatch, summarizeCandidates } from "@/lib/intake/batch";
 import { buildIntakeTelemetry, logIntakeTelemetry } from "@/lib/intake/telemetry";
 import type { TextParseNotice } from "@/lib/intake/text-parser";
+import { useIntakeReviewPersistence } from "@/lib/intake/review-persistence";
 
 const PLACEHOLDER = `Pega aquí el mensaje. Por ejemplo:
 
@@ -50,6 +51,11 @@ export function PastedTextIntakePanel() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const { restored, save, clear } = useIntakeReviewPersistence<{
+    text: string;
+    notices: TextParseNotice[];
+  }>(selectedCompanyId, "pasted_text");
+
   const [text, setText] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -57,6 +63,19 @@ export function PastedTextIntakePanel() {
   const [candidates, setCandidates] = useState<ServiceCandidate[]>([]);
   const [notices, setNotices] = useState<TextParseNotice[]>([]);
   const corrections = useRef(0);
+
+  // Persistencia de revisión: volver de otra pestaña o refrescar no borra el lote.
+  useEffect(() => {
+    if (!restored) return;
+    setCandidates(restored.candidates);
+    setBatchId(restored.batchId);
+    setNotices(restored.extra?.notices ?? []);
+    setText((prev) => prev || restored.extra?.text || "");
+  }, [restored]);
+
+  useEffect(() => {
+    save({ batchId, candidates, extra: { text, notices } });
+  }, [batchId, candidates, notices, text, save]);
 
   const noticesByCandidate = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -240,7 +259,14 @@ export function PastedTextIntakePanel() {
                 ? `${created} creados y ${reused} ya existían de un intento anterior.`
                 : "Quedaron guardados como borrador, sin publicar.",
             consequence: "Nadie fue asignado ni notificado. Publícalos desde Servicios.",
-            action: { label: "Ver servicios", onClick: () => navigate("/app/shifts") },
+            action: {
+              label: "Ver borradores",
+              // Contexto: llevamos al día del primer borrador creado, no al listado genérico.
+              onClick: () => {
+                const firstDate = next.find((c) => c.reviewStatus === "created")?.serviceDate;
+                navigate(firstDate ? `/app/shifts?date=${firstDate}&view=week` : "/app/shifts");
+              },
+            },
           });
         }
         if (blocked.length > 0) {
