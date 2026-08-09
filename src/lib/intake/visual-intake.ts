@@ -186,15 +186,23 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
   const notices: VisualNotice[] = [];
   let pageCount = 0;
   let extractionFailures = 0;
+  const failures: VisualExtractionFailure[] = [];
 
   results.forEach((entry, index) => {
     if (entry.error || !entry.extraction) {
       extractionFailures += 1;
+      const code = entry.error ?? "ai_error";
+      failures.push({
+        fileName: entry.file_name ?? "archivo",
+        code,
+        detail: (entry as { error_detail?: string }).error_detail ?? null,
+      });
       warnings.push(
-        `No pudimos leer ${entry.file_name ?? "un archivo"} (${entry.error ?? "sin resultado"}).`,
+        `${entry.file_name ?? "Un archivo"}: ${describeVisualFailure(code)}.`,
       );
       return;
     }
+
     const normalized = normalizeVisualExtraction({
       extraction: entry.extraction,
       companyId: input.companyId,
