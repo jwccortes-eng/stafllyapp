@@ -1,5 +1,5 @@
 /**
- * Ecosystem Intake Engine — FASE 1: creación asistida de entidades.
+ * Ecosystem Intake Engine — FASE 1 / 1.1: creación asistida de entidades.
  *
  * ÚNICO carril de escritura de Clientes, Lugares y Contactos desde intake.
  *
@@ -7,30 +7,40 @@
  *  - Nada se crea en silencio: toda función exige `confirmedByHuman: true`.
  *  - Antes de crear, siempre se intenta vincular (idempotencia por nombre
  *    normalizado dentro de la misma empresa).
+ *  - Si existe algo PARECIDO, se devuelve `possible_duplicate` y se detiene:
+ *    crear igualmente exige `allowDuplicate: true` (segunda confirmación).
  *  - `company_id` viene SIEMPRE del contexto autenticado, nunca del contenido.
  *  - No toca servicios, asignaciones, payroll ni time_entries.
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { normalizeEntityName } from "./entity-resolution";
-
-export type AssistedOutcome<T> =
-  | { status: "linked"; entity: T }
-  | { status: "created"; entity: T }
-  | { status: "blocked"; reason: string }
-  | { status: "error"; reason: string };
+import { normalizeEntityName, similarity } from "./entity-resolution";
 
 export interface AssistedEntity {
   id: string;
   name: string;
+  /** Sólo informativo para explicar por qué se parece (dirección, email…). */
+  hint?: string | null;
 }
+
+export type AssistedOutcome<T> =
+  | { status: "linked"; entity: T }
+  | { status: "created"; entity: T }
+  | { status: "possible_duplicate"; matches: T[] }
+  | { status: "blocked"; reason: string }
+  | { status: "error"; reason: string };
 
 interface BaseInput {
   companyId: string;
   userId?: string | null;
   /** Obligatorio: la persona confirmó explícitamente esta acción. */
   confirmedByHuman: boolean;
+  /** Segunda confirmación explícita tras ver el aviso de posible duplicado. */
+  allowDuplicate?: boolean;
 }
+
+/** Umbral de "se parece demasiado como para crear sin preguntar". */
+export const DUPLICATE_THRESHOLD = 0.82;
 
 function guard(input: BaseInput, name: string): string | null {
   if (!input.companyId) return "missing_company_context";
@@ -39,26 +49,63 @@ function guard(input: BaseInput, name: string): string | null {
   return null;
 }
 
-/** Busca en el catálogo del tenant por nombre normalizado. */
-async function findExisting(
+interface CatalogRow {
+  id: string;
+  name: string;
+  address?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
+/** Catálogo del tenant. Nunca se consulta sin `company_id`. */
+async function loadRows(
   table: "clients" | "locations_v2",
   companyId: string,
-  name: string,
-): Promise<AssistedEntity | null> {
+): Promise<CatalogRow[]> {
+  const columns = table === "clients" ? "id, name" : "id, name, formatted_address";
+  const base = (supabase.from(table as any) as any)
+    .select(columns)
+    .eq("company_id", companyId)
+    .limit(500);
+  const query = table === "clients" ? base.is("deleted_at", null) : base.eq("is_active", true);
+  const { data, error } = await query;
+  if (error || !data) return [];
+  return (data as any[]).map((r) => ({
+    id: r.id as string,
+    name: (r.name ?? "") as string,
+    address: (r.formatted_address ?? null) as string | null,
+  }));
+}
+
+function exactMatch(rows: CatalogRow[], name: string): CatalogRow | null {
   const needle = normalizeEntityName(name);
   if (!needle) return null;
+  return rows.find((r) => normalizeEntityName(r.name) === needle) ?? null;
+}
 
-  const base = (supabase.from(table as any) as any)
-    .select("id, name")
-    .eq("company_id", companyId)
-    .limit(200);
-  const query = table === "clients" ? base.is("deleted_at", null) : base.eq("is_active", true);
-
-  const { data, error } = await query;
-
-  if (error || !data) return null;
-  const hit = (data as any[]).find((row) => normalizeEntityName(row.name ?? "") === needle);
-  return hit ? { id: hit.id as string, name: (hit.name ?? name) as string } : null;
+/** Coincidencias fuertes que exigen una segunda decisión humana. */
+export function nearDuplicates(
+  rows: CatalogRow[],
+  name: string,
+  address?: string | null,
+): AssistedEntity[] {
+  const needle = normalizeEntityName(name);
+  const addrNeedle = normalizeEntityName(address ?? "");
+  const out: AssistedEntity[] = [];
+  for (const r of rows) {
+    const byName = needle ? similarity(needle, normalizeEntityName(r.name)) : 0;
+    const byAddress =
+      addrNeedle && r.address ? similarity(addrNeedle, normalizeEntityName(r.address)) : 0;
+    const score = Math.max(byName, byAddress);
+    if (score >= DUPLICATE_THRESHOLD) {
+      out.push({
+        id: r.id,
+        name: r.name,
+        hint: byAddress >= byName ? `Misma dirección: ${r.address}` : "Nombre muy parecido",
+      });
+    }
+  }
+  return out.slice(0, 5);
 }
 
 export interface LinkOrCreateClientInput extends BaseInput {
@@ -76,8 +123,14 @@ export async function linkOrCreateClient(
   const blocked = guard(input, input.name);
   if (blocked) return { status: "blocked", reason: blocked };
 
-  const existing = await findExisting("clients", input.companyId, input.name);
-  if (existing) return { status: "linked", entity: existing };
+  const rows = await loadRows("clients", input.companyId);
+  const exact = exactMatch(rows, input.name);
+  if (exact) return { status: "linked", entity: { id: exact.id, name: exact.name } };
+
+  if (!input.allowDuplicate) {
+    const matches = nearDuplicates(rows, input.name);
+    if (matches.length > 0) return { status: "possible_duplicate", matches };
+  }
 
   const { data, error } = await supabase
     .from("clients")
@@ -93,7 +146,12 @@ export async function linkOrCreateClient(
     .select("id, name")
     .single();
 
-  if (error || !data) return { status: "error", reason: error?.message ?? "insert_failed" };
+  if (error || !data) {
+    // Carrera A/B: otro admin pudo crearlo entre la lectura y la escritura.
+    const retry = exactMatch(await loadRows("clients", input.companyId), input.name);
+    if (retry) return { status: "linked", entity: { id: retry.id, name: retry.name } };
+    return { status: "error", reason: error?.message ?? "insert_failed" };
+  }
   return { status: "created", entity: { id: data.id as string, name: data.name as string } };
 }
 
@@ -111,8 +169,14 @@ export async function linkOrCreateVenue(
   const blocked = guard(input, input.name);
   if (blocked) return { status: "blocked", reason: blocked };
 
-  const existing = await findExisting("locations_v2", input.companyId, input.name);
-  if (existing) return { status: "linked", entity: existing };
+  const rows = await loadRows("locations_v2", input.companyId);
+  const exact = exactMatch(rows, input.name);
+  if (exact) return { status: "linked", entity: { id: exact.id, name: exact.name } };
+
+  if (!input.allowDuplicate) {
+    const matches = nearDuplicates(rows, input.name, input.formattedAddress);
+    if (matches.length > 0) return { status: "possible_duplicate", matches };
+  }
 
   const { data, error } = await supabase
     .from("locations_v2")
@@ -128,8 +192,15 @@ export async function linkOrCreateVenue(
     .select("id, name")
     .single();
 
-  if (error || !data) return { status: "error", reason: error?.message ?? "insert_failed" };
-  return { status: "created", entity: { id: data.id as string, name: (data.name ?? input.name) as string } };
+  if (error || !data) {
+    const retry = exactMatch(await loadRows("locations_v2", input.companyId), input.name);
+    if (retry) return { status: "linked", entity: { id: retry.id, name: retry.name } };
+    return { status: "error", reason: error?.message ?? "insert_failed" };
+  }
+  return {
+    status: "created",
+    entity: { id: data.id as string, name: (data.name ?? input.name) as string },
+  };
 }
 
 export interface LinkOrCreateContactInput extends BaseInput {
@@ -140,7 +211,10 @@ export interface LinkOrCreateContactInput extends BaseInput {
   title?: string | null;
 }
 
-/** Contacto de cliente. Requiere un cliente ya vinculado o creado. */
+/**
+ * Contacto operativo/comercial del cliente. NO es un Worker ni un Passport:
+ * vive sólo en `client_contacts`, con scope de empresa y cliente.
+ */
 export async function linkOrCreateClientContact(
   input: LinkOrCreateContactInput,
 ): Promise<AssistedOutcome<AssistedEntity>> {
@@ -150,15 +224,32 @@ export async function linkOrCreateClientContact(
 
   const { data: rows } = await supabase
     .from("client_contacts")
-    .select("id, name")
+    .select("id, name, email, phone")
     .eq("company_id", input.companyId)
     .eq("client_id", input.clientId)
     .is("deleted_at", null)
     .limit(200);
 
+  const list = (rows ?? []) as any[];
   const needle = normalizeEntityName(input.name);
-  const hit = (rows ?? []).find((r: any) => normalizeEntityName(r.name ?? "") === needle);
-  if (hit) return { status: "linked", entity: { id: hit.id as string, name: hit.name as string } };
+  const email = input.email?.trim().toLowerCase() || null;
+  const phone = input.phone?.replace(/\D/g, "") || null;
+
+  const exact = list.find(
+    (r) =>
+      normalizeEntityName(r.name ?? "") === needle ||
+      (email && (r.email ?? "").toLowerCase() === email) ||
+      (phone && (r.phone ?? "").replace(/\D/g, "") === phone),
+  );
+  if (exact) return { status: "linked", entity: { id: exact.id, name: exact.name } };
+
+  if (!input.allowDuplicate) {
+    const matches = list
+      .filter((r) => similarity(needle, normalizeEntityName(r.name ?? "")) >= DUPLICATE_THRESHOLD)
+      .slice(0, 5)
+      .map((r) => ({ id: r.id as string, name: r.name as string, hint: "Nombre muy parecido" }));
+    if (matches.length > 0) return { status: "possible_duplicate", matches };
+  }
 
   const { data, error } = await supabase
     .from("client_contacts")
