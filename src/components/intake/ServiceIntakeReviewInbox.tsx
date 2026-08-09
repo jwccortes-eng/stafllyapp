@@ -375,18 +375,26 @@ export function ServiceIntakeReviewInbox({
             </div>
 
             {missing.length > 0 && (
-              <p className="text-sm text-destructive">Campos pendientes: {missing.join(", ")}</p>
+              <p className="text-sm text-muted-foreground">
+                Puedes guardarlo como borrador. Pendiente para después: {missing.join(", ")}
+              </p>
             )}
 
             <div className="flex flex-wrap gap-1.5">
               {created && <Badge variant="secondary">Borrador creado</Badge>}
               {excluded && <Badge variant="outline">Excluido</Badge>}
+              {readiness.pendingEntities.map((name) => (
+                <Badge key={`pending-${name}`} variant="outline">
+                  {name} — pendiente de vincular
+                </Badge>
+              ))}
               {c.duplicateStatus === "exact_duplicate" && (
                 <Badge variant="destructive">Ya existe</Badge>
               )}
               {c.duplicateStatus === "possible_duplicate" && (
                 <Badge variant="outline">Posible duplicado</Badge>
               )}
+
               {c.venueCandidate.matchOrigin === "dictionary" && (
                 <Badge variant="secondary">Aprendido: {c.venueCandidate.suggestedLabel}</Badge>
               )}
