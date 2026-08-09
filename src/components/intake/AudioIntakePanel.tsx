@@ -17,10 +17,12 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Mic, Square, X } from "lucide-react";
+import { Loader2, Mic, Square, X, Sparkles } from "lucide-react";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { notifyError, notifyInfo, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
+import AnalyzingNarrative from "@/components/intake/premium/AnalyzingNarrative";
+import UnderstoodPanel from "@/components/intake/premium/UnderstoodPanel";
 import ServiceIntakeReviewInbox from "@/components/intake/ServiceIntakeReviewInbox";
 import { useRememberCorrection } from "@/components/intake/RememberCorrectionPrompt";
 import { confirmRef, recomputeCandidate, type ServiceCandidate } from "@/lib/intake";
@@ -497,7 +499,8 @@ export function AudioIntakePanel() {
             className="min-h-11 w-full sm:w-auto"
           >
             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Escuchar y analizar
+            {!isProcessing && <Sparkles className="mr-2 h-4 w-4" />}
+            Analizar
           </Button>
           {(files.length > 0 || candidates.length > 0) && (
             <Button variant="ghost" className="min-h-11 w-full sm:w-auto" onClick={reset}>
@@ -505,6 +508,8 @@ export function AudioIntakePanel() {
             </Button>
           )}
         </div>
+
+        <AnalyzingNarrative active={isProcessing} />
 
         {(result?.warnings.length ?? 0) > 0 && (
           <ul className="space-y-1 rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
@@ -539,6 +544,7 @@ export function AudioIntakePanel() {
                 : ""}
               .
             </p>
+            <UnderstoodPanel candidates={candidates} />
             <ServiceIntakeReviewInbox
             companyId={selectedCompanyId}
             intakeSource="voice_note"

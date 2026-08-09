@@ -85,7 +85,7 @@ const FILTERS: Array<{ key: FilterKey; label: string }> = [
   { key: "all", label: "Todos" },
   { key: "ready", label: "Listos" },
   { key: "needs_review", label: "Necesitan revisión" },
-  { key: "duplicates", label: "Duplicados" },
+  { key: "duplicates", label: "Creo que ya existen" },
   { key: "created", label: "Creados" },
 ];
 
@@ -128,9 +128,9 @@ function humanConfidence(c: ServiceCandidate): HumanConfidence {
 }
 
 const CONFIDENCE_COPY: Record<HumanConfidence, string> = {
-  high: "Alta confianza",
-  review: "Revisar",
-  incomplete: "Información incompleta",
+  high: "Estoy bastante seguro",
+  review: "Necesito que me confirmes",
+  incomplete: "Me falta información",
 };
 
 function formatDate(value: string | null): { day: string; rest: string } {
@@ -415,7 +415,7 @@ export function ServiceIntakeReviewInbox({
                     onClick={() => setResolving({ id: c.id, kind: "client" })}
                   >
                     <Link2 className="mr-2 h-4 w-4" />
-                    Resolver cliente
+                    Confirmar cliente
                   </Button>
                 )}
                 {!c.locationCandidate.resolvedId && (
@@ -425,7 +425,7 @@ export function ServiceIntakeReviewInbox({
                     onClick={() => setResolving({ id: c.id, kind: "venue" })}
                   >
                     <Link2 className="mr-2 h-4 w-4" />
-                    Resolver lugar
+                    Confirmar venue
                   </Button>
                 )}
               </div>

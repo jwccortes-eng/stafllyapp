@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardPaste, Loader2 } from "lucide-react";
+import { ClipboardPaste, Loader2, Sparkles } from "lucide-react";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { notifyError, notifyInfo, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
@@ -33,13 +33,21 @@ import { closeServiceIntakeBatch, summarizeCandidates } from "@/lib/intake/batch
 import { buildIntakeTelemetry, logIntakeTelemetry } from "@/lib/intake/telemetry";
 import type { TextParseNotice } from "@/lib/intake/text-parser";
 import { useIntakeReviewPersistence } from "@/lib/intake/review-persistence";
+import AnalyzingNarrative from "@/components/intake/premium/AnalyzingNarrative";
+import UnderstoodPanel from "@/components/intake/premium/UnderstoodPanel";
+import IntakeSuccessPanel, {
+  type IntakeSuccessSummary,
+} from "@/components/intake/premium/IntakeSuccessPanel";
+import { buildUnderstanding } from "@/lib/intake/understanding";
 
-const PLACEHOLDER = `Pega aquí el mensaje. Por ejemplo:
+const PLACEHOLDER = `Ejemplo:
 
-Millennium Oct 13 Bar Mitzvah
-Zemer:
-Oct 14 Sheva Brochos
-Oct 15 Bar Mitzvah`;
+"Millennium Hall
+Bar Mitzvah
+18 servers
+6 PM"
+
+No importa el formato.`;
 
 export function PastedTextIntakePanel() {
   const { selectedCompanyId } = useCompany();
@@ -63,6 +71,7 @@ export function PastedTextIntakePanel() {
   const [candidates, setCandidates] = useState<ServiceCandidate[]>([]);
   const [notices, setNotices] = useState<TextParseNotice[]>([]);
   const corrections = useRef(0);
+  const [success, setSuccess] = useState<IntakeSuccessSummary | null>(null);
 
   // Persistencia de revisión: volver de otra pestaña o refrescar no borra el lote.
   useEffect(() => {
@@ -133,7 +142,7 @@ export function PastedTextIntakePanel() {
         });
       } else {
         notifyInfo({
-          title: `${result.candidates.length} trabajos encontrados`,
+          title: `Entendí ${result.candidates.length} ${result.candidates.length === 1 ? "servicio" : "servicios"}`,
           fact: "Son propuestas, todavía no existen como servicios.",
           consequence: "Revísalas abajo y decide cuáles se crean como borrador.",
         });
@@ -252,6 +261,13 @@ export function PastedTextIntakePanel() {
         );
 
         if (created > 0 || reused > 0) {
+          const understanding = buildUnderstanding(next);
+          setSuccess({
+            created,
+            reusedClients: understanding.memory.some((m) => m.includes("cliente")) ? 1 : 0,
+            reusedVenues: understanding.memory.some((m) => m.includes("venue")) ? 1 : 0,
+            aliasesLearned: understanding.memory.filter((m) => m.includes("alias")).length,
+          });
           notifySuccess({
             title: `${created} servicios en borrador`,
             fact:
@@ -295,7 +311,7 @@ export function PastedTextIntakePanel() {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <ClipboardPaste className="h-4 w-4 text-primary" />
-          Pegar texto
+          WhatsApp / Texto
           <Badge variant="outline" className="ml-auto font-normal">
             No publica nada
           </Badge>
@@ -303,8 +319,8 @@ export function PastedTextIntakePanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Pega un mensaje de WhatsApp, una lista o un párrafo. Leemos los trabajos y te los
-          mostramos para revisar. Nada se crea hasta que lo confirmes.
+          Pégame lo que recibiste: un mensaje, una lista o un párrafo suelto. Yo identifico los
+          servicios, clientes y venues, y no creo nada hasta que lo revises.
         </p>
 
         <Textarea
@@ -323,7 +339,8 @@ export function PastedTextIntakePanel() {
             className="min-h-11 w-full sm:w-auto"
           >
             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Procesar texto
+            {!isProcessing && <Sparkles className="mr-2 h-4 w-4" />}
+            Analizar
           </Button>
           {candidates.length > 0 && (
             <Button
@@ -333,12 +350,36 @@ export function PastedTextIntakePanel() {
                 setCandidates([]);
                 setNotices([]);
                 setBatchId(null);
+                setSuccess(null);
               }}
             >
               Empezar de nuevo
             </Button>
           )}
         </div>
+
+        <AnalyzingNarrative active={isProcessing} />
+
+        {success && (
+          <IntakeSuccessPanel
+            summary={success}
+            onViewDrafts={() => {
+              const firstDate = candidates.find((c) => c.reviewStatus === "created")?.serviceDate;
+              navigate(firstDate ? `/app/shifts?date=${firstDate}&view=week` : "/app/shifts");
+            }}
+            onStartOver={() => {
+              setSuccess(null);
+              setCandidates([]);
+              setNotices([]);
+              setBatchId(null);
+              setText("");
+            }}
+          />
+        )}
+
+        {!isProcessing && !success && candidates.length > 0 && (
+          <UnderstoodPanel candidates={candidates} />
+        )}
 
         {globalNotices.length > 0 && (
           <ul className="space-y-1 rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
