@@ -59,6 +59,9 @@ interface Row {
   row: ConnecteamRow;
   assigned: number;
   openSlots: number;
+  /** Hora final provisional aplicada solo a esta exportación ("" = ninguna). */
+  provisionalEnd: string;
+
 }
 
 export function ExportConnecteamBulkDialog({
