@@ -263,10 +263,10 @@ export function ShiftRepeatSection({ shiftDate, config, onChange }: ShiftRepeatS
             <div className="rounded-lg bg-muted/30 border border-border/20 p-3">
               <p className="text-[10px] font-semibold text-foreground mb-1.5 flex items-center gap-1">
                 <Info className="h-3 w-3 text-primary" />
-                Se crearán {repeatDates.length} turno{repeatDates.length !== 1 ? "s" : ""} adicionales en borrador
+                Se crearán {repeatDates.length + 1} Servicios
               </p>
               <div className="flex flex-wrap gap-1">
-                {repeatDates.slice(0, 14).map(d => (
+                {[shiftDate, ...repeatDates].slice(0, 14).map(d => (
                   <span
                     key={d}
                     className="text-[9px] bg-primary/10 text-primary font-medium rounded-md px-2 py-0.5 capitalize"
@@ -274,9 +274,9 @@ export function ShiftRepeatSection({ shiftDate, config, onChange }: ShiftRepeatS
                     {format(parse(d, "yyyy-MM-dd", new Date()), "EEE d MMM", { locale: es })}
                   </span>
                 ))}
-                {repeatDates.length > 14 && (
+                {repeatDates.length + 1 > 14 && (
                   <span className="text-[9px] text-muted-foreground font-medium px-1">
-                    +{repeatDates.length - 14} más
+                    +{repeatDates.length + 1 - 14} más
                   </span>
                 )}
               </div>

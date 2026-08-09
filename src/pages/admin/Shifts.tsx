@@ -63,12 +63,17 @@ import { EmployeeCombobox } from "@/components/shifts/EmployeeCombobox";
 import { ShiftRepeatSection, DEFAULT_REPEAT, computeRepeatDates, type RepeatConfig } from "@/components/shifts/ShiftRepeatSection";
 import {
   newRecurrenceIntentId,
+  buildSeriesIntent,
+  buildCanonicalServiceInsert,
   freezeRecurrenceSubmit,
+  generateOccurrences,
   planRecurrenceOccurrences,
   summarizeSeries,
   seriesResultMessage,
   type OccurrenceOutcome,
   type RecurrenceSubmitSnapshot,
+  type SeriesIntent,
+  type SeriesServiceSnapshot,
 } from "@/lib/shifts/recurrence";
 import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
@@ -554,7 +559,7 @@ function DesktopShifts() {
   const recurrenceIntentRef = useRef<string | null>(null);
   // La intención se congela antes de abrir cualquier confirmación. El helper
   // nunca vuelve a leer estado React mutable mientras persiste la serie.
-  const pendingRecurrenceSubmitRef = useRef<RecurrenceSubmitSnapshot | null>(null);
+  const pendingSeriesIntentRef = useRef<SeriesIntent | null>(null);
   const seriesSubmitLockRef = useRef(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   // Phase 2C-A — Emergency Worker create flow (admin-only). Owned here so
@@ -834,7 +839,7 @@ function DesktopShifts() {
     setNewLocationName(""); setNewLocationAddress(""); setShowAddLocation(false);
     setRepeatConfig(DEFAULT_REPEAT);
     recurrenceIntentRef.current = null;
-    pendingRecurrenceSubmitRef.current = null;
+    pendingSeriesIntentRef.current = null;
     seriesSubmitLockRef.current = false;
   };
 
@@ -1041,18 +1046,19 @@ function DesktopShifts() {
     skipNotifications = false,
     forceDraft = false,
     publishNow = true,
-    opts?: { employeeIds?: string[]; sourceRef?: string | null; onAssignError?: (e: unknown) => void },
+    opts: { snapshot: SeriesServiceSnapshot; employeeIds: string[]; sourceRef?: string | null; onAssignError?: (e: unknown) => void },
   ) => {
-    if (!selectedCompanyId) return null;
-    const employeeIds = opts?.employeeIds ?? selectedEmployees;
-    const sourceRef = opts?.sourceRef ?? null;
+    const snapshot = opts.snapshot;
+    if (!snapshot.companyId) return null;
+    const employeeIds = [...opts.employeeIds];
+    const sourceRef = opts.sourceRef ?? null;
 
     // Idempotencia: doble tap o retry del mismo submit reutiliza la fila.
     if (sourceRef) {
       const existing = await supabase
         .from("scheduled_shifts")
         .select("*")
-        .eq("company_id", selectedCompanyId)
+        .eq("company_id", snapshot.companyId)
         .eq("reconciliation_hash", sourceRef)
         .is("deleted_at", null)
         .maybeSingle();
@@ -1062,38 +1068,14 @@ function DesktopShifts() {
     // Legacy `status` column retained: drafts also flow through the legacy
     // 'draft' value so existing UI/filters that look at status keep working.
     const initialStatus = isDraft ? "draft" : ((!forceDraft && shiftsConfig.auto_publish) ? "published" : "draft");
-    const insertData: any = {
-      company_id: selectedCompanyId,
-      title: title.trim() || "Turno",
-      date: shiftDate, start_time: startTime, end_time: endTime,
-      slots: parseInt(slots) || 1,
-      client_id: clientId || null,
-      location_id: locationId || null,
-      notes: notes.trim() || null,
-      claimable: shiftsConfig.allow_claims ? claimable : false,
-      meeting_point: meetingPoint.trim() || null,
-      special_instructions: specialInstructions.trim() || null,
-      created_by: user?.id,
-      pay_type: payType,
-      day_type: payType === "daily" ? dayType : "full_day",
-      pay_override: payOverride,
-      shift_admin_id: shiftAdminId || null,
-      transportation_required: transportRequired,
-      car_capacity: parseInt(carCapacity) || 5,
-      transportation_notes: transportNotes.trim() || null,
-      driver_employee_id: driverIds[0] || driverEmployeeId || null,
-      clock_method: clockMethod,
-      status: initialStatus,
-      meeting_point_location_id: meetingPointLocationId || null,
-      job_site_location_id: jobSiteLocationId || null,
-      job_site_address: jobSiteAddress.trim() || null,
-      // Trazabilidad de serie: todas las ocurrencias comparten el mismo intent.
-      ...(sourceRef ? { reconciliation_hash: sourceRef } : {}),
-      // New lifecycle column — single source of truth for draft visibility.
-      publication_status: isDraft ? "draft" : "published",
-      published_at: isDraft ? null : new Date().toISOString(),
-      published_by: isDraft ? null : user?.id ?? null,
-    };
+    const insertData: any = buildCanonicalServiceInsert({
+      snapshot,
+      date: shiftDate,
+      sourceRef,
+      createdBy: user?.id ?? null,
+      draft: isDraft,
+    });
+    insertData.status = initialStatus;
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert(insertData).select("*").single();
 
     if (error) {
@@ -1102,22 +1084,22 @@ function DesktopShifts() {
         const retry = await supabase
           .from("scheduled_shifts")
           .select("*")
-          .eq("company_id", selectedCompanyId)
+          .eq("company_id", snapshot.companyId)
           .eq("reconciliation_hash", sourceRef)
           .is("deleted_at", null)
           .maybeSingle();
         if (retry.data?.id) return retry.data as any;
       }
-      if (opts?.onAssignError) throw error;
+      if (opts.onAssignError) throw error;
       toast.error(error.message);
       return null;
     }
 
     if (employeeIds.length > 0 && shift) {
       const assigns = employeeIds.map(eid => ({
-        company_id: selectedCompanyId, shift_id: shift.id, employee_id: eid, status: "pending",
+        company_id: snapshot.companyId, shift_id: shift.id, employee_id: eid, status: "pending",
         // P0.3 — multi-driver: el rol vive en la asignación, no en el turno.
-        assignment_role: driverIds.includes(eid) ? "driver" : "worker",
+        assignment_role: snapshot.driverIds.includes(eid) ? "driver" : "worker",
         // Tentative reservations on drafts: visible to admins, invisible to workers,
         // no notifications, no readiness enforcement.
         is_draft_reservation: isDraft,
@@ -1128,7 +1110,7 @@ function DesktopShifts() {
       if (assignError) {
         // En una serie, el Servicio NUNCA se borra porque el equipo falle:
         // el caller reporta la ocurrencia afectada y permite reintentar.
-        if (opts?.onAssignError) opts.onAssignError(assignError);
+        if (opts.onAssignError) opts.onAssignError(assignError);
         else notifyWarning({
           key: "shift-create-assign",
           title: "El turno se creó, pero sin equipo",
@@ -1144,7 +1126,7 @@ function DesktopShifts() {
         isDraft ? "guardar_borrador_turno" : "crear_turno",
         shift.id,
         null,
-        { title: title.trim(), date: shiftDate, start_time: startTime, end_time: endTime, draft: isDraft },
+         { title: snapshot.title, date: shiftDate, start_time: snapshot.startTime, end_time: snapshot.endTime, draft: isDraft },
       );
 
       // No notifications fire for drafts — they're invisible to workers.
@@ -1181,7 +1163,7 @@ function DesktopShifts() {
     // cache canónica y todas las vistas derivadas hayan recibido la invalidación.
     return await reconcileServiceAfterSave(
       queryClient,
-      selectedCompanyId,
+      snapshot.companyId,
       shift.id,
       shift as ServiceRow,
     );
@@ -1236,11 +1218,11 @@ function DesktopShifts() {
     }
     setDraftSaving(true);
     try {
-      const submit = captureRecurrenceSubmit();
+      const intent = captureSeriesIntent("draft");
       // P0 recurrencia: guardar borrador también respeta la serie configurada.
       // Antes la recurrencia sólo se aplicaba al publicar, así que un borrador
       // recurrente creaba UNA sola ocurrencia (caso QK-001590).
-      const outcomes = await createServiceSeries({ publishBase: false }, submit);
+      const outcomes = await createServiceSeries(intent);
       const summary = summarizeSeries(outcomes);
       if (summary.created + summary.reused === 0) return;
       reportSeriesOutcome(outcomes, summary, /* publishedBase */ false);
@@ -1253,7 +1235,7 @@ function DesktopShifts() {
     }
   };
 
-  const captureRecurrenceSubmit = (): RecurrenceSubmitSnapshot => {
+  const captureSeriesIntent = (publicationIntent: "draft" | "publish_base"): SeriesIntent => {
     if (!recurrenceIntentRef.current) recurrenceIntentRef.current = newRecurrenceIntentId();
     const intentId = recurrenceIntentRef.current;
     const repeatDates = repeatConfig.enabled ? computeRepeatDates(date, repeatConfig) : [];
@@ -1271,8 +1253,38 @@ function DesktopShifts() {
         copyAssignments: repeatConfig.copyAssignments,
       },
     });
-    pendingRecurrenceSubmitRef.current = submit;
-    return submit;
+    const snapshot: SeriesServiceSnapshot = {
+      companyId: selectedCompanyId ?? "",
+      clientId: clientId || null,
+      locationId: locationId || null,
+      jobSiteLocationId,
+      jobSiteAddress: jobSiteAddress.trim() || null,
+      meetingPoint: meetingPoint.trim() || null,
+      meetingPointLocationId,
+      title: title.trim() || "Turno",
+      startTime,
+      endTime,
+      requestedHeadcount: parseInt(slots) || 1,
+      notes: notes.trim() || null,
+      specialInstructions: specialInstructions.trim() || null,
+      claimable: shiftsConfig.allow_claims ? claimable : false,
+      payType,
+      dayType,
+      payOverride,
+      shiftAdminId: shiftAdminId || null,
+      transportRequired,
+      carCapacity: parseInt(carCapacity) || 5,
+      transportNotes: transportNotes.trim() || null,
+      driverIds: [...driverIds],
+      clockMethod,
+      attendanceMode,
+      meetingTime: meetingTime || null,
+      employeeIds: [...selectedEmployees],
+      publicationIntent,
+    };
+    const intent = buildSeriesIntent({ recurrence: submit, service: snapshot });
+    pendingSeriesIntentRef.current = intent;
+    return intent;
   };
 
   /**
@@ -1286,32 +1298,27 @@ function DesktopShifts() {
    *  - un fallo de assignment no borra ni aborta el resto de la serie.
    */
   const createServiceSeries = async (
-    opts: { publishBase: boolean },
-    submit: RecurrenceSubmitSnapshot,
+    intent: SeriesIntent,
   ): Promise<OccurrenceOutcome[]> => {
-    if (!selectedCompanyId || !submit.baseDate || seriesSubmitLockRef.current) return [];
+    if (!intent.service.companyId || !intent.recurrence.baseDate || seriesSubmitLockRef.current) return [];
     seriesSubmitLockRef.current = true;
-    const plan = submit.occurrences;
-    const isSeries = plan.length > 1;
-
-    // Copiar workers es una decisión explícita. Fuera de la serie se mantiene
-    // el comportamiento actual (el equipo elegido va al turno creado).
-    const baseEmployees = [...selectedEmployees];
-    const copyWorkers = !isSeries || submit.copyAssignments;
+    const generated = generateOccurrences(intent);
+    const isSeries = generated.length > 1;
 
     const outcomes: OccurrenceOutcome[] = [];
     try {
-      for (const occ of plan) {
-        const employeeIds = occ.isBase || copyWorkers ? baseEmployees : [];
+      for (const item of generated) {
+        const { occurrence: occ, employeeIds, service } = item;
         let workersCopied = employeeIds.length;
         let assignError: unknown = null;
         try {
           const shift = await createSingleShift(
           occ.date,
-          /* skipNotifications */ !occ.isBase || isSeries || !opts.publishBase,
-          /* forceDraft */ !(occ.isBase && opts.publishBase),
-          /* publishNow */ occ.isBase && opts.publishBase,
+          /* skipNotifications */ !occ.isBase || isSeries || service.publicationIntent !== "publish_base",
+          /* forceDraft */ !(occ.isBase && service.publicationIntent === "publish_base"),
+          /* publishNow */ occ.isBase && service.publicationIntent === "publish_base",
           {
+            snapshot: service,
             employeeIds,
             // Sólo las series necesitan clave de idempotencia: un Servicio
             // suelto conserva exactamente el comportamiento anterior.
@@ -1411,8 +1418,8 @@ function DesktopShifts() {
 
     setSaving(true);
     try {
-      const submit = pendingRecurrenceSubmitRef.current ?? captureRecurrenceSubmit();
-      const outcomes = await createServiceSeries({ publishBase: true }, submit);
+      const intent = pendingSeriesIntentRef.current ?? captureSeriesIntent("publish_base");
+      const outcomes = await createServiceSeries(intent);
       const summary = summarizeSeries(outcomes);
       if (summary.created + summary.reused === 0) { setSaving(false); return; }
       reportSeriesOutcome(outcomes, summary, /* publishedBase */ true);
@@ -1429,21 +1436,18 @@ function DesktopShifts() {
       toast.error("Selecciona una empresa antes de crear un turno");
       return;
     }
-    const { data: shift, error } = await supabase.from("scheduled_shifts").insert({
-      company_id: selectedCompanyId,
-      title: data.title,
-      date: data.date,
-      start_time: data.start_time,
-      end_time: data.end_time,
-      slots: data.slots,
-      client_id: data.client_id || null,
-      location_id: data.location_id || null,
-      // Borrador real: status + publication_status alineados para que el turno
-      // NO aparezca al worker hasta que el admin lo publique desde el editor.
-      status: "draft",
-      publication_status: "draft",
-      created_by: user?.id,
-    } as any).select("*").single();
+    const quickSnapshot: SeriesServiceSnapshot = {
+      companyId: selectedCompanyId, clientId: data.client_id || null, locationId: data.location_id || null,
+      jobSiteLocationId: null, jobSiteAddress: null, meetingPoint: null, meetingPointLocationId: null,
+      title: data.title, startTime: data.start_time, endTime: data.end_time, requestedHeadcount: data.slots,
+      notes: null, specialInstructions: null, claimable: false, payType: "hourly", dayType: "full_day",
+      payOverride: false, shiftAdminId: null, transportRequired: false, carCapacity: 0,
+      transportNotes: null, driverIds: [], clockMethod: "mobile", attendanceMode: "standard",
+      meetingTime: null, employeeIds: [], publicationIntent: "draft",
+    };
+    const { data: shift, error } = await supabase.from("scheduled_shifts").insert(
+      buildCanonicalServiceInsert({ snapshot: quickSnapshot, date: data.date, createdBy: user?.id ?? null, draft: true }) as any,
+    ).select("*").single();
 
     if (error) {
       console.error("[QuickCreate] insert failed:", error);
@@ -2811,7 +2815,7 @@ function DesktopShifts() {
         isDirty={Boolean(title.trim() || selectedEmployees.length > 0 || notes.trim() || clientId || locationId)}
         repeatConfig={repeatConfig}
         onRepeatChange={setRepeatConfig}
-        onRequestSave={() => { captureRecurrenceSubmit(); setConfirmOpen(true); }}
+        onRequestSave={() => { captureSeriesIntent("publish_base"); setConfirmOpen(true); }}
         onSaveDraft={handleSaveDraft}
         onAddNewEmployee={() => setQuickAddOpen(true)}
         onAddEmergencyWorker={() => {

@@ -41,6 +41,125 @@ export interface RecurrenceSubmitSnapshot {
 }
 
 /**
+ * Verdad confirmada del Servicio que se repetirá. Usa nombres de dominio y no
+ * depende de estado React, presets, drafts locales ni valores por defecto.
+ */
+export interface SeriesServiceSnapshot {
+  companyId: string;
+  clientId: string | null;
+  locationId: string | null;
+  jobSiteLocationId: string | null;
+  jobSiteAddress: string | null;
+  meetingPoint: string | null;
+  meetingPointLocationId: string | null;
+  title: string;
+  startTime: string;
+  endTime: string;
+  requestedHeadcount: number;
+  notes: string | null;
+  specialInstructions: string | null;
+  claimable: boolean;
+  payType: "hourly" | "daily";
+  dayType: "full_day" | "half_day";
+  payOverride: boolean;
+  shiftAdminId: string | null;
+  transportRequired: boolean;
+  carCapacity: number;
+  transportNotes: string | null;
+  driverIds: string[];
+  clockMethod: "mobile" | "kiosk" | "both";
+  attendanceMode: string;
+  meetingTime: string | null;
+  employeeIds: string[];
+  publicationIntent: "draft" | "publish_base";
+}
+
+export interface SeriesIntent {
+  recurrence: RecurrenceSubmitSnapshot;
+  service: Readonly<SeriesServiceSnapshot>;
+}
+
+/** Captura defensiva: los arrays quedan desligados del formulario mutable. */
+export function buildSeriesIntent(input: {
+  recurrence: RecurrenceSubmitSnapshot;
+  service: SeriesServiceSnapshot;
+}): SeriesIntent {
+  return {
+    recurrence: {
+      ...input.recurrence,
+      selectedDays: [...input.recurrence.selectedDays],
+      occurrences: input.recurrence.occurrences.map((occurrence) => ({ ...occurrence })),
+    },
+    service: {
+      ...input.service,
+      driverIds: [...input.service.driverIds],
+      employeeIds: [...input.service.employeeIds],
+    },
+  };
+}
+
+export function generateOccurrences(intent: SeriesIntent): Array<{
+  occurrence: RecurrenceOccurrencePlan;
+  service: SeriesServiceSnapshot;
+  employeeIds: string[];
+}> {
+  const isSeries = intent.recurrence.occurrences.length > 1;
+  return intent.recurrence.occurrences.map((occurrence) => ({
+    occurrence: { ...occurrence },
+    service: { ...intent.service, driverIds: [...intent.service.driverIds], employeeIds: [...intent.service.employeeIds] },
+    employeeIds:
+      !isSeries || occurrence.isBase || intent.recurrence.copyAssignments
+        ? [...intent.service.employeeIds]
+        : [],
+  }));
+}
+
+/** Único traductor de una verdad confirmada a una fila de Servicio. */
+export function buildCanonicalServiceInsert(input: {
+  snapshot: SeriesServiceSnapshot;
+  date: string;
+  sourceRef?: string | null;
+  createdBy?: string | null;
+  draft: boolean;
+}): Record<string, unknown> {
+  const { snapshot, date, sourceRef = null, createdBy = null, draft } = input;
+  return {
+    company_id: snapshot.companyId,
+    title: snapshot.title,
+    date,
+    start_time: snapshot.startTime,
+    end_time: snapshot.endTime,
+    slots: snapshot.requestedHeadcount,
+    client_id: snapshot.clientId,
+    location_id: snapshot.locationId,
+    notes: snapshot.notes,
+    claimable: snapshot.claimable,
+    meeting_point: snapshot.meetingPoint,
+    special_instructions: snapshot.specialInstructions,
+    created_by: createdBy,
+    pay_type: snapshot.payType,
+    day_type: snapshot.payType === "daily" ? snapshot.dayType : "full_day",
+    pay_override: snapshot.payOverride,
+    shift_admin_id: snapshot.shiftAdminId,
+    transportation_required: snapshot.transportRequired,
+    car_capacity: snapshot.carCapacity,
+    transportation_notes: snapshot.transportNotes,
+    driver_employee_id: snapshot.driverIds[0] ?? null,
+    clock_method: snapshot.clockMethod,
+    attendance_mode: snapshot.attendanceMode,
+    meeting_time: snapshot.meetingTime,
+    meeting_point_location_id: snapshot.meetingPointLocationId,
+    job_site_location_id: snapshot.jobSiteLocationId,
+    job_site_address: snapshot.jobSiteAddress,
+    ...(sourceRef ? { reconciliation_hash: sourceRef } : {}),
+    status: draft ? "draft" : "published",
+    publication_status: draft ? "draft" : "published",
+    published_at: draft ? null : new Date().toISOString(),
+    published_by: draft ? null : createdBy,
+  };
+}
+
+/**
  * Foto inmutable tomada al pulsar Guardar/Publicar. Evita que una recuperación
  * local o los diálogos intermedios degraden una serie a una sola fecha.
  */
