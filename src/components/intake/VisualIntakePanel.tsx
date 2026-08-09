@@ -151,6 +151,8 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
     setResult(null);
     setCandidates([]);
     corrections.current = 0;
+    humanEdited.current = new Set();
+
   }, [previews]);
 
   const handleAnalyze = useCallback(async () => {
