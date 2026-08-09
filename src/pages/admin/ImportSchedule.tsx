@@ -2064,8 +2064,8 @@ export default function ImportSchedule() {
   return (
     <div className="space-y-6">
       <OperationalScreenHeader
-        title="Importar servicios"
-        context="Convierte mensajes, imágenes, PDFs, notas de voz y archivos en borradores listos para revisar."
+        title="✨ Smart Operations Assistant"
+        context="Cuéntame qué recibiste hoy y yo organizaré el trabajo contigo."
         action={
           <Button asChild variant="outline" className="min-h-11">
             <Link to="/app/company-dictionary">
@@ -2076,35 +2076,32 @@ export default function ImportSchedule() {
         }
       />
 
-      <div>
-        <h2 className="text-base font-semibold text-foreground">Trae tus trabajos a Stafly</h2>
-        <p className="text-sm text-muted-foreground">
-          Elige cómo te llegó la información. Todo pasa por la misma revisión antes de crear borradores.
-        </p>
-      </div>
+      {/* Tarjetas de entrada — mismo carril canónico, sin pipeline nuevo. */}
+      <AssistantSourceCards
+        value={source === "pdf" || source === "excel" ? "files" : (source as AssistantSourceKey)}
+        onChange={(key) => setSource(key === "files" ? "pdf" : key)}
+      />
 
-      {/* Selector único de fuente — todas las opciones usan el mismo carril canónico. */}
-      <nav aria-label="Fuente de los servicios" className="flex flex-wrap gap-2">
-        {SOURCE_OPTIONS.map((opt) => {
-          const active = source === opt.key;
-          return (
+      {(source === "pdf" || source === "excel") && (
+        <div className="flex gap-2">
+          {(["pdf", "excel"] as const).map((k) => (
             <button
-              key={opt.key}
+              key={k}
               type="button"
-              onClick={() => setSource(opt.key)}
-              aria-pressed={active}
-              className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium transition-colors sm:flex-none ${
-                active
+              aria-pressed={source === k}
+              onClick={() => setSource(k)}
+              className={`min-h-11 flex-1 rounded-xl border px-4 text-sm font-medium transition-colors sm:flex-none ${
+                source === k
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-card text-foreground hover:bg-muted"
               }`}
             >
-              <opt.icon className="h-4 w-4" />
-              {opt.label}
+              {k === "pdf" ? "PDF" : "Excel / CSV"}
             </button>
-          );
-        })}
-      </nav>
+          ))}
+        </div>
+      )}
+
 
       {source === "text" && <PastedTextIntakePanel />}
       {source === "image" && <VisualIntakePanel variant="image" />}
