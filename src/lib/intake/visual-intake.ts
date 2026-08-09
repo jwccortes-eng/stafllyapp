@@ -287,7 +287,10 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
     pageCount: pageCount || uploaded.length,
     duplicatePagesRemoved: deduped.removed,
     extractionFailures,
+    failures,
+    analysisIncomplete: extractionFailures > 0,
     latencyMs: Date.now() - startedAt,
+
   };
 }
 
