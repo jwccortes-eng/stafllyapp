@@ -583,6 +583,15 @@ function DesktopShifts() {
   }>({ open: false, shiftId: null, shiftLabel: "", target: "create" });
   const [emergencyPreselectId, setEmergencyPreselectId] = useState<string | null>(null);
   const [copyingWeek, setCopyingWeek] = useState(false);
+  // P0 FINAL — vista previa obligatoria: ninguna ruta escribe una serie sin que
+  // el operador vea antes exactamente qué Servicios se crearán.
+  const [seriesPreview, setSeriesPreview] = useState<{
+    preview: SeriesPreview;
+    routeLabel: string;
+    confirmLabel?: string;
+    run: () => Promise<void>;
+  } | null>(null);
+  const [seriesPreviewSubmitting, setSeriesPreviewSubmitting] = useState(false);
 
   // Filtered shifts
   const filteredShifts = useMemo(() => {
