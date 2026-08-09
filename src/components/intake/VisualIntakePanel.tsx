@@ -60,6 +60,9 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const corrections = useRef(0);
+  /** Ids con corrección humana: prioridad máxima al reconciliar reintentos. */
+  const humanEdited = useRef<Set<string>>(new Set());
+
 
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<Record<string, string>>({});
