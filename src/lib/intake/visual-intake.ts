@@ -307,6 +307,31 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
     );
   }
 
+  // 9. Capa de recuperación operativa: un fallo técnico nunca es "0 servicios".
+  const failureKind = classifyProviderFailure({
+    code: requestFailure?.code ?? failures[0]?.code ?? null,
+    message: requestFailure?.detail ?? failures[0]?.detail ?? null,
+  });
+  const recoveryText = recoveryTexts.join("\n").trim();
+  const recovery =
+    candidates.length === 0 && extractionFailures > 0 && recoveryText
+      ? runStructuralRecovery({
+          text: recoveryText,
+          companyId: input.companyId, // SIEMPRE del contexto autenticado
+          batchId,
+          source,
+          referenceDate: input.referenceDate,
+          sourceReference: "recuperación estructural",
+          failureKind,
+        })
+      : null;
+
+  const outcome = classifyAnalysisOutcome({
+    candidateCount: candidates.length + (recovery?.candidates.length ?? 0),
+    technicalFailure: extractionFailures > 0,
+    evidence: recovery?.evidence ?? null,
+  });
+
   return {
     batchId,
     candidates,
@@ -321,10 +346,17 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
     extractionFailures,
     failures,
     analysisIncomplete: extractionFailures > 0,
+    failureKind: extractionFailures > 0 ? failureKind : null,
+    outcome:
+      candidates.length > 0 && extractionFailures > 0 && recovery === null
+        ? "ANALYSIS_SUCCESS"
+        : outcome,
+    recovery,
+    recoveryText: recoveryText || null,
     latencyMs: Date.now() - startedAt,
-
   };
 }
+
 
 /** Fingerprint no sensible del lote para telemetría y correlación de reintentos. */
 export function fingerprintFiles(files: File[]): string {
