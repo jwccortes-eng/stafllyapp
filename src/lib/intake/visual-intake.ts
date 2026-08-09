@@ -169,29 +169,44 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
       })),
     },
   });
+  let requestFailure: { code: string; detail: string } | null = null;
   if (error) {
     // El cuerpo del error trae el motivo real (créditos, límite, rechazo).
     let detail = "";
+    let code = "";
     try {
       const ctx = (error as { context?: Response }).context;
       if (ctx && typeof ctx.json === "function") {
         const body = await ctx.clone().json();
         detail = String(body?.error ?? "");
+        code = String(body?.code ?? "");
       }
     } catch {
       /* noop */
     }
-    throw new Error(detail || (error as Error).message || "El análisis visual no se completó");
+    requestFailure = {
+      code: code || "ai_error",
+      detail: detail || (error as Error).message || "El análisis visual no se completó",
+    };
+  } else if ((data as any)?.error) {
+    requestFailure = {
+      code: String((data as any).code ?? "ai_error"),
+      detail: String((data as any).error),
+    };
   }
-  if ((data as any)?.error) throw new Error(String((data as any).error));
-
 
   const results: Array<{
     file_name?: string;
     storage_path?: string;
     error?: string;
+    raw_text?: string;
     extraction?: RawVisualExtraction;
-  }> = Array.isArray((data as any)?.extractions) ? (data as any).extractions : [];
+  }> = requestFailure
+    ? input.files.map((f) => ({ file_name: f.name, error: requestFailure!.code }))
+    : Array.isArray((data as any)?.extractions)
+      ? (data as any).extractions
+      : [];
+
 
   // 4. Normalización pura (nada se inventa; lo ambiguo va a "Necesitan revisión").
   let candidates: ServiceCandidate[] = [];
