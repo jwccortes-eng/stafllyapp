@@ -106,17 +106,29 @@ export function getServiceOperationalReadiness(
   }
 
   // ── Export Connecteam: espejo de validateShiftForExport ─────────────────
+  //
+  // `publication_status` es CONTEXTO, no blocker: un borrador completo tiene la
+  // misma información que un publicado y exportarlo no lo publica. Solo los
+  // estados terminales bloquean.
   const pub = txt(input.publicationStatus);
-  if (pub && pub !== "published") {
+  const TERMINAL = ["cancelled", "canceled", "archived"];
+  if (pub && TERMINAL.includes(pub.toLowerCase())) {
     blockers.push({
-      code: "export.not_published",
-      label: "Publicación",
-      reason: `El servicio está en estado "${pub}". Connecteam solo acepta servicios publicados.`,
+      code: "export.terminal_status",
+      label: "Estado del servicio",
+      reason: `El servicio está en estado "${pub}" — no debe importarse a Connecteam.`,
       field: "publication_status",
-      action: { label: "Publicar servicio", anchorId: SERVICE_CLIENT_ANCHOR },
+      action: { label: "Revisar servicio", anchorId: SERVICE_CLIENT_ANCHOR },
+      scope: "export",
+    });
+  } else if (pub && pub !== "published") {
+    warnings.push({
+      code: "export.draft_context",
+      message: "Stafly: borrador. Exportar a Connecteam no publica ni notifica a nadie.",
       scope: "export",
     });
   }
+
   if (!txt(input.title)) {
     blockers.push({
       code: "export.missing_title",
