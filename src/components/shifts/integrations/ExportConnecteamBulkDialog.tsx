@@ -13,6 +13,9 @@ import {
   effectiveAssignmentsForExport,
   bulkExportFilename,
   CSV_UTF8_BOM,
+  countCsvDataRows,
+  findDuplicateRowSignatures,
+
   type ValidationResult,
   type ConnecteamRow,
 } from "@/lib/integrations/connecteam-export";
