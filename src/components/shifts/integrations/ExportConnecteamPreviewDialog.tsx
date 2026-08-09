@@ -22,6 +22,7 @@ import { ExportStateBadges } from "./ExportStateBadges";
 import { ConnecteamMappingSheet } from "./ConnecteamMappingSheet";
 import { useConnecteamMapping } from "@/hooks/useConnecteamMapping";
 import { connecteamSubjectsForShift } from "@/lib/integrations/connecteam-compat";
+import { CONNECTEAM_MAPPING_COPY } from "@/lib/integrations/connecteam-mapping";
 
 interface Props {
   open: boolean;
