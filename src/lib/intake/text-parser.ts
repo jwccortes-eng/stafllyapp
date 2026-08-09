@@ -19,9 +19,12 @@
 import {
   createCandidate,
   emptyRef,
+  recomputeCandidate,
   type IntakeSource,
   type ServiceCandidate,
 } from "./candidate";
+import { expandDateList } from "./date-expansion";
+
 
 /* -------------------------------------------------------------------------
  * Contexto y salida
