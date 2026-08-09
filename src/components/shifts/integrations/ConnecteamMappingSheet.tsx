@@ -132,7 +132,7 @@ export function ConnecteamMappingSheet({ open, onOpenChange, subjects, impactCou
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setSubjectKey(key)}
+                    onClick={() => selectSubject(s)}
                     className={`rounded-full border px-3 py-1.5 text-xs min-h-[36px] ${
                       active
                         ? "border-primary bg-primary/10 text-primary font-semibold"
