@@ -10,10 +10,10 @@ import { parseTextToCandidates } from "@/lib/intake/text-parser";
 import { expandDateList } from "@/lib/intake/date-expansion";
 import {
   canCreateDraft,
-  confirmRef,
   getCandidateReadiness,
   recomputeCandidate,
 } from "@/lib/intake/candidate";
+import { confirmRef } from "@/lib/intake/entity-resolution";
 import { buildDraftPayload } from "@/lib/intake/create-draft-service";
 
 const REF = "2026-08-09";
