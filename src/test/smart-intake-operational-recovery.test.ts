@@ -40,7 +40,7 @@ const recover = (text: string, companyId = COMPANY) =>
     source: "image",
     referenceDate: REF_DATE,
     sourceReference: "recuperación estructural",
-    failureKind: "quota",
+    failureKind: "quota_or_credit",
   });
 
 describe("A. captura real + proveedor OK", () => {
@@ -58,7 +58,7 @@ describe("A. captura real + proveedor OK", () => {
 describe("B. proveedor 403 credit_limit_reached", () => {
   it("clasifica el fallo como cuota sin exponer jerga en la UX", () => {
     const kind = classifyProviderFailure({ code: "403", message: "credit_limit_reached" });
-    expect(kind).toBe("quota");
+    expect(kind).toBe("quota_or_credit");
     const copy = describeOutcome("TECHNICAL_FAILURE_WITH_EVIDENCE", { failureKind: kind });
     expect(copy.title).toContain("encontré información suficiente");
     expect(`${copy.title} ${copy.fact} ${copy.consequence}`).not.toMatch(
@@ -77,7 +77,7 @@ describe("B. proveedor 403 credit_limit_reached", () => {
     expect(c.startTime).toBe("16:00");
     expect(c.endTime).toBe("21:00");
     expect(
-      `${c.venueCandidate.raw} ${c.clientCandidate.raw} ${c.rawText ?? ""}`.toUpperCase(),
+      `${c.venueCandidate.raw} ${c.clientCandidate.raw} ${c.sourceReference ?? ""}`.toUpperCase(),
     ).toContain("ELUM FRANKLHALL");
   });
 
@@ -97,7 +97,7 @@ describe("B. proveedor 403 credit_limit_reached", () => {
 describe("C. timeout y otros fallos de proveedor", () => {
   it("clasifica cada familia de fallo", () => {
     expect(classifyProviderFailure({ code: null, message: "request timed out" })).toBe("timeout");
-    expect(classifyProviderFailure({ code: "429", message: "rate limited" })).toBe("quota");
+    expect(classifyProviderFailure({ code: "429", message: "rate limited" })).toBe("quota_or_credit");
     expect(classifyProviderFailure({ code: "503", message: "provider unavailable" })).toBe(
       "provider_unavailable",
     );
