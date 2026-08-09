@@ -19,6 +19,13 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { buildCanonicalServiceInsert } from "@/lib/shifts/recurrence";
+import {
+  snapshotFromServiceRow,
+  buildSeriesIntentFromSnapshot,
+  verifySeriesIntegrity,
+  describeSeriesVerification,
+} from "@/lib/shifts/series-engine";
 
 /**
  * DuplicateShiftDialog — Phase 1 Quick Win #2.
@@ -241,36 +248,25 @@ export function DuplicateShiftDialog({
       assignments_to_insert_count: copyWorkers ? workersToCopy.length : 0,
     });
 
-    // 1) Insert shift as draft/draft. publication_status defaults to 'draft'.
-    const insertPayload: Record<string, any> = {
-      company_id: companyId,
-      title: shift.title,
+    // P0 FINAL — snapshot canónico congelado ANTES de escribir. Duplicar usa el
+    // mismo contrato que Crear, Publicar, Copiar semana y Editar → Repetir.
+    const snapshot = snapshotFromServiceRow(shift, {
+      companyId,
+      employeeIds: copyWorkers ? workersToCopy.map((a) => a.employee_id) : [],
+      publicationIntent: "draft",
+      include: { client: copyClient, notes: copyNotes, roles: copyRoles },
+    });
+    const intent = buildSeriesIntentFromSnapshot({ snapshot, baseDate: dateStr });
+    const sourceRef = intent.recurrence.occurrences[0]?.sourceRef ?? null;
+    const insertPayload = buildCanonicalServiceInsert({
+      snapshot,
       date: dateStr,
-      start_time: shift.start_time,
-      end_time: shift.end_time,
-      slots: shift.slots ?? 1,
-      client_id: copyClient ? (shift.client_id || null) : null,
-      location_id: copyClient ? (shift.location_id || null) : null,
-      meeting_point_location_id: copyClient ? (shift.meeting_point_location_id || null) : null,
-      job_site_location_id: copyClient ? (shift.job_site_location_id || null) : null,
-      meeting_point: copyNotes ? (shift.meeting_point || null) : null,
-      special_instructions: copyNotes ? (shift.special_instructions || null) : null,
-      notes: copyNotes ? (shift.notes || null) : null,
-      pay_type: shift.pay_type || "hourly",
-      day_type: shift.day_type || "full_day",
-      pay_override: shift.pay_override ?? false,
-      attendance_mode: shift.attendance_mode || null,
-      clock_method: shift.clock_method || "both",
-      transportation_required: shift.transportation_required ?? false,
-      car_capacity: shift.car_capacity ?? 5,
-      transportation_notes: shift.transportation_notes || null,
-      shift_admin_id: copyRoles ? (shift.shift_admin_id || null) : null,
-      claimable: shift.claimable ?? false,
+      sourceRef,
+      createdBy: userId,
       // Explicitly draft. Never auto-publish.
-      status: "draft",
-      publication_status: "draft",
-      created_by: userId,
-    };
+      draft: true,
+    });
+
 
     const { data: created, error: insertErr } = await supabase
       .from("scheduled_shifts")
@@ -332,6 +328,41 @@ export function DuplicateShiftDialog({
           );
           return;
         }
+      }
+    }
+
+    // P0 FINAL — verificación automática: cliente, venue, horario, headcount,
+    // assignments, QK y referencia de serie. No corrige: reporta.
+    const { data: persistedRow } = await supabase
+      .from("scheduled_shifts")
+      .select("id, date, shift_ref, client_id, location_id, job_site_location_id, start_time, end_time, slots, reconciliation_hash")
+      .eq("id", newShiftId)
+      .maybeSingle();
+    const { count: assignCount } = await supabase
+      .from("shift_assignments")
+      .select("id", { count: "exact", head: true })
+      .eq("shift_id", newShiftId);
+    if (persistedRow) {
+      const r = persistedRow as any;
+      const verification = verifySeriesIntegrity({
+        intent,
+        persisted: [{
+          date: r.date,
+          shiftId: r.id,
+          ref: r.shift_ref ?? null,
+          clientId: r.client_id ?? null,
+          venueId: r.job_site_location_id ?? r.location_id ?? null,
+          startTime: r.start_time ?? null,
+          endTime: r.end_time ?? null,
+          headcount: r.slots ?? null,
+          assignmentCount: assignCount ?? 0,
+          seriesRef: r.reconciliation_hash ?? null,
+        }],
+      });
+      if (!verification.ok) {
+        toast.warning("Duplicado con diferencias", {
+          description: describeSeriesVerification(verification),
+        });
       }
     }
 

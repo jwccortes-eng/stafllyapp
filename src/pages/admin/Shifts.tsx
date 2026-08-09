@@ -75,6 +75,16 @@ import {
   type SeriesIntent,
   type SeriesServiceSnapshot,
 } from "@/lib/shifts/recurrence";
+import {
+  snapshotFromServiceRow,
+  buildSeriesIntentFromSnapshot,
+  buildSeriesPreview,
+  verifySeriesIntegrity,
+  describeSeriesVerification,
+  type SeriesPreview,
+  type PersistedOccurrence,
+} from "@/lib/shifts/series-engine";
+import { SeriesPreviewDialog } from "@/components/shifts/series/SeriesPreviewDialog";
 import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import EmergencyWorkerDialog, { type EmergencyWorkerCreated } from "@/components/employee/EmergencyWorkerDialog";
@@ -573,6 +583,15 @@ function DesktopShifts() {
   }>({ open: false, shiftId: null, shiftLabel: "", target: "create" });
   const [emergencyPreselectId, setEmergencyPreselectId] = useState<string | null>(null);
   const [copyingWeek, setCopyingWeek] = useState(false);
+  // P0 FINAL — vista previa obligatoria: ninguna ruta escribe una serie sin que
+  // el operador vea antes exactamente qué Servicios se crearán.
+  const [seriesPreview, setSeriesPreview] = useState<{
+    preview: SeriesPreview;
+    routeLabel: string;
+    confirmLabel?: string;
+    run: () => Promise<void>;
+  } | null>(null);
+  const [seriesPreviewSubmitting, setSeriesPreviewSubmitting] = useState(false);
 
   // Filtered shifts
   const filteredShifts = useMemo(() => {
@@ -1216,23 +1235,99 @@ function DesktopShifts() {
       toast.error("Agrega al menos un cliente, ubicación, título o trabajador para guardar este borrador.");
       return;
     }
-    setDraftSaving(true);
-    try {
-      const intent = captureSeriesIntent("draft");
-      // P0 recurrencia: guardar borrador también respeta la serie configurada.
-      // Antes la recurrencia sólo se aplicaba al publicar, así que un borrador
-      // recurrente creaba UNA sola ocurrencia (caso QK-001590).
-      const outcomes = await createServiceSeries(intent);
-      const summary = summarizeSeries(outcomes);
-      if (summary.created + summary.reused === 0) return;
-      reportSeriesOutcome(outcomes, summary, /* publishedBase */ false);
-      createSession.endSession(); // P0.4 — borrador en BD guardado → sesión local limpia
-      setCreateOpen(false);
-      resetForm();
-      loadData();
-    } finally {
-      setDraftSaving(false);
+    const intent = captureSeriesIntent("draft");
+    // P0 FINAL — la vista previa es obligatoria en todas las rutas.
+    openSeriesPreview({
+      intent,
+      routeLabel: "Guardar borrador",
+      run: async () => {
+        setDraftSaving(true);
+        try {
+          // P0 recurrencia: guardar borrador también respeta la serie configurada.
+          const outcomes = await createServiceSeries(intent);
+          const summary = summarizeSeries(outcomes);
+          if (summary.created + summary.reused === 0) return;
+          reportSeriesOutcome(outcomes, summary, /* publishedBase */ false);
+          await verifySeriesAfterPersist(intent, outcomes);
+          createSession.endSession(); // P0.4 — borrador en BD guardado → sesión local limpia
+          setCreateOpen(false);
+          resetForm();
+          loadData();
+        } finally {
+          setDraftSaving(false);
+        }
+      },
+    });
+  };
+
+  /** Puerta única: ninguna serie se persiste sin confirmación visual previa. */
+  const openSeriesPreview = (input: {
+    /** Una intención (Crear/Publicar/Duplicar/Repetir) o varias (Copiar semana). */
+    intent?: SeriesIntent;
+    intents?: SeriesIntent[];
+    routeLabel: string;
+    confirmLabel?: string;
+    run: () => Promise<void>;
+  }) => {
+    const list = input.intents ?? (input.intent ? [input.intent] : []);
+    const previews = list.map((i) => buildSeriesPreview(i));
+    const merged: SeriesPreview = {
+      intentId: previews[0]?.intentId ?? "",
+      total: previews.reduce((n, p) => n + p.total, 0),
+      rows: previews.flatMap((p) => p.rows),
+      pending: Array.from(new Set(previews.flatMap((p) => p.pending))),
+    };
+    setSeriesPreview({
+      preview: merged,
+      routeLabel: input.routeLabel,
+      confirmLabel: input.confirmLabel,
+      run: input.run,
+    });
+  };
+
+  /**
+   * Verificación automática posterior a la escritura: cliente, venue, horario,
+   * headcount, assignments, QK y referencia de serie. No corrige: reporta.
+   */
+  const verifySeriesAfterPersist = async (
+    intent: SeriesIntent,
+    outcomes: OccurrenceOutcome[],
+  ) => {
+    const ids = outcomes.map((o) => o.shiftId).filter((id): id is string => !!id);
+    if (ids.length === 0) return null;
+    const [{ data: rows }, { data: assignRows }] = await Promise.all([
+      supabase
+        .from("scheduled_shifts")
+        .select("id, date, shift_ref, client_id, location_id, job_site_location_id, start_time, end_time, slots, reconciliation_hash")
+        .in("id", ids),
+      supabase.from("shift_assignments").select("shift_id").in("shift_id", ids),
+    ]);
+    const counts: Record<string, number> = {};
+    for (const a of (assignRows ?? []) as Array<{ shift_id: string }>) {
+      counts[a.shift_id] = (counts[a.shift_id] ?? 0) + 1;
     }
+    const persisted: PersistedOccurrence[] = ((rows ?? []) as any[]).map((r) => ({
+      date: r.date,
+      shiftId: r.id,
+      ref: r.shift_ref ?? null,
+      clientId: r.client_id ?? null,
+      venueId: r.job_site_location_id ?? r.location_id ?? null,
+      startTime: r.start_time ?? null,
+      endTime: r.end_time ?? null,
+      headcount: r.slots ?? null,
+      assignmentCount: counts[r.id] ?? 0,
+      seriesRef: r.reconciliation_hash ?? null,
+    }));
+    const result = verifySeriesIntegrity({ intent, persisted });
+    if (!result.ok) {
+      notifyWarning({
+        key: "series-verification",
+        title: "Los Servicios se crearon con diferencias",
+        fact: describeSeriesVerification(result),
+        consequence: "Abre los Servicios señalados y corrige antes de publicar o exportar.",
+      });
+    }
+    return result;
   };
 
   const captureSeriesIntent = (publicationIntent: "draft" | "publish_base"): SeriesIntent => {
@@ -1416,18 +1511,25 @@ function DesktopShifts() {
     }
 
 
-    setSaving(true);
-    try {
-      const intent = pendingSeriesIntentRef.current ?? captureSeriesIntent("publish_base");
-      const outcomes = await createServiceSeries(intent);
-      const summary = summarizeSeries(outcomes);
-      if (summary.created + summary.reused === 0) { setSaving(false); return; }
-      reportSeriesOutcome(outcomes, summary, /* publishedBase */ true);
-      createSession.endSession(); // P0.4 — turno creado → sesión, storage y timers limpios
-      setCreateOpen(false); resetForm(); loadData();
-    } finally {
-      setSaving(false);
-    }
+    const intent = pendingSeriesIntentRef.current ?? captureSeriesIntent("publish_base");
+    openSeriesPreview({
+      intent,
+      routeLabel: "Publicar",
+      run: async () => {
+        setSaving(true);
+        try {
+          const outcomes = await createServiceSeries(intent);
+          const summary = summarizeSeries(outcomes);
+          if (summary.created + summary.reused === 0) return;
+          reportSeriesOutcome(outcomes, summary, /* publishedBase */ true);
+          await verifySeriesAfterPersist(intent, outcomes);
+          createSession.endSession(); // P0.4 — turno creado → sesión, storage y timers limpios
+          setCreateOpen(false); resetForm(); loadData();
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
   };
 
   // Quick create: minimal shift from popover
@@ -2020,149 +2122,113 @@ function DesktopShifts() {
 
   const handleDuplicateToDay = async (shiftData: any, targetDate: string) => {
     if (!canEdit || !selectedCompanyId) return;
-    // Phase 2 #2.1: copy full operational structure (status=draft) WITHOUT
-    // assignments, QR recipients, or driver_employee_id. Driver is a person,
-    // not a structural property of the shift — copying it would create a false
-    // sense that transport is resolved.
-    const { error, data: newShift } = await supabase.from("scheduled_shifts").insert({
-      company_id: selectedCompanyId,
-      title: shiftData.title,
-      date: targetDate,
-      start_time: shiftData.start_time,
-      end_time: shiftData.end_time,
-      slots: shiftData.slots ?? 1,
-      client_id: shiftData.client_id || null,
-      location_id: shiftData.location_id || null,
-      notes: shiftData.notes || null,
-      claimable: shiftData.claimable ?? false,
-      meeting_point: shiftData.meeting_point || null,
-      special_instructions: shiftData.special_instructions || null,
-      pay_type: shiftData.pay_type || "hourly",
-      day_type: shiftData.day_type || "full_day",
-      pay_override: shiftData.pay_override ?? false,
-      attendance_mode: shiftData.attendance_mode || null,
-      clock_method: shiftData.clock_method || "both",
-      transportation_required: shiftData.transportation_required ?? false,
-      car_capacity: shiftData.car_capacity ?? 5,
-      transportation_notes: shiftData.transportation_notes || null,
-      shift_admin_id: shiftData.shift_admin_id || null,
-      meeting_point_location_id: shiftData.meeting_point_location_id || null,
-      job_site_location_id: shiftData.job_site_location_id || null,
-      // Explicitly NOT copied: driver_employee_id, assignments, QR recipients
-      status: "draft",
-      created_by: user?.id,
-    } as any).select("id, shift_code").single();
-
-    if (error) { toast.error(error.message); return; }
-
-    if (newShift) {
-      await logShiftActivity("duplicar_turno", newShift.id, null, {
-        title: shiftData.title, date: targetDate, source_shift: shiftData.shiftId,
-      });
-    }
-
-    const niceDate = new Date(targetDate + "T12:00:00").toLocaleDateString("es", {
-      weekday: "short", day: "numeric", month: "short",
+    // P0 FINAL — mismo contrato que Crear/Publicar/Copiar semana: snapshot
+    // canónico + vista previa + verificación. Sin assignments ni driver: la
+    // persona no es una propiedad estructural del Servicio.
+    const snapshot = snapshotFromServiceRow(shiftData, {
+      companyId: selectedCompanyId,
+      publicationIntent: "draft",
     });
-    toast.success(`Turno duplicado al ${niceDate} como borrador.`, {
-      description: "Asigna empleados para activar.",
+    const intent = buildSeriesIntentFromSnapshot({ snapshot, baseDate: targetDate });
+    openSeriesPreview({
+      intent,
+      routeLabel: "Duplicar",
+      confirmLabel: "Duplicar como borrador",
+      run: async () => {
+        const outcomes = await createServiceSeries(intent);
+        const summary = summarizeSeries(outcomes);
+        if (summary.created + summary.reused === 0) {
+          toast.error("No pudimos duplicar el Servicio");
+          return;
+        }
+        const created = outcomes.find((o) => o.shiftId);
+        if (created?.shiftId) {
+          await logShiftActivity("duplicar_turno", created.shiftId, null, {
+            title: snapshot.title, date: targetDate, source_shift: shiftData.shiftId ?? shiftData.id,
+          });
+        }
+        await verifySeriesAfterPersist(intent, outcomes);
+        const niceDate = new Date(targetDate + "T12:00:00").toLocaleDateString("es", {
+          weekday: "short", day: "numeric", month: "short",
+        });
+        toast.success(`Turno duplicado al ${niceDate} como borrador.`, {
+          description: "Asigna empleados para activar.",
+        });
+        loadData();
+      },
     });
-    loadData();
   };
 
   const handleCopyWeek = async () => {
     if (!canEdit || !selectedCompanyId) return;
-    setCopyingWeek(true);
     const nextWeekStart = addDays(weekStart, 7);
     const currentWeekShifts = shifts.filter(s => {
       const sd = new Date(s.date + "T00:00:00");
       return sd >= weekStart && sd <= addDays(weekStart, 6);
     });
     if (currentWeekShifts.length === 0) {
-      toast.error("No shifts to copy in the current week");
-      setCopyingWeek(false);
+      toast.error("No hay Servicios que copiar en esta semana");
       return;
     }
-    let created = 0;
-    for (const s of currentWeekShifts) {
-      const dayOfWeek = new Date(s.date + "T00:00:00").getDay();
-      const wsDay = weekStart.getDay();
-      const offset = ((dayOfWeek - wsDay) + 7) % 7;
+
+    // P0 FINAL — un snapshot canónico por Servicio origen, congelado ANTES de
+    // escribir. Copiar semana usa exactamente el mismo motor de series que
+    // Crear, Publicar, Duplicar y Editar → Repetir.
+    const wsDay = weekStart.getDay();
+    const plans = currentWeekShifts.map((s) => {
+      const offset = ((new Date(s.date + "T00:00:00").getDay() - wsDay) + 7) % 7;
       const targetDate = format(addDays(nextWeekStart, offset), "yyyy-MM-dd");
-      const raw = s as any;
-      const { data: newShift, error } = await supabase.from("scheduled_shifts").insert({
-        company_id: selectedCompanyId,
-        title: s.title,
-        date: targetDate,
-        start_time: s.start_time,
-        end_time: s.end_time,
-        slots: s.slots ?? 1,
-        client_id: s.client_id || null,
-        location_id: s.location_id || null,
-        notes: s.notes || null,
-        claimable: s.claimable ?? false,
-        // Phase 2 #2.2: align fields with handleDuplicateToDay (#2.1).
-        meeting_point: raw.meeting_point || null,
-        special_instructions: raw.special_instructions || null,
-        pay_type: raw.pay_type || "hourly",
-        day_type: raw.day_type || "full_day",
-        pay_override: raw.pay_override ?? false,
-        attendance_mode: raw.attendance_mode || null,
-        clock_method: raw.clock_method || "both",
-        transportation_required: raw.transportation_required ?? false,
-        car_capacity: raw.car_capacity ?? 5,
-        transportation_notes: raw.transportation_notes || null,
-        shift_admin_id: raw.shift_admin_id || null,
-        meeting_point_location_id: raw.meeting_point_location_id || null,
-        job_site_location_id: raw.job_site_location_id || null,
-        // Explicitly NOT copied: driver_employee_id, QR recipients
-        // Assignments handled separately below, gated by shifts_config.copy_week_assignments
-        status: "draft",
-        created_by: user?.id,
-      } as any).select("id, shift_ref").single();
-      if (error) continue;
-      /* P0 · SHIFT IDENTITY: el título NO lleva número. La referencia visible
-       * (`shift_ref`) la emite la secuencia por empresa; prefijar el título
-       * creaba un segundo número compitiendo en cabeceras. */
-      // Copy assignments (respects shifts_config.copy_week_assignments)
-      if (shiftsConfig.copy_week_assignments && newShift) {
-        const shiftAssigns = assignments.filter(a => a.shift_id === s.id);
-        if (shiftAssigns.length > 0) {
-          const newAssigns = shiftAssigns.map(a => ({
-            company_id: selectedCompanyId,
-            shift_id: newShift.id,
-            employee_id: a.employee_id,
-            status: "pending",
-          }));
-          const { error: copyAssignError } = await supabase.from("shift_assignments").insert(newAssigns as any);
-          if (copyAssignError) {
-            notifyWarning({
-              key: "shift-copy-assign",
-              title: "Se copió el turno, pero sin equipo",
-              fact: `No pudimos copiar ${newAssigns.length} asignación(es).`,
-              consequence: "Revisa el turno copiado y asigna el equipo manualmente.",
-              cause: copyAssignError,
-            });
-          }
-        }
-      }
-      if (newShift) {
-        await logShiftActivity("copiar_semana", newShift.id, null, {
-          source_shift: s.id, source_date: s.date, target_date: targetDate,
-        });
-      }
-      created++;
-    }
-    const weekLabel = `${format(nextWeekStart, "MMM d")}–${format(addDays(nextWeekStart, 6), "MMM d")}`;
-    // Phase 2 #2.2: make assignment-copy behavior visible in the toast.
-    toast.success(`${created} turnos duplicados a ${weekLabel} como borrador.`, {
-      description: shiftsConfig.copy_week_assignments
-        ? "Asignaciones copiadas como pending — los empleados deben aceptar."
-        : "Sin asignaciones copiadas. Asigna empleados para activar.",
+      const employeeIds = shiftsConfig.copy_week_assignments
+        ? Array.from(new Set(assignments.filter(a => a.shift_id === s.id).map(a => a.employee_id)))
+        : [];
+      const snapshot = snapshotFromServiceRow(s as any, {
+        companyId: selectedCompanyId,
+        employeeIds,
+        publicationIntent: "draft",
+      });
+      return {
+        sourceId: s.id,
+        sourceDate: s.date,
+        targetDate,
+        intent: buildSeriesIntentFromSnapshot({ snapshot, baseDate: targetDate, copyAssignments: true }),
+      };
     });
-    setCopyingWeek(false);
-    loadData();
+
+    const weekLabel = `${format(nextWeekStart, "MMM d")}–${format(addDays(nextWeekStart, 6), "MMM d")}`;
+    openSeriesPreview({
+      intents: plans.map((p) => p.intent),
+      routeLabel: `Copiar semana a ${weekLabel}`,
+      confirmLabel: `Copiar ${plans.length} Servicio${plans.length === 1 ? "" : "s"}`,
+      run: async () => {
+        setCopyingWeek(true);
+        try {
+          let created = 0;
+          for (const plan of plans) {
+            const outcomes = await createServiceSeries(plan.intent);
+            const summary = summarizeSeries(outcomes);
+            if (summary.created + summary.reused === 0) continue;
+            created += summary.created + summary.reused;
+            const newId = outcomes.find((o) => o.shiftId)?.shiftId;
+            if (newId) {
+              await logShiftActivity("copiar_semana", newId, null, {
+                source_shift: plan.sourceId, source_date: plan.sourceDate, target_date: plan.targetDate,
+              });
+            }
+            await verifySeriesAfterPersist(plan.intent, outcomes);
+          }
+          toast.success(`${created} Servicios copiados a ${weekLabel} como borrador.`, {
+            description: shiftsConfig.copy_week_assignments
+              ? "Equipo copiado como pendiente — los empleados deben aceptar."
+              : "Sin equipo copiado. Asigna trabajadores para activar.",
+          });
+          loadData();
+        } finally {
+          setCopyingWeek(false);
+        }
+      },
+    });
   };
+
 
   const toggleEmployee = (id: string) => {
     setSelectedEmployees(prev =>
@@ -3219,6 +3285,26 @@ function DesktopShifts() {
         clients={clients}
         locations={locations}
         selectedCompanyId={selectedCompanyId}
+      />
+
+      {/* P0 FINAL — vista previa obligatoria antes de crear cualquier Servicio */}
+      <SeriesPreviewDialog
+        open={!!seriesPreview}
+        onOpenChange={(o) => { if (!o && !seriesPreviewSubmitting) setSeriesPreview(null); }}
+        preview={seriesPreview?.preview ?? null}
+        routeLabel={seriesPreview?.routeLabel ?? ""}
+        confirmLabel={seriesPreview?.confirmLabel}
+        submitting={seriesPreviewSubmitting}
+        onConfirm={async () => {
+          if (!seriesPreview) return;
+          setSeriesPreviewSubmitting(true);
+          try {
+            await seriesPreview.run();
+            setSeriesPreview(null);
+          } finally {
+            setSeriesPreviewSubmitting(false);
+          }
+        }}
       />
     </div>
   );
