@@ -1062,6 +1062,8 @@ function DesktopShifts() {
       meeting_point_location_id: meetingPointLocationId || null,
       job_site_location_id: jobSiteLocationId || null,
       job_site_address: jobSiteAddress.trim() || null,
+      // Trazabilidad de serie: todas las ocurrencias comparten el mismo intent.
+      ...(sourceRef ? { reconciliation_hash: sourceRef } : {}),
       // New lifecycle column — single source of truth for draft visibility.
       publication_status: isDraft ? "draft" : "published",
       published_at: isDraft ? null : new Date().toISOString(),
@@ -1069,10 +1071,25 @@ function DesktopShifts() {
     };
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert(insertData).select("*").single();
 
-    if (error) { toast.error(error.message); return null; }
+    if (error) {
+      if (sourceRef) {
+        // Carrera: otro intento pudo insertar la misma ocurrencia.
+        const retry = await supabase
+          .from("scheduled_shifts")
+          .select("*")
+          .eq("company_id", selectedCompanyId)
+          .eq("reconciliation_hash", sourceRef)
+          .is("deleted_at", null)
+          .maybeSingle();
+        if (retry.data?.id) return retry.data as any;
+      }
+      if (opts?.onAssignError) throw error;
+      toast.error(error.message);
+      return null;
+    }
 
-    if (selectedEmployees.length > 0 && shift) {
-      const assigns = selectedEmployees.map(eid => ({
+    if (employeeIds.length > 0 && shift) {
+      const assigns = employeeIds.map(eid => ({
         company_id: selectedCompanyId, shift_id: shift.id, employee_id: eid, status: "pending",
         // P0.3 — multi-driver: el rol vive en la asignación, no en el turno.
         assignment_role: driverIds.includes(eid) ? "driver" : "worker",
@@ -1084,7 +1101,10 @@ function DesktopShifts() {
       // Sin CTA de reintento: repetir el insert podría duplicar asignaciones.
       const { error: assignError } = await supabase.from("shift_assignments").insert(assigns as any);
       if (assignError) {
-        notifyWarning({
+        // En una serie, el Servicio NUNCA se borra porque el equipo falle:
+        // el caller reporta la ocurrencia afectada y permite reintentar.
+        if (opts?.onAssignError) opts.onAssignError(assignError);
+        else notifyWarning({
           key: "shift-create-assign",
           title: "El turno se creó, pero sin equipo",
           fact: `No pudimos asignar ${assigns.length} worker(s).`,
