@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { canCreateDraft, type ServiceCandidate } from "@/lib/intake/candidate";
+import { canCreateDraft, getCandidateReadiness, type ServiceCandidate } from "@/lib/intake/candidate";
 import type { ConfidenceLevel, UnresolvedElement } from "@/lib/intake/visual-extraction";
 import CandidateQuickEditSheet from "@/components/intake/CandidateQuickEditSheet";
 import EntityResolutionSheet from "@/components/intake/EntityResolutionSheet";
