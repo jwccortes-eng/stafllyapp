@@ -29,12 +29,20 @@ describe("getServiceOperationalReadiness", () => {
     expect(r.readyToExportConnecteam).toBe(true);
   });
 
-  it("separa publicar de exportar: borrador publica pero no exporta", () => {
+  it("un borrador completo sí es exportable: publicación es contexto", () => {
     const r = getServiceOperationalReadiness({ ...base, publicationStatus: "draft" } as any);
     expect(r.readyToPublish).toBe(true);
-    expect(r.readyToExportConnecteam).toBe(false);
-    expect(r.exportBlockers.map((b) => b.code)).toContain("export.not_published");
+    expect(r.readyToExportConnecteam).toBe(true);
+    expect(r.exportBlockers.map((b) => b.code)).not.toContain("export.not_published");
+    expect(r.warnings.map((w) => w.code)).toContain("export.draft_context");
   });
+
+  it("bloquea export cuando el servicio está cancelado", () => {
+    const r = getServiceOperationalReadiness({ ...base, publicationStatus: "cancelled" } as any);
+    expect(r.readyToExportConnecteam).toBe(false);
+    expect(r.exportBlockers.map((b) => b.code)).toContain("export.terminal_status");
+  });
+
 
   it("bloquea publicación y export cuando falta el lugar del servicio", () => {
     const r = getServiceOperationalReadiness({
