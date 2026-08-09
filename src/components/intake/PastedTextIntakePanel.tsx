@@ -10,7 +10,7 @@
  *  - `company_id` sale del contexto autenticado, jamás del mensaje.
  */
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ import { runPastedTextIntake, refreshDuplicateStatus } from "@/lib/intake/text-i
 import { closeServiceIntakeBatch, summarizeCandidates } from "@/lib/intake/batch";
 import { buildIntakeTelemetry, logIntakeTelemetry } from "@/lib/intake/telemetry";
 import type { TextParseNotice } from "@/lib/intake/text-parser";
+import { useIntakeReviewPersistence } from "@/lib/intake/review-persistence";
 
 const PLACEHOLDER = `Pega aquí el mensaje. Por ejemplo:
 
