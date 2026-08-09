@@ -75,6 +75,10 @@ export interface CalendarServiceIdentity {
     missing: number;
     complete: boolean;
     label: string;
+    /** ¿Se puede empezar a asignar personal? (independiente de publicar/exportar) */
+    readyToStaff: boolean;
+    staffBlockers: OperationalBlocker[];
+    staffStatusText: string;
   };
 
   time: {
