@@ -262,11 +262,16 @@ export function PastedTextIntakePanel() {
 
         if (created > 0 || reused > 0) {
           const understanding = buildUnderstanding(next);
+          const createdOnes = next.filter((c) => c.reviewStatus === "created");
+          const readinessOf = createdOnes.map((c) => getCandidateReadiness(c));
           setSuccess({
             created,
             reusedClients: understanding.memory.some((m) => m.includes("cliente")) ? 1 : 0,
             reusedVenues: understanding.memory.some((m) => m.includes("venue")) ? 1 : 0,
             aliasesLearned: understanding.memory.filter((m) => m.includes("alias")).length,
+            pendingVenue: readinessOf.filter((r) => r.exportGaps.includes("connecteam_job") || r.publishGaps.includes("venue_link")).length,
+            pendingEndTime: readinessOf.filter((r) => r.publishGaps.includes("end_time")).length,
+            pendingWorkers: readinessOf.filter((r) => r.publishGaps.includes("requested_workers")).length,
           });
           notifySuccess({
             title: `${created} servicios en borrador`,
