@@ -291,16 +291,28 @@ export function buildConnecteamRow(
   // Users: empty by default in v1.1 (Connecteam needs exact identifiers).
   const usersValue = opts.includeUsers ? userNames.join("; ") : "";
 
-  // Note: notes + special_instructions + `Ref: <shift_code>` (never Stafly UUID).
+  // Identificador humano del servicio: `shift_ref` (QK-001578) es la referencia
+  // canónica visible; `shift_code` solo como fallback histórico. NUNCA el UUID.
+  const humanRef = nonEmpty(s.shift_ref) || nonEmpty(s.shift_code) || "";
+
+  // Note: notes + special_instructions + `Ref: <referencia>` (never Stafly UUID).
   const noteParts: string[] = [];
   if (s.notes && s.notes.trim()) noteParts.push(s.notes.trim());
   if (s.special_instructions && s.special_instructions.trim()) {
     noteParts.push(s.special_instructions.trim());
   }
-  if (s.shift_code && s.shift_code.trim()) {
-    noteParts.push(`Ref: ${s.shift_code.trim()}`);
+  if (humanRef) {
+    noteParts.push(`Ref: ${humanRef}`);
   }
   const note = noteParts.join(" · ");
+
+  // Shift title: `QK-001578 · Luminance`. Hace cada fila única y trazable en
+  // Connecteam (dos servicios del mismo día con el mismo nombre dejan de ser
+  // indistinguibles). El código legado sigue viajando solo en Note.
+  const rawTitle = (s.title ?? "").trim();
+  const shiftTitle = nonEmpty(s.shift_ref)
+    ? [nonEmpty(s.shift_ref), rawTitle].filter(Boolean).join(" · ")
+    : rawTitle;
 
   const row: ConnecteamRow = {
     "Date": fmtDate(s.date),
@@ -309,7 +321,8 @@ export function buildConnecteamRow(
     "Timezone": resolveTimezone(s, ctx),
     "Unpaid break": "",
     "Paid break": "",
-    "Shift title": (s.title ?? "").trim(),
+    "Shift title": shiftTitle,
+
     "Job": compat.job,
     "Sub item": compat.subItem,
     "Address": addr.value,
