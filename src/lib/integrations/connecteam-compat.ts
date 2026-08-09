@@ -1,32 +1,37 @@
 /**
- * Export Connecteam v1.2 — TEMPORARY COMPATIBILITY MAPPING for Job/Sub item.
+ * Resolución de Job / Sub item para el puente Stafly → Connecteam.
  *
- * WHY THIS EXISTS:
- *   Connecteam reports group hours and cost by Job + Sub item. When the
- *   exported value does not exactly match an existing Connecteam Job/Sub item,
- *   the row lands in "Select" and disappears from reporting. Until Stafly
- *   exposes per-tenant `connecteam_job_name` / `connecteam_sub_item_name`
- *   hints (and a proper tenant-scoped catalog), we infer the most likely
- *   bucket from currently-available signals (client, location, category,
- *   role, pay_type, weekday, free text).
+ * FASE 2 — la fuente canónica es ahora la CONFIGURACIÓN POR COMPAÑÍA
+ * (`connecteam-mapping.ts`, `company_settings.key = 'connecteam_mapping'`).
+ *
+ * Orden de resolución:
+ *   1. mapping     → destino declarado por la compañía (venue → cliente → título)
+ *   2. hint        → `connecteam_job_name` explícito en turno/venue/cliente
+ *   3. legacy      → BETA_COMPAT_RULES, SOLO mientras la compañía no tenga
+ *                    ningún mapping declarado (compatibilidad con el beta de
+ *                    Quality Staff: Eminence / Production). Emite aviso.
+ *   4. fallback    → nombre crudo de venue/cliente/categoría. También legacy:
+ *                    desaparece en cuanto la compañía declara su mapping,
+ *                    porque Connecteam lo muestra como "Select".
+ *   5. missing     → bloquea la exportación con motivo explícito.
  *
  * SCOPE (HARD BOUNDARY):
- *   Pure, frontend-only helper. NO writes, NO supabase, NO fetch, NO edge.
- *   Reads only the BuildContext already loaded by the export flow.
+ *   Puro, frontend-only. NO writes, NO supabase, NO fetch, NO edge.
  *
- * NOT A PERMANENT DATA MODEL:
- *   The hard-coded `BETA_COMPAT_RULES` below are a BRIDGE for beta tenants
- *   (Quality Staff: Eminence / Production). Each rule has a stable `ruleId`
- *   so we can audit which mapping was applied. Do NOT add new tenants here
- *   without an explicit ticket — once the schema lands, this whole module is
- *   superseded by an explicit `connecteam_compat_profiles` table.
- *
- * TODO(post-beta): move BETA_COMPAT_RULES to a tenant-scoped configuration
- *   (e.g. `company_settings.connecteam_compat_profile`) and stop hard-coding
- *   tenant strings (`Eminence`, `Production`) in the codebase.
+ * INVENTARIO DE HARDCODES (auditoría Fase 2, ver reporte):
+ *   BETA_COMPAT_RULES contiene 6 reglas hardcodeadas (4 Eminence, 2 Production).
+ *   Ya NO son la única fuente: cualquier mapping declarado por la compañía las
+ *   desactiva por completo. Se conservan solo como red de compatibilidad para
+ *   tenants que aún no han configurado su tabla de traducción.
  */
 import type { Shift, SelectOption } from "@/components/shifts/types";
 import type { BuildContext, ExportWarning } from "./connecteam-export";
+import {
+  candidateSubjects,
+  hasAnyMapping,
+  lookupMapping,
+  type ConnecteamMappingConfig,
+} from "./connecteam-mapping";
 
 // ── Public types ───────────────────────────────────────────────────────────
 
@@ -37,9 +42,11 @@ export interface JobAndSubItem {
   subItem: string;
   confidence: JobConfidence;
   source: {
-    job: "hint" | "location" | "client" | "category" | "none";
-    subItem: "compat_rule" | "category" | "none";
+    job: "mapping" | "hint" | "location" | "client" | "category" | "none";
+    subItem: "mapping" | "compat_rule" | "category" | "none";
     ruleId?: string;
+    /** Clave de mapping usada (`client:<id>` / `location:<id>` / `title:<slug>`). */
+    mappingKey?: string;
   };
   warnings: ExportWarning[];
 }
@@ -51,11 +58,17 @@ export interface ResolveOptions {
    * Use this if Connecteam ever rejects rows because of a bad inferred bucket.
    */
   enableBetaCompatMapping?: boolean;
+  /**
+   * Modo estricto: sin mapping declarado no hay Job. Se activa solo cuando la
+   * compañía ya declaró al menos un destino (o cuando el caller lo fuerza).
+   */
+  strict?: boolean;
 }
 
-const DEFAULT_RESOLVE_OPTIONS: Required<ResolveOptions> = {
+const DEFAULT_RESOLVE_OPTIONS: Required<Pick<ResolveOptions, "enableBetaCompatMapping">> = {
   enableBetaCompatMapping: true,
 };
+
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -295,15 +308,34 @@ export function resolveConnecteamJobAndSubItem(
 ): JobAndSubItem {
   const opts = { ...DEFAULT_RESOLVE_OPTIONS, ...options };
   const warnings: ExportWarning[] = [];
+  const mapping: ConnecteamMappingConfig | null = ctx.mapping ?? null;
+  const strict = options.strict ?? hasAnyMapping(mapping);
 
-  // 1) Explicit hint always wins.
+  // 0) Mapping declarado por la compañía — fuente canónica.
+  const subjects = connecteamSubjectsForShift(shift, ctx);
+  const found = lookupMapping(mapping, subjects);
+  if (found) {
+    return {
+      job: found.entry.job,
+      subItem: found.entry.subItem ?? "",
+      confidence: "exact",
+      source: {
+        job: "mapping",
+        subItem: found.entry.subItem ? "mapping" : "none",
+        mappingKey: `${found.subject.kind}:${found.subject.id}`,
+      },
+      warnings,
+    };
+  }
+
+  // 1) Hint explícito (`connecteam_job_name`).
   const fb = resolveFallback(shift, ctx);
   if (fb.confidence === "exact") {
     return { ...fb, confidence: "exact", warnings };
   }
 
-  // 2) Beta compatibility rules.
-  if (opts.enableBetaCompatMapping) {
+  // 2) Reglas legacy — solo mientras la compañía no declaró su mapping.
+  if (!strict && opts.enableBetaCompatMapping) {
     const sig = buildSignals(shift, ctx);
     for (const rule of BETA_COMPAT_RULES) {
       if (matchClause(rule.when, sig)) {
@@ -323,8 +355,9 @@ export function resolveConnecteamJobAndSubItem(
     }
   }
 
-  // 3) Naked fallback.
-  if (fb.confidence === "fallback") {
+  // 3) Fallback crudo — legacy. En modo estricto NO se emite: Connecteam lo
+  //    mostraría como "Select" y la fila quedaría fuera del reporting.
+  if (!strict && fb.confidence === "fallback") {
     warnings.push({
       code: "job_fallback",
       severity: "warn",
@@ -333,11 +366,33 @@ export function resolveConnecteamJobAndSubItem(
     return { ...fb, confidence: "fallback", warnings };
   }
 
-  // 4) Missing.
+  // 4) Sin destino → bloquea con motivo explícito y accionable.
   warnings.push({
-    code: "missing_job_context",
+    code: "missing_job_mapping",
     severity: "block",
-    message: "Sin Job posible — agrega cliente, ubicación o categoría.",
+    message: subjects.length
+      ? "Falta configurar destino Connecteam (Job/Sub item) para este cliente o lugar."
+      : "Sin Job posible — confirma el cliente o el lugar del servicio y configura su destino Connecteam.",
   });
-  return { ...fb, confidence: "missing", warnings };
+  return {
+    job: "",
+    subItem: "",
+    confidence: "missing",
+    source: { job: "none", subItem: "none" },
+    warnings,
+  };
 }
+
+/** Sujetos de mapping (venue → cliente → título) de un servicio. */
+export function connecteamSubjectsForShift(shift: Shift, ctx: BuildContext) {
+  const client = ctx.clients.find(c => c.id === shift.client_id);
+  const location = ctx.locations.find(l => l.id === shift.location_id);
+  return candidateSubjects({
+    locationId: shift.location_id ?? null,
+    locationName: location?.name ?? null,
+    clientId: shift.client_id ?? null,
+    clientName: client?.name ?? null,
+    title: shift.title ?? null,
+  });
+}
+

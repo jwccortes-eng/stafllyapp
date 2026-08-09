@@ -21,6 +21,7 @@ import type { Shift, Assignment, Employee, SelectOption } from "@/components/shi
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
 import { useCanExportConnecteam, EXPORT_PERMISSION_DENIED_COPY } from "@/lib/integrations/connecteam-export-permission";
 import { ExportStateBadges } from "./ExportStateBadges";
+import { useConnecteamMapping } from "@/hooks/useConnecteamMapping";
 
 interface Props {
   open: boolean;
@@ -49,9 +50,12 @@ export function ExportConnecteamBulkDialog({
 }: Props) {
   // Canonical, tenant-aware authorization — same policy on every entry point.
   const canExport = useCanExportConnecteam();
+  // Mapping Job/Sub item declarado por ESTA compañía (fuente canónica).
+  const { mapping } = useConnecteamMapping();
   const buildCtx = useMemo(() => ({
-    clients, locations, employees, assignments, categories, defaultTimezone,
-  }), [clients, locations, employees, assignments, categories, defaultTimezone]);
+    clients, locations, employees, assignments, categories, defaultTimezone, mapping,
+  }), [clients, locations, employees, assignments, categories, defaultTimezone, mapping]);
+
 
   const rows: Row[] = useMemo(() => {
     return shifts.map((shift) => {

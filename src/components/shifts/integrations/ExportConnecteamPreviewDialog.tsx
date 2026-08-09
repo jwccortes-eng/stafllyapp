@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,10 @@ import { downloadCsv } from "@/lib/import-review/csv-export";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { useCanExportConnecteam, EXPORT_PERMISSION_DENIED_COPY } from "@/lib/integrations/connecteam-export-permission";
 import { ExportStateBadges } from "./ExportStateBadges";
+import { ConnecteamMappingSheet } from "./ConnecteamMappingSheet";
+import { useConnecteamMapping } from "@/hooks/useConnecteamMapping";
+import { connecteamSubjectsForShift } from "@/lib/integrations/connecteam-compat";
+import { CONNECTEAM_MAPPING_COPY } from "@/lib/integrations/connecteam-mapping";
 
 interface Props {
   open: boolean;
@@ -46,9 +50,13 @@ export function ExportConnecteamPreviewDialog({
 }: Props) {
   // Canonical, tenant-aware authorization — same policy on every entry point.
   const canExport = useCanExportConnecteam();
+  // Mapping Job/Sub item declarado por ESTA compañía (fuente canónica).
+  const { mapping } = useConnecteamMapping();
+  const [mappingOpen, setMappingOpen] = useState(false);
+
   const buildCtx = useMemo(() => ({
-    clients, locations, employees, assignments, categories, defaultTimezone,
-  }), [clients, locations, employees, assignments, categories, defaultTimezone]);
+    clients, locations, employees, assignments, categories, defaultTimezone, mapping,
+  }), [clients, locations, employees, assignments, categories, defaultTimezone, mapping]);
 
   const validation: ValidationResult | null = useMemo(() => {
     if (!shift) return null;
@@ -60,7 +68,15 @@ export function ExportConnecteamPreviewDialog({
     return buildConnecteamRow(shift, buildCtx);
   }, [shift, buildCtx]);
 
+  const subjects = useMemo(
+    () => (shift ? connecteamSubjectsForShift(shift, buildCtx) : []),
+    [shift, buildCtx],
+  );
+
+  const needsMapping = validation?.warnings.some(w => w.code === "missing_job_mapping") ?? false;
+
   const canDownload = canExport && validation?.status !== "blocked";
+
 
   const handleDownload = () => {
     if (!shift || !row || !canDownload) return;
@@ -119,9 +135,20 @@ export function ExportConnecteamPreviewDialog({
               </div>
             )}
 
+            {/* Falta de mapping — bloqueo explícito y resoluble aquí mismo */}
+            {needsMapping && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-3 text-xs space-y-2">
+                <p className="font-semibold text-destructive">{CONNECTEAM_MAPPING_COPY.missingTitle}</p>
+                <p className="text-foreground/85">{CONNECTEAM_MAPPING_COPY.missingReason}</p>
+                <Button size="sm" variant="outline" onClick={() => setMappingOpen(true)}>
+                  {CONNECTEAM_MAPPING_COPY.resolveCta}
+                </Button>
+              </div>
+            )}
 
             {/* v1.2: Job/Sub item resolution badge */}
             {validation?.meta && (
+
               <div className="rounded-xl border border-border/30 bg-muted/20 px-3.5 py-2.5 text-xs space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold">Job:</span>
@@ -143,9 +170,18 @@ export function ExportConnecteamPreviewDialog({
                     <Badge variant="outline" className="text-[10px] border-warning/40 text-warning">Fallback — puede mostrar "Select" en Connecteam</Badge>
                   )}
                   {validation.meta.jobConfidence === "exact" && (
-                    <Badge variant="outline" className="text-[10px] border-earning/40 text-earning">Hint explícito</Badge>
+                    <Badge variant="outline" className="text-[10px] border-earning/40 text-earning">Mapping de la compañía</Badge>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() => setMappingOpen(true)}
+                  >
+                    Cambiar destino
+                  </Button>
                 </div>
+
               </div>
             )}
 
@@ -250,6 +286,13 @@ export function ExportConnecteamPreviewDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <ConnecteamMappingSheet
+        open={mappingOpen}
+        onOpenChange={setMappingOpen}
+        subjects={subjects}
+      />
     </Dialog>
   );
+
 }
