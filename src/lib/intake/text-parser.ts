@@ -383,7 +383,25 @@ export function resolveTimesFromText(segment: string): {
   return { start: null, end: null, confidence: 0, matched: "" };
 }
 
+/** "aprox 5pm", "~5pm", "around 5", "sobre las 5": la hora NO es un hecho. */
+export function isApproximateTime(segment: string): boolean {
+  const t = stripAccents(String(segment ?? "").toLowerCase());
+  return /(aprox|approx|around|~|alrededor|cerca de|mas o menos|sobre las|tentativ|estimad|more or less)/.test(t);
+}
+
+/** Roles mencionados en texto libre. Sugerencia, nunca cantidad. */
+export function detectRoleCandidates(segment: string): string[] {
+  const t = stripAccents(String(segment ?? "").toLowerCase());
+  const roles: string[] = [];
+  if (/\b(mesero|meseros|mesonero|mesoneros|camarero|camareros|waiter|waiters|server|servers|mozo|mozos)\b/.test(t)) {
+    roles.push("server");
+  }
+  if (/\b(bartender|bartenders|barman)\b/.test(t)) roles.push("bartender");
+  return roles;
+}
+
 export function resolveWorkersFromText(segment: string): { count: number | null; matched: string } {
+
   const text = stripAccents(segment.toLowerCase());
   const withNoun = text.match(new RegExp(`\\b(\\d{1,2})\\s*${WORKER_NOUNS.source}`, "i"));
   if (withNoun) return { count: +withNoun[1], matched: withNoun[0] };
