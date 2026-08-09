@@ -1248,32 +1248,16 @@ function DesktopShifts() {
 
 
     setSaving(true);
-
-    const repeatDates = computeRepeatDates(date, repeatConfig);
-    const isRepeating = repeatConfig.enabled && repeatDates.length > 0;
-
-    // Base shift = published. Repeated shifts inherit the original behavior:
-    // they are created as drafts so the operator reviews them before publishing.
-    const baseShift = await createSingleShift(date, isRepeating, false, true);
-    if (!baseShift) { setSaving(false); return; }
-
-    if (isRepeating) {
-      const copyAssign = repeatConfig.copyAssignments;
-      const savedEmployees = [...selectedEmployees];
-      if (!copyAssign) setSelectedEmployees([]);
-
-      for (const repeatDate of repeatDates) {
-        await createSingleShift(repeatDate, true, true, false);
-      }
-
-      if (!copyAssign) setSelectedEmployees(savedEmployees);
-      toast.success(`${repeatDates.length + 1} turnos creados (${repeatDates.length} repetidos en borrador)`);
-    } else {
-      toast.success("Turno publicado");
+    try {
+      const outcomes = await createServiceSeries({ publishBase: true });
+      const summary = summarizeSeries(outcomes);
+      if (summary.created + summary.reused === 0) { setSaving(false); return; }
+      reportSeriesOutcome(outcomes, summary, /* publishedBase */ true);
+      createSession.endSession(); // P0.4 — turno creado → sesión, storage y timers limpios
+      setCreateOpen(false); resetForm(); loadData();
+    } finally {
+      setSaving(false);
     }
-
-    createSession.endSession(); // P0.4 — turno creado → sesión, storage y timers limpios
-    setSaving(false); setCreateOpen(false); resetForm(); loadData();
   };
 
   // Quick create: minimal shift from popover
