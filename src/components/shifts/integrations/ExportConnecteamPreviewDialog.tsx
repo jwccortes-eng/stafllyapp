@@ -46,9 +46,13 @@ export function ExportConnecteamPreviewDialog({
 }: Props) {
   // Canonical, tenant-aware authorization — same policy on every entry point.
   const canExport = useCanExportConnecteam();
+  // Mapping Job/Sub item declarado por ESTA compañía (fuente canónica).
+  const { mapping } = useConnecteamMapping();
+  const [mappingOpen, setMappingOpen] = useState(false);
+
   const buildCtx = useMemo(() => ({
-    clients, locations, employees, assignments, categories, defaultTimezone,
-  }), [clients, locations, employees, assignments, categories, defaultTimezone]);
+    clients, locations, employees, assignments, categories, defaultTimezone, mapping,
+  }), [clients, locations, employees, assignments, categories, defaultTimezone, mapping]);
 
   const validation: ValidationResult | null = useMemo(() => {
     if (!shift) return null;
@@ -60,7 +64,15 @@ export function ExportConnecteamPreviewDialog({
     return buildConnecteamRow(shift, buildCtx);
   }, [shift, buildCtx]);
 
+  const subjects = useMemo(
+    () => (shift ? connecteamSubjectsForShift(shift, buildCtx) : []),
+    [shift, buildCtx],
+  );
+
+  const needsMapping = validation?.warnings.some(w => w.code === "missing_job_mapping") ?? false;
+
   const canDownload = canExport && validation?.status !== "blocked";
+
 
   const handleDownload = () => {
     if (!shift || !row || !canDownload) return;
