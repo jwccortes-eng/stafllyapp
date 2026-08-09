@@ -32,6 +32,10 @@ import {
   type ExportCauseKey,
 } from "@/lib/integrations/connecteam-export-groups";
 import { ProvisionalEndPanel } from "./ProvisionalEndPanel";
+import { ConnecteamMappingSheet } from "./ConnecteamMappingSheet";
+import { connecteamSubjectsForShift } from "@/lib/integrations/connecteam-compat";
+import { mappingKey, type MappingSubject } from "@/lib/integrations/connecteam-mapping";
+
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
