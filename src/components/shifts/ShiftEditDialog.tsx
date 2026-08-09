@@ -128,7 +128,7 @@ export function ShiftEditDialog({
     employees,
     shifts: [],
     assignments,
-    clients,
+    clients: clientOptions,
     locations,
     showEmployeePicker: false,
   });
@@ -319,7 +319,8 @@ export function ShiftEditDialog({
         companyId={(shift as any).company_id ?? null}
         value={form}
         onChange={(patch) => { setForm((prev) => ({ ...prev, ...patch })); setTouched(true); }}
-        clients={clients}
+        clients={clientOptions}
+        onQuickAddClient={handleQuickAddClient}
         locations={locations}
         employees={employees}
         assignments={assignments}
