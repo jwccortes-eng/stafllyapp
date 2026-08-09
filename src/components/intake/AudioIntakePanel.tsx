@@ -38,12 +38,28 @@ import {
 } from "@/lib/intake/audio-intake";
 import type { ConfidenceLevel } from "@/lib/intake/visual-extraction";
 import { useIntakeReviewPersistence } from "@/lib/intake/review-persistence";
+import { describeOutcome } from "@/lib/intake/recovery";
+
 
 function formatSeconds(total: number): string {
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
 }
+
+/**
+ * Tamaño legible SIN redondear a "0.0 MB": un audio de 380 KB es real y debe
+ * verse como 380 KB. Sólo 0 bytes se declara vacío.
+ */
+export function formatFileSize(bytes: number): string {
+  const n = Number.isFinite(bytes) ? Math.max(0, Math.round(bytes)) : 0;
+  if (n === 0) return "vacío (0 bytes)";
+  if (n < 1024) return `${n} bytes`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
+  const mb = n / (1024 * 1024);
+  return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)} MB`;
+}
+
 
 export function AudioIntakePanel() {
   const { selectedCompanyId } = useCompany();
@@ -198,6 +214,18 @@ export function AudioIntakePanel() {
     }
     if (files.length === 0) return;
 
+    // Grabación vacía: se explica, no se analiza. Enviarla sólo produce un
+    // fallo del proveedor que después parece "no encontramos servicios".
+    const empty = files.filter((f) => f.size === 0);
+    if (empty.length > 0) {
+      notifyError({
+        title: "La grabación está vacía",
+        fact: `${empty.map((f) => f.name).join(", ")} no contiene audio (0 bytes).`,
+        consequence: "No se analizó nada. Vuelve a grabar o adjunta otro archivo.",
+      });
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const run = await runAudioIntake({
@@ -221,22 +249,26 @@ export function AudioIntakePanel() {
         }),
       );
 
-      if (run.candidates.length === 0) {
-        notifyWarning({
-          title: "No encontramos servicios",
-          fact: "La nota no menciona trabajos que podamos interpretar.",
-          consequence: "No se creó nada. Puedes volver a grabar o pegar el texto.",
-        });
-      } else {
-        notifyInfo({
-          title: `${run.candidates.length} servicios escuchados`,
-          fact:
-            run.unresolved.length > 0
-              ? `${run.unresolved.length} elementos necesitan tu revisión.`
-              : "Todo lo dicho se interpretó.",
-          consequence: "Revisa y confirma: nada se crea sin tu aprobación.",
-        });
-      }
+      // Contrato único: un fallo técnico (créditos, límite, caída del proveedor)
+      // nunca se comunica como ausencia de servicios.
+      const copy = describeOutcome(run.outcome, {
+        candidateCount: run.candidates.length,
+        failureKind: run.failureKind ?? undefined,
+      });
+      const notify =
+        copy.tone === "error" ? notifyError : copy.tone === "warning" ? notifyWarning : notifyInfo;
+      notify({
+        title:
+          run.outcome === "ANALYSIS_SUCCESS"
+            ? `${run.candidates.length} servicios escuchados`
+            : copy.title,
+        fact:
+          run.outcome === "ANALYSIS_SUCCESS" && run.unresolved.length > 0
+            ? `${run.unresolved.length} elementos necesitan tu revisión.`
+            : copy.fact,
+        consequence: copy.consequence,
+      });
+
     } catch (error) {
       notifyError({
         title: "No pudimos analizar la nota de voz",
@@ -475,9 +507,16 @@ export function AudioIntakePanel() {
               >
                 <Mic className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate text-xs">{f.name}</span>
-                <span className="text-[11px] text-muted-foreground">
-                  {(f.size / 1024 / 1024).toFixed(1)} MB
+                <span
+                  className={
+                    f.size === 0
+                      ? "text-[11px] font-medium text-destructive"
+                      : "text-[11px] text-muted-foreground"
+                  }
+                >
+                  {formatFileSize(f.size)}
                 </span>
+
                 <Button
                   size="icon"
                   variant="ghost"

@@ -19,6 +19,15 @@ import { applyDuplicateVerdict, detectDuplicate } from "./duplicate";
 import { loadExistingServices, loadIntakeCatalogs, resolveCandidateEntities } from "./text-intake";
 import { normalizeAudioExtraction } from "./audio-extraction";
 import {
+  classifyAnalysisOutcome,
+  classifyProviderFailure,
+  runStructuralRecovery,
+  type IntakeAnalysisOutcome,
+  type ProviderFailureKind,
+  type RecoveryResult,
+} from "./recovery";
+
+import {
   dedupeAcrossPages,
   type RawVisualExtraction,
   type UnresolvedElement,
@@ -91,6 +100,14 @@ export interface AudioIntakeResult {
   fileCount: number;
   duplicatePagesRemoved: number;
   extractionFailures: number;
+  /** true = el análisis no se completó; NUNCA decir "no encontramos servicios". */
+  analysisIncomplete: boolean;
+  /** Clasificación técnica del fallo (crédito, red, timeout…). */
+  failureKind: ProviderFailureKind | null;
+  /** Los tres resultados posibles del análisis, contrato compartido con visual. */
+  outcome: IntakeAnalysisOutcome;
+  /** Recuperación estructural sobre la transcripción cuando la extracción falló. */
+  recovery: RecoveryResult | null;
   latencyMs: number;
 }
 
@@ -104,6 +121,7 @@ const ERROR_LABELS: Record<string, string> = {
   ai_error: "la extracción falló",
   unparseable_extraction: "la extracción devolvió un resultado ilegible",
 };
+
 
 /**
  * Procesa notas de voz de punta a punta hasta dejar candidatos listos para
@@ -159,15 +177,45 @@ export async function runAudioIntake(input: AudioIntakeInput): Promise<AudioInta
       })),
     },
   });
-  if (error) throw error;
-  if ((data as any)?.error) throw new Error(String((data as any).error));
+  // Un fallo del proveedor (créditos, límite, caída) NO se lanza como excepción
+  // genérica: se conserva como fallo técnico por archivo para que el resultado
+  // pueda decir "no pudimos analizar" en vez de "no encontramos servicios".
+  let requestFailure: { code: string; detail: string } | null = null;
+  if (error) {
+    let detail = "";
+    let code = "";
+    try {
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === "function") {
+        const body = await ctx.clone().json();
+        detail = String(body?.error ?? "");
+        code = String(body?.code ?? "");
+      }
+    } catch {
+      /* noop */
+    }
+    requestFailure = {
+      code: code || "transcription_failed",
+      detail: detail || (error as Error).message || "El análisis de audio no se completó",
+    };
+  } else if ((data as any)?.error) {
+    requestFailure = {
+      code: String((data as any).code ?? "ai_error"),
+      detail: String((data as any).error),
+    };
+  }
 
   const results: Array<{
     file_name?: string;
     transcript?: string;
     error?: string;
     extraction?: RawVisualExtraction;
-  }> = Array.isArray((data as any)?.results) ? (data as any).results : [];
+  }> = requestFailure
+    ? uploaded.map((u) => ({ file_name: u.name, error: requestFailure!.code }))
+    : Array.isArray((data as any)?.results)
+      ? (data as any).results
+      : [];
+
 
   // 4. Normalización pura (fechas relativas resueltas; nada se inventa).
   let candidates: ServiceCandidate[] = [];
@@ -188,8 +236,11 @@ export async function runAudioIntake(input: AudioIntakeInput): Promise<AudioInta
     if (entry.error || !entry.extraction) {
       extractionFailures += 1;
       warnings.push(
-        `No pudimos usar ${fileName}: ${ERROR_LABELS[entry.error ?? ""] ?? "sin resultado"}.`,
+        `No pudimos usar ${fileName}: ${
+          ERROR_LABELS[entry.error ?? ""] ?? requestFailure?.detail ?? "fallo técnico del análisis"
+        }.`,
       );
+
       return;
     }
 
@@ -263,6 +314,37 @@ export async function runAudioIntake(input: AudioIntakeInput): Promise<AudioInta
     warnings.push(`${deduped.removed} servicios repetidos en la nota se unificaron en uno.`);
   }
 
+  // 9. Contrato único de resultado: un fallo técnico jamás se cuenta como
+  //    "no encontramos servicios". Si la transcripción existe, se intenta la
+  //    misma recuperación estructural del canal visual.
+  const failureKind = classifyProviderFailure({
+    code: requestFailure?.code ?? transcripts.find((t) => t.error)?.error ?? null,
+    message: requestFailure?.detail ?? null,
+  });
+  const recoveryText = transcripts
+    .map((t) => t.transcript)
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+  const recovery =
+    candidates.length === 0 && extractionFailures > 0 && recoveryText
+      ? runStructuralRecovery({
+          text: recoveryText,
+          companyId: input.companyId, // SIEMPRE del contexto autenticado
+          batchId,
+          source,
+          referenceDate: input.referenceDate,
+          sourceReference: "recuperación estructural de la transcripción",
+          failureKind,
+        })
+      : null;
+
+  const outcome = classifyAnalysisOutcome({
+    candidateCount: candidates.length + (recovery?.candidates.length ?? 0),
+    technicalFailure: extractionFailures > 0,
+    evidence: recovery?.evidence ?? null,
+  });
+
   return {
     batchId,
     candidates,
@@ -275,6 +357,14 @@ export async function runAudioIntake(input: AudioIntakeInput): Promise<AudioInta
     fileCount: uploaded.length,
     duplicatePagesRemoved: deduped.removed,
     extractionFailures,
+    analysisIncomplete: extractionFailures > 0,
+    failureKind: extractionFailures > 0 ? failureKind : null,
+    outcome:
+      candidates.length > 0 && extractionFailures > 0 && recovery === null
+        ? "ANALYSIS_SUCCESS"
+        : outcome,
+    recovery,
     latencyMs: Date.now() - startedAt,
   };
+
 }

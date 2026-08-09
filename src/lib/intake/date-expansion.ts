@@ -76,13 +76,19 @@ const MONTH_NAMES = Object.keys(MONTH_TOKENS).sort((a, b) => b.length - a.length
 /**
  * Lista de días tras un mes: `30`, `30/31`, `1/2/3`, `30, 31`, `30-31`.
  * Los separadores permitidos son `/`, `,`, `-`, `y`, `and`.
+ *
+ * `(?!\d)` tras cada día evita el falso positivo confirmado en la auditoría:
+ * en "Aug 10, 2026" la coma más "20" del año se leían como un segundo día
+ * (20 AGO). Un día real nunca va pegado a más dígitos.
  */
+const DAY_TOKEN = `\\d{1,2}(?!\\d)`;
 const GROUP_RE = new RegExp(
   `\\b(${MONTH_NAMES})\\.?\\s*` +
-    `(\\d{1,2}(?:\\s*(?:[/,]|-|\\band\\b|\\by\\b)\\s*\\d{1,2})*)` +
+    `(${DAY_TOKEN}(?:\\s*(?:[/,]|-|\\band\\b|\\by\\b)\\s*${DAY_TOKEN})*)` +
     `(?!\\s*(?:am|pm|:\\d))`,
   "gi",
 );
+
 
 /**
  * Expande TODAS las listas de días encontradas en un fragmento.
