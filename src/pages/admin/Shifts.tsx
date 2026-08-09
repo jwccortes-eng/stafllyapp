@@ -1235,23 +1235,89 @@ function DesktopShifts() {
       toast.error("Agrega al menos un cliente, ubicación, título o trabajador para guardar este borrador.");
       return;
     }
-    setDraftSaving(true);
-    try {
-      const intent = captureSeriesIntent("draft");
-      // P0 recurrencia: guardar borrador también respeta la serie configurada.
-      // Antes la recurrencia sólo se aplicaba al publicar, así que un borrador
-      // recurrente creaba UNA sola ocurrencia (caso QK-001590).
-      const outcomes = await createServiceSeries(intent);
-      const summary = summarizeSeries(outcomes);
-      if (summary.created + summary.reused === 0) return;
-      reportSeriesOutcome(outcomes, summary, /* publishedBase */ false);
-      createSession.endSession(); // P0.4 — borrador en BD guardado → sesión local limpia
-      setCreateOpen(false);
-      resetForm();
-      loadData();
-    } finally {
-      setDraftSaving(false);
+    const intent = captureSeriesIntent("draft");
+    // P0 FINAL — la vista previa es obligatoria en todas las rutas.
+    openSeriesPreview({
+      intent,
+      routeLabel: "Guardar borrador",
+      run: async () => {
+        setDraftSaving(true);
+        try {
+          // P0 recurrencia: guardar borrador también respeta la serie configurada.
+          const outcomes = await createServiceSeries(intent);
+          const summary = summarizeSeries(outcomes);
+          if (summary.created + summary.reused === 0) return;
+          reportSeriesOutcome(outcomes, summary, /* publishedBase */ false);
+          await verifySeriesAfterPersist(intent, outcomes);
+          createSession.endSession(); // P0.4 — borrador en BD guardado → sesión local limpia
+          setCreateOpen(false);
+          resetForm();
+          loadData();
+        } finally {
+          setDraftSaving(false);
+        }
+      },
+    });
+  };
+
+  /** Puerta única: ninguna serie se persiste sin confirmación visual previa. */
+  const openSeriesPreview = (input: {
+    intent: SeriesIntent;
+    routeLabel: string;
+    confirmLabel?: string;
+    run: () => Promise<void>;
+  }) => {
+    setSeriesPreview({
+      preview: buildSeriesPreview(input.intent),
+      routeLabel: input.routeLabel,
+      confirmLabel: input.confirmLabel,
+      run: input.run,
+    });
+  };
+
+  /**
+   * Verificación automática posterior a la escritura: cliente, venue, horario,
+   * headcount, assignments, QK y referencia de serie. No corrige: reporta.
+   */
+  const verifySeriesAfterPersist = async (
+    intent: SeriesIntent,
+    outcomes: OccurrenceOutcome[],
+  ) => {
+    const ids = outcomes.map((o) => o.shiftId).filter((id): id is string => !!id);
+    if (ids.length === 0) return null;
+    const [{ data: rows }, { data: assignRows }] = await Promise.all([
+      supabase
+        .from("scheduled_shifts")
+        .select("id, date, shift_ref, client_id, location_id, job_site_location_id, start_time, end_time, slots, reconciliation_hash")
+        .in("id", ids),
+      supabase.from("shift_assignments").select("shift_id").in("shift_id", ids),
+    ]);
+    const counts = new Map<string, number>();
+    for (const a of (assignRows ?? []) as Array<{ shift_id: string }>) {
+      counts.set(a.shift_id, (counts.get(a.shift_id) ?? 0) + 1);
     }
+    const persisted: PersistedOccurrence[] = ((rows ?? []) as any[]).map((r) => ({
+      date: r.date,
+      shiftId: r.id,
+      ref: r.shift_ref ?? null,
+      clientId: r.client_id ?? null,
+      venueId: r.job_site_location_id ?? r.location_id ?? null,
+      startTime: r.start_time ?? null,
+      endTime: r.end_time ?? null,
+      headcount: r.slots ?? null,
+      assignmentCount: counts.get(r.id) ?? 0,
+      seriesRef: r.reconciliation_hash ?? null,
+    }));
+    const result = verifySeriesIntegrity({ intent, persisted });
+    if (!result.ok) {
+      notifyWarning({
+        key: "series-verification",
+        title: "Los Servicios se crearon con diferencias",
+        fact: describeSeriesVerification(result),
+        consequence: "Abre los Servicios señalados y corrige antes de publicar o exportar.",
+      });
+    }
+    return result;
   };
 
   const captureSeriesIntent = (publicationIntent: "draft" | "publish_base"): SeriesIntent => {
