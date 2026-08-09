@@ -330,9 +330,13 @@ export function resolveConnecteamJobAndSubItem(
   const opts = { ...DEFAULT_RESOLVE_OPTIONS, ...options };
   const warnings: ExportWarning[] = [];
   const mapping: ConnecteamMappingConfig | null = ctx.mapping ?? null;
-  const strict = options.strict ?? hasAnyMapping(mapping);
+  // Opt-in por llamada. NUNCA derivado de `hasAnyMapping(mapping)`: eso hacía
+  // que el primer destino declarado de la compañía apagara los fallbacks
+  // válidos de todos los demás destinos.
+  const strict = options.strict === true;
 
-  // 0) Mapping declarado por la compañía — fuente canónica.
+  // 0) Mapping declarado por la compañía — fuente canónica, POR DESTINO
+  //    (venue → cliente → título).
   const subjects = connecteamSubjectsForShift(shift, ctx);
   const found = lookupMapping(mapping, subjects);
   if (found) {
@@ -340,6 +344,10 @@ export function resolveConnecteamJobAndSubItem(
       job: found.entry.job,
       subItem: found.entry.subItem ?? "",
       confidence: "exact",
+      destinationSource: "explicit_mapping",
+      reason: `Mapping explícito de la compañía para ${found.subject.kind}: ${found.subject.label}.`,
+      mappingScope: found.subject.kind,
+      fallbackUsed: false,
       source: {
         job: "mapping",
         subItem: found.entry.subItem ? "mapping" : "none",
@@ -352,10 +360,18 @@ export function resolveConnecteamJobAndSubItem(
   // 1) Hint explícito (`connecteam_job_name`).
   const fb = resolveFallback(shift, ctx);
   if (fb.confidence === "exact") {
-    return { ...fb, confidence: "exact", warnings };
+    return {
+      ...fb,
+      confidence: "exact",
+      destinationSource: "explicit_hint",
+      reason: "Destino declarado en el servicio, lugar o cliente (connecteam_job_name).",
+      fallbackUsed: false,
+      warnings,
+    };
   }
 
-  // 2) Reglas legacy — solo mientras la compañía no declaró su mapping.
+  // 2) Reglas legacy — vigentes para ESTE destino mientras no tenga mapping
+  //    explícito. Independientes de lo que otros destinos hayan declarado.
   if (!strict && opts.enableBetaCompatMapping) {
     const sig = buildSignals(shift, ctx);
     for (const rule of BETA_COMPAT_RULES) {
@@ -369,6 +385,9 @@ export function resolveConnecteamJobAndSubItem(
           job: rule.job,
           subItem: rule.subItem,
           confidence: "inferred",
+          destinationSource: "legacy_rule",
+          reason: `Sin mapping explícito para este destino; se aplicó la regla legacy vigente ${rule.id}.`,
+          fallbackUsed: true,
           source: { job: "hint", subItem: "compat_rule", ruleId: rule.id },
           warnings,
         };
@@ -376,15 +395,22 @@ export function resolveConnecteamJobAndSubItem(
     }
   }
 
-  // 3) Fallback crudo — legacy. En modo estricto NO se emite: Connecteam lo
-  //    mostraría como "Select" y la fila quedaría fuera del reporting.
+  // 3) Fallback crudo — nombre de lugar/cliente/categoría. Sigue disponible
+  //    para este destino; solo el modo estricto por llamada lo apaga.
   if (!strict && fb.confidence === "fallback") {
     warnings.push({
       code: "job_fallback",
       severity: "warn",
       message: `Connecteam Job/Sub item puede necesitar match exacto en Connecteam (fuente: ${fb.source.job}).`,
     });
-    return { ...fb, confidence: "fallback", warnings };
+    return {
+      ...fb,
+      confidence: "fallback",
+      destinationSource: "raw_fallback",
+      reason: `Sin mapping explícito ni regla legacy para este destino; se usó el nombre de ${fb.source.job}.`,
+      fallbackUsed: true,
+      warnings,
+    };
   }
 
   // 4) Sin destino → bloquea con motivo explícito y accionable.
@@ -399,10 +425,14 @@ export function resolveConnecteamJobAndSubItem(
     job: "",
     subItem: "",
     confidence: "missing",
+    destinationSource: "unresolved",
+    reason: "No hay mapping explícito ni fallback válido para este destino.",
+    fallbackUsed: false,
     source: { job: "none", subItem: "none" },
     warnings,
   };
 }
+
 
 /** Sujetos de mapping (venue → cliente → título) de un servicio. */
 export function connecteamSubjectsForShift(shift: Shift, ctx: BuildContext) {
