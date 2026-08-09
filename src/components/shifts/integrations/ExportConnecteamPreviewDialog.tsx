@@ -286,6 +286,13 @@ export function ExportConnecteamPreviewDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <ConnecteamMappingSheet
+        open={mappingOpen}
+        onOpenChange={setMappingOpen}
+        subjects={subjects}
+      />
     </Dialog>
   );
+
 }
