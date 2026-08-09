@@ -488,7 +488,15 @@ export function ExportConnecteamBulkDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <ConnecteamMappingSheet
+        open={mappingOpen}
+        onOpenChange={setMappingOpen}
+        subjects={missingDestinationSubjects}
+        impactCount={missingDestinationRows.length}
+      />
     </Dialog>
+
   );
 }
 
