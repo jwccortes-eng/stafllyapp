@@ -20,6 +20,7 @@ import { downloadCsv } from "@/lib/import-review/csv-export";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
 import { useCanExportConnecteam, EXPORT_PERMISSION_DENIED_COPY } from "@/lib/integrations/connecteam-export-permission";
+import { ExportStateBadges } from "./ExportStateBadges";
 
 interface Props {
   open: boolean;
