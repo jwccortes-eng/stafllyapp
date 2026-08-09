@@ -257,7 +257,36 @@ function conf(
   return Math.max(0, Math.min(1, value));
 }
 
-/** ¿Este servicio propuesto tiene evidencia suficiente para ser candidato? */
+/**
+ * Recurrencia detectada en el texto visual ("Every day for 4 times",
+ * "cada día por 4 veces"). No crea ocurrencias: sólo conserva la señal.
+ */
+export function detectVisualRecurrence(
+  ...texts: Array<string | null | undefined>
+): { raw: string; times: number | null } | null {
+  for (const t of texts) {
+    const text = String(t ?? "").trim();
+    if (!text) continue;
+    const m =
+      /((?:every|each|cada)\s+[a-záéíóúñ]+(?:\s+(?:for|por|durante)\s+(\d{1,3})\s*(?:times|veces|x)?)?)/i.exec(
+        text,
+      ) ?? /(repeat[s]?\s+[^.,\n]{0,40})/i.exec(text);
+    if (m) {
+      const times = m[2] ? Number(m[2]) : null;
+      return { raw: m[1].trim(), times: Number.isFinite(times as number) ? times : null };
+    }
+  }
+  return null;
+}
+
+/**
+ * MÍNIMO DE SERVICIO VISUAL.
+ *
+ * Un bloque es candidato revisable cuando tiene fecha y, además, al menos una
+ * de estas señales estructurales: identidad (lugar / cliente / tipo), horario
+ * o dirección. Una captura de "Shift details" con fecha + horario ya es un
+ * servicio, aunque el Job quede pendiente de confirmar.
+ */
 export function hasMinimumEvidence(service: RawVisualService): boolean {
   const hasDate = !!cleanText(service.service_date);
   const hasIdentity = !!(
@@ -265,8 +294,11 @@ export function hasMinimumEvidence(service: RawVisualService): boolean {
     cleanText(service.client_name) ||
     cleanText(service.service_type)
   );
-  return hasDate && hasIdentity;
+  const hasSchedule = !!(cleanText(service.start_time) || cleanText(service.end_time));
+  const hasAddress = !!cleanText(service.location_text);
+  return hasDate && (hasIdentity || hasSchedule || hasAddress);
 }
+
 
 export function normalizeVisualExtraction(
   input: NormalizeVisualInput,
