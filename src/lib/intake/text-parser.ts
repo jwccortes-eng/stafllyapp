@@ -44,8 +44,12 @@ export type TextNoticeKind =
   | "abbreviation_suggested"
   | "ambiguous_date"
   | "missing_date"
+  | "inferred_year"
+  | "approximate_time"
+  | "pending_workers"
   | "missing_venue"
   | "no_service_detected";
+
 
 export interface TextParseNotice {
   candidateId: string | null;
