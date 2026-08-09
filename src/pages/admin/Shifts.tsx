@@ -827,6 +827,7 @@ function DesktopShifts() {
     setMeetingPointLocationId(null); setJobSiteLocationId(null); setJobSiteAddress("");
     setNewLocationName(""); setNewLocationAddress(""); setShowAddLocation(false);
     setRepeatConfig(DEFAULT_REPEAT);
+    recurrenceIntentRef.current = null;
   };
 
   // ── S3 — Local autosave for the create-shift form (NO DB writes) ──
