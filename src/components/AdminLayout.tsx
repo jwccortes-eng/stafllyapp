@@ -20,6 +20,7 @@ import { NavItem } from "@/components/navigation/nav-items";
 import { ContextSwitcher } from "@/components/context/ContextSwitcher";
 
 import { safeLocalStorage } from "@/lib/safe-storage";
+import { SHELL_GUTTER_X } from "@/lib/ux/shell-spacing";
 import { saveIntendedRoute } from "@/lib/auth-session";
 import { logMount, logUnmount } from "@/lib/ctx001-forensics";
 
@@ -291,7 +292,7 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main className="p-4 animate-fade-in">
+        <main className={cn(SHELL_GUTTER_X, "py-4 animate-fade-in")}>
           <Outlet />
         </main>
 
