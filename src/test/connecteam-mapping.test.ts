@@ -5,7 +5,7 @@ import {
   upsertEntry,
   removeEntry,
   mappingKey,
-  normalizeTitleKey,
+
   knownJobs,
   knownSubItems,
   EMPTY_CONNECTEAM_MAPPING,
