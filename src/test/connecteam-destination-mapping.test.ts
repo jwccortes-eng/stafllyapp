@@ -109,8 +109,12 @@ describe("Connecteam destination mapping — Millennium vs Imperial", () => {
     expect(c.job).toBe("IMPERIAL HALL");
   });
 
-  it("cero cross-tenant: sin las entradas de esta compañía no hay destino", () => {
+  it("cero cross-tenant: sin las entradas de esta compañía no hay destino declarado", () => {
     const r = resolveConnecteamJobAndSubItem(imperial, ctx({ entries: {} }));
-    expect(r.job).not.toBe("IMPERIAL HALL");
+    // Nunca por mapping: otra compañía no hereda el destino de esta.
+    expect(r.source.job).not.toBe("mapping");
+    expect(r.source.mappingKey).toBeUndefined();
+    expect(r.confidence).not.toBe("exact");
   });
+
 });
