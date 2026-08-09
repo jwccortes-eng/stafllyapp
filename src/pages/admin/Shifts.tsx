@@ -85,6 +85,7 @@ import {
   type PersistedOccurrence,
 } from "@/lib/shifts/series-engine";
 import { SeriesPreviewDialog } from "@/components/shifts/series/SeriesPreviewDialog";
+import { BulkServiceCreationDialog } from "@/components/shifts/bulk/BulkServiceCreationDialog";
 import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import EmergencyWorkerDialog, { type EmergencyWorkerCreated } from "@/components/employee/EmergencyWorkerDialog";
@@ -450,6 +451,8 @@ function DesktopShifts() {
   const employees = employeeRoster.employees;
   const [createOpen, setCreateOpen] = useState(false);
   const [bulkExportConnecteamOpen, setBulkExportConnecteamOpen] = useState(false);
+  // P0 — Creación masiva de Servicios (vista operativa nativa, no importador).
+  const [bulkCreateOpen, setBulkCreateOpen] = useState(false);
 
   // Open create dialog when navigated with ?create=1
   useEffect(() => {
@@ -2614,6 +2617,17 @@ function DesktopShifts() {
         </div>
         {canEdit && (
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Creación masiva nativa — no es importación de archivos */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-[11px] px-3 gap-1.5 rounded-xl"
+              onClick={() => setBulkCreateOpen(true)}
+              title="Crea varios Servicios como borradores desde una grilla editable"
+            >
+              <CalendarRange className="h-3.5 w-3.5" />
+              Crear varios servicios
+            </Button>
             {/* Primary action — scope-explicit */}
             <Button
               variant="default"
@@ -3275,6 +3289,17 @@ function DesktopShifts() {
           />
         );
       })()}
+
+      <BulkServiceCreationDialog
+        open={bulkCreateOpen}
+        onOpenChange={setBulkCreateOpen}
+        companyId={selectedCompanyId}
+        userId={user?.id ?? null}
+        clients={clients}
+        locations={locations}
+        referenceDate={dateRange.from}
+        onCreated={refreshShifts}
+      />
 
       <ExportConnecteamBulkDialog
         open={bulkExportConnecteamOpen}
