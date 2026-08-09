@@ -334,11 +334,58 @@ export function detectRecurrenceSignal(text: string): { raw: string; times: numb
  * Convierte evidencia estructural en candidatos revisables usando el parser
  * canónico ya existente. No hay OCR nuevo, ni segundo LLM, ni segundo modelo.
  */
+/**
+ * Normaliza texto con forma de captura (etiquetas en líneas sueltas) al formato
+ * de una línea por servicio que el parser canónico ya entiende.
+ * No agrega información: sólo reordena lo que la fuente ya dice.
+ */
+export function normalizeStructuralText(text: string): string {
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    // Encabezados y ruido de UI que no describen el trabajo.
+    .filter((l) => !/^(shift details|detalles del turno|shift info|schedule|agenda)\s*:?$/i.test(l))
+    .filter((l) => !/^(recurrence|recurrencia)\b/i.test(l));
+
+  let start: string | null = null;
+  let end: string | null = null;
+  const rest: string[] = [];
+
+  for (const line of lines) {
+    const s = /^(start|inicio|desde)\b\s*:?\s*(.+)$/i.exec(line);
+    if (s) {
+      start = s[2].trim();
+      continue;
+    }
+    const e = /^(end|fin|hasta)\b\s*:?\s*(.+)$/i.exec(line);
+    if (e) {
+      end = e[2].trim();
+      continue;
+    }
+    rest.push(
+      line
+        // "Monday, Aug 10, 2026" → "Aug 10, 2026": el weekday suelto confunde al parser.
+        .replace(
+          /^(mon|tue|wed|thu|fri|sat|sun)[a-z]*\s*,\s*|^(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\s*,\s*/i,
+          "",
+        )
+        // Etiquetas de campo: el valor es lo que importa.
+        .replace(/^(job|shift title|title|address|direcci[oó]n|users?|personal)\s*:\s*/i, ""),
+    );
+  }
+
+  const schedule = start && end ? `${start} - ${end}` : start ?? end ?? "";
+  const joined = [...rest, schedule].filter(Boolean).join(" · ").trim();
+  return joined || text;
+}
+
 export function runStructuralRecovery(input: RecoveryInput): RecoveryResult {
   const failureKind = input.failureKind ?? "unknown";
   const evidence = detectStructuralEvidence(input.text);
   const notices: string[] = [];
   const recurrence = detectRecurrenceSignal(input.text);
+
 
   if (!evidence.hasMinimumServiceEvidence) {
     return {
