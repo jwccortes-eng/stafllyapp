@@ -47,12 +47,46 @@ export function ShiftEditDialog({
   const [qrAttendanceMode, setQrAttendanceMode] = useState("disabled");
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  /**
+   * Clientes creados dentro del propio editor (Fase B/E — completar sin salir).
+   * Se fusionan con la lista del padre para que el combobox los muestre sin
+   * refrescar la pantalla ni perder el servicio abierto.
+   */
+  const [inlineClients, setInlineClients] = useState<SelectOption[]>([]);
   // S4-FIX1 — explicit user-interaction flag. JSON diff alone was unreliable
   // for the edit dialog (re-mounted shift snapshots, field normalization,
   // child callbacks that patch back identical values), so any actual user
   // edit also flips this and forces the unsaved-changes guard to engage.
   const [touched, setTouched] = useState(false);
   const { user } = useAuth();
+
+  const clientOptions = useMemo(() => {
+    const seen = new Set(clients.map((c) => c.id));
+    return [...clients, ...inlineClients.filter((c) => !seen.has(c.id))];
+  }, [clients, inlineClients]);
+
+  const handleQuickAddClient = async (name: string) => {
+    const companyId = (shift as any)?.company_id ?? null;
+    if (!companyId || !name.trim()) return;
+    const { data, error } = await supabase
+      .from("clients")
+      .insert({ company_id: companyId, name: name.trim() } as any)
+      .select("id, name")
+      .single();
+    if (error) {
+      toast.error("No se pudo crear el cliente", { description: error.message });
+      return;
+    }
+    if (data) {
+      setInlineClients((prev) => [...prev, { id: data.id, name: data.name } as SelectOption]);
+      setForm((prev) => ({ ...prev, clientId: data.id }));
+      setTouched(true);
+      toast.success(`Cliente "${data.name}" creado`, {
+        description: "Seleccionado en este servicio. Guarda para aplicarlo.",
+      });
+    }
+  };
+
 
   useEffect(() => {
     if (shift && open) {
