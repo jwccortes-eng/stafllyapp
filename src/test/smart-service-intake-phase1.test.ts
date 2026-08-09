@@ -47,10 +47,17 @@ describe("modelo canónico de candidato", () => {
     expect(INTAKE_SOURCES).toContain("voice_note");
   });
 
-  it("marca campos faltantes y bloquea la creación", () => {
+  it("marca campos faltantes sin bloquear el borrador (nivel A ≠ nivel B)", () => {
     const c = recomputeCandidate({ ...base(), endTime: null });
     expect(c.missingFields).toContain("end_time");
-    expect(canCreateDraft(c).ok).toBe(false);
+    // Hora de fin pendiente no impide guardar el trabajo como borrador.
+    expect(canCreateDraft(c).ok).toBe(true);
+    expect(getCandidateReadiness(c).publishGaps).toContain("end_time");
+  });
+
+  it("sin fecha no hay borrador posible", () => {
+    const c = recomputeCandidate({ ...base(), serviceDate: null });
+    expect(canCreateDraft(c)).toMatchObject({ ok: false, reason: "missing_service_date" });
   });
 
   it("permite crear cuando está completo", () => {
@@ -80,12 +87,14 @@ describe("resolución cliente / venue", () => {
     expect(ref.suggestedLabel).toBe("Zemer Banquet");
   });
 
-  it("un venue ambiguo bloquea la creación hasta confirmar", () => {
+  it("un venue sin vincular NO bloquea el borrador, pero sí publicar y exportar", () => {
     let c = base();
     c = recomputeCandidate({ ...c, venueCandidate: resolveEntity("Millenium", catalog) });
-    expect(canCreateDraft(c).ok).toBe(false);
-    c = recomputeCandidate({ ...c, venueCandidate: confirmRef(c.venueCandidate, "v1") });
     expect(canCreateDraft(c).ok).toBe(true);
+    const r = getCandidateReadiness(c);
+    expect(r.publishGaps).toContain("venue_link");
+    expect(r.exportGaps).toContain("connecteam_job");
+    expect(r.pendingEntities).toContain("Millenium");
   });
 
   it("no sugiere nada cuando no hay parecido", () => {
@@ -279,14 +288,14 @@ describe("helper canónico de creación de draft", () => {
     const list = [
       base(),
       { ...base(), id: "c2", sourceRowId: "row-2" },
-      { ...base(), id: "c3", endTime: null, missingFields: ["end_time"] },
+      { ...base(), id: "c3", serviceDate: null, missingFields: ["service_date"] },
     ];
     const out = await mod.createDraftServicesFromCandidates(list, {
       companyId: COMPANY,
       userId: "user-1",
     });
     expect(out.filter((o) => o.status === "created")).toHaveLength(2);
-    expect(out[2]).toMatchObject({ status: "blocked", reason: "missing_fields" });
+    expect(out[2]).toMatchObject({ status: "blocked", reason: "missing_service_date" });
     expect(inserts).toHaveLength(2);
   });
 });
