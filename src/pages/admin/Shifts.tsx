@@ -2112,54 +2112,41 @@ function DesktopShifts() {
 
   const handleDuplicateToDay = async (shiftData: any, targetDate: string) => {
     if (!canEdit || !selectedCompanyId) return;
-    // Phase 2 #2.1: copy full operational structure (status=draft) WITHOUT
-    // assignments, QR recipients, or driver_employee_id. Driver is a person,
-    // not a structural property of the shift — copying it would create a false
-    // sense that transport is resolved.
-    const { error, data: newShift } = await supabase.from("scheduled_shifts").insert({
-      company_id: selectedCompanyId,
-      title: shiftData.title,
-      date: targetDate,
-      start_time: shiftData.start_time,
-      end_time: shiftData.end_time,
-      slots: shiftData.slots ?? 1,
-      client_id: shiftData.client_id || null,
-      location_id: shiftData.location_id || null,
-      notes: shiftData.notes || null,
-      claimable: shiftData.claimable ?? false,
-      meeting_point: shiftData.meeting_point || null,
-      special_instructions: shiftData.special_instructions || null,
-      pay_type: shiftData.pay_type || "hourly",
-      day_type: shiftData.day_type || "full_day",
-      pay_override: shiftData.pay_override ?? false,
-      attendance_mode: shiftData.attendance_mode || null,
-      clock_method: shiftData.clock_method || "both",
-      transportation_required: shiftData.transportation_required ?? false,
-      car_capacity: shiftData.car_capacity ?? 5,
-      transportation_notes: shiftData.transportation_notes || null,
-      shift_admin_id: shiftData.shift_admin_id || null,
-      meeting_point_location_id: shiftData.meeting_point_location_id || null,
-      job_site_location_id: shiftData.job_site_location_id || null,
-      // Explicitly NOT copied: driver_employee_id, assignments, QR recipients
-      status: "draft",
-      created_by: user?.id,
-    } as any).select("id, shift_code").single();
-
-    if (error) { toast.error(error.message); return; }
-
-    if (newShift) {
-      await logShiftActivity("duplicar_turno", newShift.id, null, {
-        title: shiftData.title, date: targetDate, source_shift: shiftData.shiftId,
-      });
-    }
-
-    const niceDate = new Date(targetDate + "T12:00:00").toLocaleDateString("es", {
-      weekday: "short", day: "numeric", month: "short",
+    // P0 FINAL — mismo contrato que Crear/Publicar/Copiar semana: snapshot
+    // canónico + vista previa + verificación. Sin assignments ni driver: la
+    // persona no es una propiedad estructural del Servicio.
+    const snapshot = snapshotFromServiceRow(shiftData, {
+      companyId: selectedCompanyId,
+      publicationIntent: "draft",
     });
-    toast.success(`Turno duplicado al ${niceDate} como borrador.`, {
-      description: "Asigna empleados para activar.",
+    const intent = buildSeriesIntentFromSnapshot({ snapshot, baseDate: targetDate });
+    openSeriesPreview({
+      intent,
+      routeLabel: "Duplicar",
+      confirmLabel: "Duplicar como borrador",
+      run: async () => {
+        const outcomes = await createServiceSeries(intent);
+        const summary = summarizeSeries(outcomes);
+        if (summary.created + summary.reused === 0) {
+          toast.error("No pudimos duplicar el Servicio");
+          return;
+        }
+        const created = outcomes.find((o) => o.shiftId);
+        if (created?.shiftId) {
+          await logShiftActivity("duplicar_turno", created.shiftId, null, {
+            title: snapshot.title, date: targetDate, source_shift: shiftData.shiftId ?? shiftData.id,
+          });
+        }
+        await verifySeriesAfterPersist(intent, outcomes);
+        const niceDate = new Date(targetDate + "T12:00:00").toLocaleDateString("es", {
+          weekday: "short", day: "numeric", month: "short",
+        });
+        toast.success(`Turno duplicado al ${niceDate} como borrador.`, {
+          description: "Asigna empleados para activar.",
+        });
+        loadData();
+      },
     });
-    loadData();
   };
 
   const handleCopyWeek = async () => {
