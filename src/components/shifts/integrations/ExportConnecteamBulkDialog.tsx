@@ -243,7 +243,16 @@ export function ExportConnecteamBulkDialog({
               <SummaryTile label="Exportables" value={summary.exportable} tone={canDownload ? "ok" : "danger"} />
             </div>
 
+            {/* Completar mínimo para Connecteam — dato provisional explícito */}
+            <ProvisionalEndPanel
+              pending={pendingEnd}
+              applied={provisional}
+              onApply={setProvisional}
+              onClear={() => setProvisional(null)}
+            />
+
             {/* Status breakdown */}
+
             <div className="flex items-center gap-2 flex-wrap text-xs">
               <Badge variant="outline" className="gap-1 border-earning/40 text-earning">
                 <CheckCircle2 className="h-3 w-3" /> {summary.ready} listos
