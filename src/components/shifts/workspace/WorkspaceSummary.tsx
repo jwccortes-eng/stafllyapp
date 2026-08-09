@@ -9,12 +9,14 @@
  *
  * Phase 2: UI-only. No DB writes, no notifications, no portal touches.
  */
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShiftSummaryPanel } from "../form/ShiftSummaryPanel";
 import { PendingBadgeRow } from "./PendingBadgeRow";
 import { WorkerPreviewCard } from "./WorkerPreviewCard";
+import { ServiceReadinessCard } from "./ServiceReadinessCard";
+import { getServiceOperationalReadiness } from "@/lib/shifts/service-operational-readiness";
 import {
   computeShiftPendingFlags,
   describePublishState,
