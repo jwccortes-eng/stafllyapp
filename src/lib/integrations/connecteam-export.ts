@@ -285,8 +285,13 @@ export function buildConnecteamRow(
   const addr = resolveAddress(shift, ctx);
 
 
-  // Number of users: prefer declared slots/capacity; fall back to assigned count.
-  const numberOfUsers = String(s.slots ?? userNames.length ?? 0);
+  // Number of users: `slots = NULL` significa "cantidad de personal PENDIENTE",
+  // no 0 ni 1. En ese caso la columna viaja VACÍA: no se inventa capacidad.
+  const numberOfUsers =
+    s.slots == null
+      ? (userNames.length > 0 ? String(userNames.length) : "")
+      : String(s.slots);
+
 
   // Users: empty by default in v1.1 (Connecteam needs exact identifiers).
   const usersValue = opts.includeUsers ? userNames.join("; ") : "";
@@ -483,14 +488,23 @@ export function validateShiftForExport(
   // v1.1: NO bloquear por 0 accepted assignments si el export es capacity-only
   // y hay capacidad declarada. Connecteam recibirá Number of users con slots.
   if (eff.length === 0 && !opts.includeUsers) {
-    if (capacity <= 0) {
+    if (shift.slots == null) {
+      // Cantidad de personal PENDIENTE ≠ 0. Connecteam no exige `Number of
+      // users`: la columna viaja vacía y el turno se crea igual.
+      warnings.push({
+        code: "headcount_pending",
+        severity: "warn",
+        message: "Cantidad de personal pendiente — Number of users viaja vacío. No se inventa 0 ni 1.",
+      });
+    } else if (capacity <= 0) {
       warnings.push({
         code: "no_capacity_no_users",
         severity: "block",
-        message: "Sin capacidad (slots) y sin workers aceptados — nada que importar.",
+        message: "Capacidad declarada en 0 y sin workers aceptados — nada que importar.",
       });
     }
   } else if (eff.length === 0 && opts.includeUsers) {
+
     warnings.push({
       code: "no_accepted_assignments",
       severity: "block",

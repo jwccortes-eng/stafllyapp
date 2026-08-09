@@ -1,4 +1,17 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useAuditLog } from "@/hooks/useAuditLog";
+import {
+  needsProvisionalEnd,
+  resolveProvisionalEnd,
+  withProvisionalEnd,
+  provisionalNote,
+  buildProvisionalTrace,
+  PROVISIONAL_COPY,
+  type ProvisionalEndDecision,
+} from "@/lib/integrations/connecteam-provisional";
+import { ProvisionalEndPanel } from "./ProvisionalEndPanel";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +59,9 @@ interface Row {
   row: ConnecteamRow;
   assigned: number;
   openSlots: number;
+  /** Hora final provisional aplicada solo a esta exportación ("" = ninguna). */
+  provisionalEnd: string;
+
 }
 
 export function ExportConnecteamBulkDialog({
@@ -54,15 +70,50 @@ export function ExportConnecteamBulkDialog({
 }: Props) {
   // Canonical, tenant-aware authorization — same policy on every entry point.
   const canExport = useCanExportConnecteam();
+  const { user } = useAuth();
+  const { logAudit } = useAuditLog();
+
   // Mapping Job/Sub item declarado por ESTA compañía (fuente canónica).
   const { mapping } = useConnecteamMapping();
   const buildCtx = useMemo(() => ({
     clients, locations, employees, assignments, categories, defaultTimezone, mapping,
   }), [clients, locations, employees, assignments, categories, defaultTimezone, mapping]);
 
+  // ── Dato provisional para Connecteam (NO cambia el Servicio) ────────────
+  const [provisional, setProvisional] = useState<ProvisionalEndDecision | null>(null);
+
+  /** Servicios cuya hora final todavía no existe en Stafly. */
+  const pendingEnd = useMemo(
+    () =>
+      shifts
+        .filter((s) => needsProvisionalEnd(s))
+        .map((s) => ({ shift: s, ref: getShiftDisplayIdentity(s as any).primaryRef })),
+    [shifts],
+  );
+
+  /**
+   * Copia efectiva SOLO para el CSV: aplica la hora final provisional y deja
+   * constancia en la nota. `scheduled_shifts` no se toca.
+   */
+  const effectiveShifts = useMemo(() => {
+    return shifts.map((shift) => {
+      if (!provisional || !needsProvisionalEnd(shift)) return { shift, provisionalEnd: "" };
+      const end = resolveProvisionalEnd(shift, provisional);
+      if (!end) return { shift, provisionalEnd: "" };
+      const withEnd = withProvisionalEnd(shift, end);
+      const note = provisionalNote(end, provisional);
+      return {
+        shift: {
+          ...withEnd,
+          notes: [withEnd.notes?.trim(), note].filter(Boolean).join(" · "),
+        } as Shift,
+        provisionalEnd: end,
+      };
+    });
+  }, [shifts, provisional]);
 
   const rows: Row[] = useMemo(() => {
-    return shifts.map((shift) => {
+    return effectiveShifts.map(({ shift, provisionalEnd }) => {
       const validation = validateShiftForExport(shift, buildCtx, {
         isAdmin: canExport,
         selectedCompanyId,
@@ -72,9 +123,9 @@ export function ExportConnecteamBulkDialog({
       const assigned = effectiveAssignmentsForExport(shift.id, assignments).length;
       const capacity = Number(shift.slots ?? 0);
       const openSlots = Math.max(0, capacity - assigned);
-      return { shift, validation, row, assigned, openSlots };
+      return { shift, validation, row, assigned, openSlots, provisionalEnd };
     });
-  }, [shifts, buildCtx, canExport, selectedCompanyId, assignments]);
+  }, [effectiveShifts, buildCtx, canExport, selectedCompanyId, assignments]);
 
   const summary = useMemo(() => {
     const total = rows.length;
@@ -111,13 +162,49 @@ export function ExportConnecteamBulkDialog({
     const csvBody = serializeConnecteamCsv(exportable.map(r => r.row));
     const csv = CSV_UTF8_BOM + csvBody;
     const dataRows = countCsvDataRows(csv);
-    downloadCsv(bulkExportFilename(), csv);
+    const filename = bulkExportFilename();
+    downloadCsv(filename, csv);
+
+    // Trazabilidad: una entrada por fila exportada con dato provisional.
+    if (provisional) {
+      const traces = exportable
+        .filter((r) => r.provisionalEnd)
+        .map((r) =>
+          buildProvisionalTrace({
+            shift: r.shift,
+            ref: getShiftDisplayIdentity(r.shift as any).primaryRef,
+            provisionalEnd: r.provisionalEnd,
+            decision: provisional,
+            confirmedBy: user?.id ?? null,
+            batchRef: filename,
+          }),
+        );
+      if (traces.length > 0) {
+        void logAudit({
+          action: "export",
+          entityType: "connecteam_export",
+          details: {
+            batch_ref: filename,
+            rows: dataRows,
+            provisional_rows: traces.length,
+            provisional: true,
+            traces,
+          },
+        });
+      }
+    }
+
     toast.success(
       `CSV descargado — ${dataRows} fila${dataRows === 1 ? "" : "s"} para ${exportable.length} ${ADMIN_LEX.EntityPlural.toLowerCase()}.`,
-      { description: "Una fila por servicio. Verifica el mismo número en el Overview de Connecteam." },
+      {
+        description: provisional
+          ? PROVISIONAL_COPY.exportWarning
+          : "Una fila por servicio. Verifica el mismo número en el Overview de Connecteam.",
+      },
     );
     onOpenChange(false);
   };
+
 
 
   const canDownload = canExport && summary.exportable > 0;
@@ -156,7 +243,16 @@ export function ExportConnecteamBulkDialog({
               <SummaryTile label="Exportables" value={summary.exportable} tone={canDownload ? "ok" : "danger"} />
             </div>
 
+            {/* Completar mínimo para Connecteam — dato provisional explícito */}
+            <ProvisionalEndPanel
+              pending={pendingEnd}
+              applied={provisional}
+              onApply={setProvisional}
+              onClear={() => setProvisional(null)}
+            />
+
             {/* Status breakdown */}
+
             <div className="flex items-center gap-2 flex-wrap text-xs">
               <Badge variant="outline" className="gap-1 border-earning/40 text-earning">
                 <CheckCircle2 className="h-3 w-3" /> {summary.ready} listos
