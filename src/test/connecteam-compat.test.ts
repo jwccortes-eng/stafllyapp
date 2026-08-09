@@ -227,7 +227,14 @@ describe("connecteam-compat: confidence levels", () => {
       { clients: [], locations: [], employees: EMPLOYEES, assignments: ASGN },
     );
     expect(r.confidence).toBe("missing");
-    expect(r.warnings.some(w => w.code === "missing_job_context" && w.severity === "block")).toBe(true);
+    // Fase 2: sin mapping por compañía el bloqueo es explícito (nunca "Select").
+    expect(
+      r.warnings.some(
+        w =>
+          (w.code === "missing_job_context" || w.code === "missing_job_mapping") &&
+          w.severity === "block",
+      ),
+    ).toBe(true);
   });
 
   it("enableBetaCompatMapping=false skips rules and falls through", () => {
@@ -281,7 +288,11 @@ describe("connecteam-compat: validation merges warnings", () => {
       { isAdmin: true, selectedCompanyId: "co", shiftCompanyId: "co" },
     );
     expect(r.status).toBe("blocked");
-    expect(r.warnings.some(w => w.code === "missing_job_context")).toBe(true);
+    expect(
+      r.warnings.some(
+        w => w.code === "missing_job_context" || w.code === "missing_job_mapping",
+      ),
+    ).toBe(true);
   });
 });
 
@@ -291,6 +302,7 @@ describe("connecteam-compat: safety boundary", () => {
     const exported = Object.keys(mod).sort();
     expect(exported).toEqual([
       "BETA_COMPAT_RULES",
+      "connecteamSubjectsForShift",
       "resolveConnecteamJobAndSubItem",
     ]);
   });
