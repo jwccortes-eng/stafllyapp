@@ -1007,13 +1007,32 @@ function DesktopShifts() {
   // - `publishNow=false` ⇒ it's a draft: publication_status='draft',
   //   no notifications, assignments flagged as draft reservations.
   // - `publishNow=true`  ⇒ regular published shift, assignments are real.
+  //
+  // P0 recurrencia: `opts.employeeIds` evita depender del estado de React
+  // (los setters son asíncronos y dejaban el equipo obsoleto dentro del bucle)
+  // y `opts.sourceRef` da idempotencia estable por ocurrencia.
   const createSingleShift = async (
     shiftDate: string,
     skipNotifications = false,
     forceDraft = false,
     publishNow = true,
+    opts?: { employeeIds?: string[]; sourceRef?: string | null; onAssignError?: (e: unknown) => void },
   ) => {
     if (!selectedCompanyId) return null;
+    const employeeIds = opts?.employeeIds ?? selectedEmployees;
+    const sourceRef = opts?.sourceRef ?? null;
+
+    // Idempotencia: doble tap o retry del mismo submit reutiliza la fila.
+    if (sourceRef) {
+      const existing = await supabase
+        .from("scheduled_shifts")
+        .select("*")
+        .eq("company_id", selectedCompanyId)
+        .eq("reconciliation_hash", sourceRef)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (existing.data?.id) return existing.data as any;
+    }
     const isDraft = !publishNow || forceDraft;
     // Legacy `status` column retained: drafts also flow through the legacy
     // 'draft' value so existing UI/filters that look at status keep working.
