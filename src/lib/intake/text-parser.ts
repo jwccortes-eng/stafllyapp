@@ -609,14 +609,32 @@ export function parseTextToCandidates(
   /** Venue heredado del fragmento anterior de la MISMA línea. */
   let lastLine = -1;
   let lastVenue = "";
+  /** blockIndex de cada candidato, para heredar el contexto común. */
+  const blockOf = new Map<string, number>();
+  const dedupe = new Set<string>();
 
   for (const seg of parsedSegments) {
+    if (seg.kind === "context") continue;
+
     const date = resolveDateFromText(seg.text, ctx.referenceDate, { weekAnchor: seg.weekAnchor });
-    const times = resolveTimesFromText(seg.text.replace(date.matched, " "));
+    const expansion = expandDateList(seg.text, ctx.referenceDate);
+    const multi = expansion.dates.length > 1;
+
+    // Texto sin fechas: base para venue, hora y personal comunes al fragmento.
+    const dateTokens = multi
+      ? [...expansion.matchedFragments, ...expansion.dates.map((d) => d.matched)]
+      : [date.matched];
+    let withoutDates = seg.text;
+    for (const token of dateTokens) {
+      if (token) withoutDates = withoutDates.replace(new RegExp(escapeRe(token), "ig"), " ");
+    }
+
+    const times = resolveTimesFromText(withoutDates);
     const workers = resolveWorkersFromText(seg.text);
     const type = resolveServiceTypeFromText(seg.text);
+    const approximate = times.start ? isApproximateTime(seg.text) : false;
 
-    const consumed = [date.matched, times.matched, workers.matched, type.matched].filter(Boolean);
+    const consumed = [...dateTokens, times.matched, workers.matched, type.matched].filter(Boolean);
     const venueFromText = extractVenueText(seg.text, consumed);
     if (seg.lineNumber !== lastLine) {
       lastLine = seg.lineNumber;
@@ -627,7 +645,7 @@ export function parseTextToCandidates(
 
     // Un fragmento sólo es un trabajo si trae fecha (o fecha ambigua) o un
     // tipo de servicio reconocible. Un texto suelto NO inventa un servicio.
-    const hasSignal = Boolean(date.iso || date.ambiguous || type.value);
+    const hasSignal = Boolean(multi || date.iso || date.ambiguous || type.value);
     if (!hasSignal) {
       notices.push({
         candidateId: null,
@@ -638,65 +656,165 @@ export function parseTextToCandidates(
       continue;
     }
 
-    const candidateId = `text-${index}-${seg.lineNumber}`;
-    index += 1;
+    // Una lista de días ("Aug 30/31", "Sep 1/2/3") es un servicio por día.
+    const occurrences: Array<{
+      iso: string | null;
+      confidence: number;
+      ambiguous: boolean;
+      matched: string;
+      yearInferred: boolean;
+    }> = multi
+      ? expansion.dates.map((d) => ({
+          iso: d.iso,
+          confidence: d.confidence,
+          ambiguous: false,
+          matched: d.matched,
+          yearInferred: d.yearInferred,
+        }))
+      : [
+          {
+            iso: date.iso,
+            confidence: date.confidence,
+            ambiguous: date.ambiguous,
+            matched: date.matched,
+            yearInferred: date.reason === "year_inferred",
+          },
+        ];
 
-    const confidenceByField: Record<string, number> = {};
-    if (date.iso) confidenceByField.service_date = date.confidence;
-    if (times.start) confidenceByField.start_time = times.confidence;
-    if (times.end) confidenceByField.end_time = times.confidence;
-    if (type.value) confidenceByField.service_type = type.confidence;
-    if (venueRaw) confidenceByField.venue = venueFromText ? 0.6 : 0.5;
-    if (workers.count) confidenceByField.requested_workers = 0.8;
+    for (const occ of occurrences) {
+      const key = `${seg.blockIndex}|${occ.iso ?? seg.text}|${stripAccents(venueRaw.toLowerCase())}|${times.start ?? ""}`;
+      if (dedupe.has(key)) continue;
+      dedupe.add(key);
 
-    const candidate = createCandidate({
-      id: candidateId,
-      companyId: ctx.companyId, // nunca del contenido
-      source,
-      sourceBatchId: ctx.batchId ?? null,
-      sourceRowId: null,
-      sourceReference: `${seg.lineNumber}:${seg.text}`,
-      serviceDate: date.iso,
-      startTime: times.start,
-      endTime: times.end,
-      venueCandidate: { ...emptyRef(venueRaw) },
-      clientCandidate: { ...emptyRef("") },
-      serviceType: type.value,
-      requestedWorkers: workers.count,
-      notes: seg.text,
-      confidenceByField,
-    });
+      const candidateId = `text-${index}-${seg.lineNumber}`;
+      index += 1;
 
-    candidates.push(candidate);
-    segments.push({ candidateId, excerpt: seg.text, lineNumber: seg.lineNumber });
+      const confidenceByField: Record<string, number> = {};
+      if (occ.iso) confidenceByField.service_date = occ.confidence;
+      if (times.start) confidenceByField.start_time = approximate ? 0.5 : times.confidence;
+      if (times.end) confidenceByField.end_time = times.confidence;
+      if (type.value) confidenceByField.service_type = type.confidence;
+      if (venueRaw) confidenceByField.venue = venueFromText ? 0.6 : 0.5;
+      if (workers.count) confidenceByField.requested_workers = 0.8;
 
-    if (type.abbreviation) {
-      notices.push({
-        candidateId,
-        kind: "abbreviation_suggested",
-        message: `Interpretamos ${type.abbreviation.raw} como ${type.abbreviation.expansion}. Confirma antes de crear.`,
-        raw: type.abbreviation.raw,
-        suggestion: type.abbreviation.expansion,
+      const candidate = createCandidate({
+        id: candidateId,
+        companyId: ctx.companyId, // nunca del contenido
+        source,
+        sourceBatchId: ctx.batchId ?? null,
+        sourceRowId: null,
+        sourceReference: `${seg.lineNumber}:${occ.matched || seg.text}`,
+        serviceDate: occ.iso,
+        startTime: times.start,
+        endTime: times.end,
+        venueCandidate: { ...emptyRef(venueRaw) },
+        clientCandidate: { ...emptyRef("") },
+        serviceType: type.value,
+        requestedWorkers: workers.count,
+        notes: seg.text,
+        confidenceByField,
       });
-    }
-    if (date.ambiguous || !date.iso) {
-      notices.push({
+
+      candidates.push(candidate);
+      blockOf.set(candidateId, seg.blockIndex);
+      segments.push({
         candidateId,
-        kind: date.ambiguous ? "ambiguous_date" : "missing_date",
-        message: date.ambiguous
-          ? "Fecha por confirmar: hay más de una interpretación razonable."
-          : "Fecha por confirmar: el mensaje no indica la fecha.",
-        raw: date.matched || undefined,
+        excerpt: multi ? `${occ.matched} — ${seg.text}` : seg.text,
+        lineNumber: seg.lineNumber,
       });
-    }
-    if (!venueRaw) {
-      notices.push({
-        candidateId,
-        kind: "missing_venue",
-        message: "Falta el lugar o cliente. Complétalo antes de crear el borrador.",
-      });
+
+      if (type.abbreviation) {
+        notices.push({
+          candidateId,
+          kind: "abbreviation_suggested",
+          message: `Interpretamos ${type.abbreviation.raw} como ${type.abbreviation.expansion}. Confirma antes de crear.`,
+          raw: type.abbreviation.raw,
+          suggestion: type.abbreviation.expansion,
+        });
+      }
+      if (occ.ambiguous || !occ.iso) {
+        notices.push({
+          candidateId,
+          kind: occ.ambiguous ? "ambiguous_date" : "missing_date",
+          message: occ.ambiguous
+            ? "Fecha por confirmar: hay más de una interpretación razonable."
+            : "Fecha por confirmar: el mensaje no indica la fecha.",
+          raw: occ.matched || undefined,
+        });
+      } else if (occ.yearInferred) {
+        notices.push({
+          candidateId,
+          kind: "inferred_year",
+          message: "El año no está escrito en la fuente: lo dedujimos por cercanía. Revisa antes de crear.",
+          raw: occ.matched,
+          suggestion: occ.iso,
+        });
+      }
+      if (approximate) {
+        notices.push({
+          candidateId,
+          kind: "approximate_time",
+          message: "La fuente indica que la hora es aproximada. Confirma el horario antes de crear.",
+          raw: times.matched,
+          suggestion: times.start ?? undefined,
+        });
+      }
+      if (!venueRaw) {
+        notices.push({
+          candidateId,
+          kind: "missing_venue",
+          message: "Falta el lugar o cliente. Complétalo antes de crear el borrador.",
+        });
+      }
     }
   }
+
+  // Contexto común del bloque: hora aproximada y personal pendiente.
+  for (const seg of parsedSegments) {
+    if (seg.kind !== "context") continue;
+    const times = resolveTimesFromText(seg.text);
+    const approximate = times.start ? isApproximateTime(seg.text) : false;
+    const workers = resolveWorkersFromText(seg.text);
+    const pending = PENDING_SIGNAL.test(stripAccents(seg.text.toLowerCase()));
+    const roles = detectRoleCandidates(seg.text);
+
+    for (const candidate of candidates) {
+      if (blockOf.get(candidate.id) !== seg.blockIndex) continue;
+
+      if (times.start && !candidate.startTime) {
+        candidate.startTime = times.start;
+        candidate.confidenceByField.start_time = approximate ? 0.5 : times.confidence;
+        if (approximate) {
+          notices.push({
+            candidateId: candidate.id,
+            kind: "approximate_time",
+            message: "La fuente indica que la hora es aproximada. Confirma el horario antes de crear.",
+            raw: times.matched,
+            suggestion: times.start,
+          });
+        }
+      }
+      // Nunca se inventa la hora de fin.
+      if (workers.count !== null && candidate.requestedWorkers === null && !pending) {
+        candidate.requestedWorkers = workers.count;
+        candidate.confidenceByField.requested_workers = 0.8;
+      }
+      if (roles.length > 0) {
+        candidate.roleCandidates = Array.from(new Set([...candidate.roleCandidates, ...roles]));
+      }
+      if (pending && candidate.requestedWorkers === null) {
+        // "pendiente" nunca es 0: se mantiene desconocido y se avisa.
+        notices.push({
+          candidateId: candidate.id,
+          kind: "pending_workers",
+          message: "La fuente dice que la cantidad de personal está pendiente. Complétala antes de crear.",
+          raw: seg.text,
+        });
+      }
+      recomputeCandidate(candidate);
+    }
+  }
+
 
   if (candidates.length === 0) {
     warnings.push("No se encontraron trabajos en el texto pegado.");
