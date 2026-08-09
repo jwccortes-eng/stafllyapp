@@ -3,12 +3,13 @@ import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, i
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Users, Plus, UserX, ChevronDown, ChevronUp } from "lucide-react";
+import { getClientColor } from "./types";
+import { QuickCreatePopover } from "./QuickCreatePopover";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { isEmployeeAvailable } from "@/hooks/useEmployeeAvailability";
 import { getCalendarServiceIdentity } from "@/lib/shifts/calendar-service-identity";
 import { ServiceCalendarChip } from "./calendar/ServiceCalendarChip";
-import { QuickCreatePopover } from "./QuickCreatePopover";
 
 interface QuickCreateData {
   title: string; date: string; start_time: string; end_time: string;
@@ -81,7 +82,6 @@ function MonthViewImpl({
 
   const renderShiftCard = (shift: Shift) => {
     const shiftAssigns = getAssignmentsForShift(shift.id);
-
     const color = getClientColor(shift.client_id, clientIds);
 
     const identity = getCalendarServiceIdentity(shift as any, {
@@ -162,7 +162,7 @@ function MonthViewImpl({
 
   return (
     <div className="w-full">
-      {/* Calendar uses the full available width in the month view. */}
+      {/* En la vista Mes el calendario ocupa todo el ancho disponible. */}
       <div className="w-full overflow-x-auto">
         {/* Day headers */}
         <div className="grid grid-cols-7 gap-px bg-border/30 rounded-t-xl overflow-hidden">
@@ -194,73 +194,6 @@ function MonthViewImpl({
 
                 const visibleCards = isExpanded ? allCards : allCards.slice(0, MAX_VISIBLE);
                 const remainingCount = allCards.length - MAX_VISIBLE;
-
-                const totalAssigns = dayShifts.reduce((sum, s) => sum + getAssignmentsForShift(s.id).length, 0);
-
-                return (
-                  <div
-                    key={day.toISOString()}
-                    className={cn(
-                      "min-h-[100px] p-1.5 transition-colors border-b border-border/20",
-                      !inMonth && "opacity-30 bg-muted/10",
-                      inMonth && "bg-card/50",
-                      isToday && "bg-primary/[0.04]",
-                    )}
-                  >
-                    {/* Day header */}
-                    <div className="flex items-center justify-between mb-1">
-                      <div className={cn(
-                        "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full",
-                        isToday && "bg-primary text-primary-foreground font-bold",
-                        !isToday && "text-muted-foreground/70"
-                      )}>{format(day, "d")}</div>
-                      <div className="flex items-center gap-1">
-                        {unavailableCount > 0 && (
-                          <span className="text-[9px] font-semibold text-rose-500 flex items-center gap-0.5">
-                            <UserX className="h-2.5 w-2.5" />
-                            {unavailableCount}
-                          </span>
-                        )}
-                        {totalAssigns > 0 && (
-                          <span className="text-[9px] font-semibold text-muted-foreground flex items-center gap-0.5">
-                            <Users className="h-2.5 w-2.5" />
-                            {totalAssigns}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-        {/* Day headers */}
-        <div className="grid grid-cols-7 gap-px bg-border/30 rounded-t-xl overflow-hidden">
-          {dayHeaders.map(dh => (
-            <div key={dh} className="text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-2 bg-muted/30">{dh}</div>
-          ))}
-        </div>
-
-        {/* Calendar grid */}
-        <div className="border border-border/30 border-t-0 rounded-b-xl overflow-hidden">
-          {weeks.map((week, wi) => (
-            <div key={wi} className="grid grid-cols-7 divide-x divide-border/20">
-              {week.map(day => {
-                const dayKey = format(day, "yyyy-MM-dd");
-                const dayShifts = getShiftsForDay(day).sort((a, b) => a.start_time.localeCompare(b.start_time));
-                const isToday = isSameDay(day, new Date());
-                const inMonth = isSameMonth(day, currentMonth);
-                const unavailableCount = inMonth && !selectedEmpId ? getUnavailableCount(day) : 0;
-                const isExpanded = expandedDays.has(dayKey);
-
-                // Flatten: each shift with N assignments becomes N cards; unassigned = 1 card
-                const allCards: React.ReactNode[] = [];
-                dayShifts.forEach(shift => {
-                  const cards = renderShiftCard(shift);
-                  if (!cards) return;
-                  if (Array.isArray(cards)) allCards.push(...cards);
-                  else allCards.push(cards);
-                });
-
-                const visibleCards = isExpanded ? allCards : allCards.slice(0, MAX_VISIBLE);
-                const remainingCount = allCards.length - MAX_VISIBLE;
-
                 const totalAssigns = dayShifts.reduce((sum, s) => sum + getAssignmentsForShift(s.id).length, 0);
 
                 return (
