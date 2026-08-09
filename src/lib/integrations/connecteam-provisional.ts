@@ -152,13 +152,15 @@ export function buildProvisionalTrace(args: {
 
 /** Copy canónico del flujo provisional (una sola voz en toda la UI). */
 export const PROVISIONAL_COPY = {
-  needTitle: "Connecteam necesita una hora final para crear este turno.",
-  needBody: "En Stafly la hora final todavía está pendiente.",
-  cta: "Definir dato provisional para exportar",
-  onlyForExport: "Esto se utilizará únicamente para esta exportación a Connecteam.",
-  doesNotChangeService: "No cambia la hora final confirmada del Servicio.",
+  needTitle: "Connecteam necesita una hora final.",
+  needBody: "En Stafly todavía no conocemos esa información.",
+  cta: "Completar temporalmente para Connecteam",
+  onlyForExport: "La hora provisional solo se utilizará para generar el CSV.",
+  doesNotChangeService:
+    "No modifica el Servicio, no modifica payroll y no cambia la realidad: el Servicio seguirá mostrando Hora pendiente.",
   exportWarning:
     "La hora final utilizada es provisional y no modifica el Servicio en Stafly.",
   headcountPending:
     "Cantidad de personal pendiente — Number of users viaja vacío. No se inventa 0 ni 1.",
 } as const;
+
