@@ -396,4 +396,3 @@ export function connecteamSubjectsForShift(shift: Shift, ctx: BuildContext) {
   });
 }
 
-}
