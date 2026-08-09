@@ -1,12 +1,9 @@
-import { useState, useMemo, memo } from "react";
-import { formatPersonName } from "@/lib/format-helpers";
+import { useState, memo } from "react";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isSameMonth, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Users, Plus, UserX, Search, ChevronDown, ChevronUp } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-import { getClientColor, CLIENT_COLORS } from "./types";
+import { Users, Plus, UserX, ChevronDown, ChevronUp } from "lucide-react";
+import { getClientColor } from "./types";
 import { QuickCreatePopover } from "./QuickCreatePopover";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
@@ -41,8 +38,6 @@ function MonthViewImpl({
   onQuickCreate, onOpenFull,
   availabilityConfigs = [], availabilityOverrides = [],
 }: MonthViewProps) {
-  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
-  const [empSearch, setEmpSearch] = useState("");
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
 
   const toggleDay = (key: string) => {
@@ -65,17 +60,8 @@ function MonthViewImpl({
   const weeks: Date[][] = [];
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
 
-  // Filter shifts by selected employee
-  const filteredShifts = useMemo(() => {
-    if (!selectedEmpId) return shifts;
-    const empAssignShiftIds = new Set(
-      assignments.filter(a => a.employee_id === selectedEmpId).map(a => a.shift_id)
-    );
-    return shifts.filter(s => empAssignShiftIds.has(s.id));
-  }, [shifts, assignments, selectedEmpId]);
-
   const getShiftsForDay = (day: Date) =>
-    filteredShifts.filter(s => isSameDay(new Date(s.date + "T00:00:00"), day));
+    shifts.filter(s => isSameDay(new Date(s.date + "T00:00:00"), day));
 
   const clientIds = clients.map(c => c.id);
 
@@ -91,31 +77,11 @@ function MonthViewImpl({
     }).length;
   };
 
-  // Employee list filtered by search
-  const filteredEmps = useMemo(() => {
-    if (!empSearch) return employees;
-    const s = empSearch.toLowerCase();
-    return employees.filter(e => `${e.first_name} ${e.last_name}`.toLowerCase().includes(s));
-  }, [employees, empSearch]);
-
-  // Count shifts per employee for the month
-  const empShiftCounts = useMemo(() => {
-    const map: Record<string, number> = {};
-    assignments.forEach(a => {
-      const shift = shifts.find(s => s.id === a.shift_id);
-      if (shift) {
-        map[a.employee_id] = (map[a.employee_id] || 0) + 1;
-      }
-    });
-    return map;
-  }, [assignments, shifts]);
-
   const dayHeaders = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const MAX_VISIBLE = 5;
 
   const renderShiftCard = (shift: Shift) => {
     const shiftAssigns = getAssignmentsForShift(shift.id);
-
     const color = getClientColor(shift.client_id, clientIds);
 
     const identity = getCalendarServiceIdentity(shift as any, {
@@ -164,7 +130,6 @@ function MonthViewImpl({
       )];
     }
 
-
     return shiftAssigns.map(assign => {
       const emp = employees.find(e => e.id === assign.employee_id);
       const empName = emp ? `${emp.first_name} ${emp.last_name.charAt(0)}.` : "—";
@@ -196,63 +161,9 @@ function MonthViewImpl({
   };
 
   return (
-    <div className="flex gap-4">
-      {/* Employee sidebar */}
-      <div className="w-48 shrink-0 space-y-1 hidden sm:block">
-        {/* Search */}
-        <div className="relative mb-2">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            value={empSearch}
-            onChange={e => setEmpSearch(e.target.value)}
-            placeholder="Buscar worker..."
-            className="pl-7 h-7 text-xs"
-          />
-        </div>
-
-        <div className="max-h-[500px] overflow-y-auto space-y-0.5">
-          <button
-            className={cn(
-              "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors",
-              !selectedEmpId ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted/50"
-            )}
-            onClick={() => setSelectedEmpId(null)}
-          >
-            All ({employees.length})
-          </button>
-          {filteredEmps.map(emp => (
-            <button
-              key={emp.id}
-              className={cn(
-                "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors",
-                selectedEmpId === emp.id ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted/50"
-              )}
-              onClick={() => setSelectedEmpId(emp.id)}
-            >
-              <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="sm" className="h-5 w-5 text-[8px]" />
-              <span className="truncate flex-1">{formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)?.charAt(0)}.</span>
-              {(empShiftCounts[emp.id] ?? 0) > 0 && (
-                <span className="text-[10px] font-mono text-muted-foreground">{empShiftCounts[emp.id]}</span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Calendar */}
-      <div className="flex-1 overflow-x-auto">
-        {/* Selected employee chip (mobile) */}
-        {selectedEmpId && (
-          <div className="sm:hidden mb-2">
-            <button
-              className="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-medium px-2.5 py-1 rounded-full"
-              onClick={() => setSelectedEmpId(null)}
-            >
-              ✕ {employees.find(e => e.id === selectedEmpId)?.first_name}
-            </button>
-          </div>
-        )}
-
+    <div className="w-full">
+      {/* En la vista Mes el calendario ocupa todo el ancho disponible. */}
+      <div className="w-full overflow-x-auto">
         {/* Day headers */}
         <div className="grid grid-cols-7 gap-px bg-border/30 rounded-t-xl overflow-hidden">
           {dayHeaders.map(dh => (
@@ -269,7 +180,7 @@ function MonthViewImpl({
                 const dayShifts = getShiftsForDay(day).sort((a, b) => a.start_time.localeCompare(b.start_time));
                 const isToday = isSameDay(day, new Date());
                 const inMonth = isSameMonth(day, currentMonth);
-                const unavailableCount = inMonth && !selectedEmpId ? getUnavailableCount(day) : 0;
+                const unavailableCount = inMonth ? getUnavailableCount(day) : 0;
                 const isExpanded = expandedDays.has(dayKey);
 
                 // Flatten: each shift with N assignments becomes N cards; unassigned = 1 card
@@ -283,7 +194,6 @@ function MonthViewImpl({
 
                 const visibleCards = isExpanded ? allCards : allCards.slice(0, MAX_VISIBLE);
                 const remainingCount = allCards.length - MAX_VISIBLE;
-
                 const totalAssigns = dayShifts.reduce((sum, s) => sum + getAssignmentsForShift(s.id).length, 0);
 
                 return (
