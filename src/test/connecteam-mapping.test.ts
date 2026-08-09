@@ -31,7 +31,8 @@ describe("connecteam-mapping: sujetos candidatos", () => {
     const subs = candidateSubjects({ title: "  IMPERIAL   Gala  " });
     expect(subs).toHaveLength(1);
     expect(subs[0].kind).toBe("title");
-    expect(subs[0].id).toBe(normalizeTitleKey("imperial gala"));
+    // La clave de almacenamiento normaliza mayúsculas y espacios.
+    expect(mappingKey("title", subs[0].id)).toBe(mappingKey("title", "imperial gala"));
   });
 
   it("sin ningún dato no hay sujeto: no se puede mapear", () => {
