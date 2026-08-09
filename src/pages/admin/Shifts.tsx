@@ -1501,18 +1501,25 @@ function DesktopShifts() {
     }
 
 
-    setSaving(true);
-    try {
-      const intent = pendingSeriesIntentRef.current ?? captureSeriesIntent("publish_base");
-      const outcomes = await createServiceSeries(intent);
-      const summary = summarizeSeries(outcomes);
-      if (summary.created + summary.reused === 0) { setSaving(false); return; }
-      reportSeriesOutcome(outcomes, summary, /* publishedBase */ true);
-      createSession.endSession(); // P0.4 — turno creado → sesión, storage y timers limpios
-      setCreateOpen(false); resetForm(); loadData();
-    } finally {
-      setSaving(false);
-    }
+    const intent = pendingSeriesIntentRef.current ?? captureSeriesIntent("publish_base");
+    openSeriesPreview({
+      intent,
+      routeLabel: "Publicar",
+      run: async () => {
+        setSaving(true);
+        try {
+          const outcomes = await createServiceSeries(intent);
+          const summary = summarizeSeries(outcomes);
+          if (summary.created + summary.reused === 0) return;
+          reportSeriesOutcome(outcomes, summary, /* publishedBase */ true);
+          await verifySeriesAfterPersist(intent, outcomes);
+          createSession.endSession(); // P0.4 — turno creado → sesión, storage y timers limpios
+          setCreateOpen(false); resetForm(); loadData();
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
   };
 
   // Quick create: minimal shift from popover
