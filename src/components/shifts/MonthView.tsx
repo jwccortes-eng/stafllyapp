@@ -11,6 +11,8 @@ import { QuickCreatePopover } from "./QuickCreatePopover";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { isEmployeeAvailable } from "@/hooks/useEmployeeAvailability";
+import { getCalendarServiceIdentity } from "@/lib/shifts/calendar-service-identity";
+import { ServiceCalendarChip } from "./calendar/ServiceCalendarChip";
 
 interface QuickCreateData {
   title: string; date: string; start_time: string; end_time: string;
@@ -116,14 +118,32 @@ function MonthViewImpl({
 
     const color = getClientColor(shift.client_id, clientIds);
 
-    // Unassigned shift — show as vacant card
+    const identity = getCalendarServiceIdentity(shift as any, {
+      assignedCount: shiftAssigns.length,
+      clientName: clients.find(c => c.id === shift.client_id)?.name ?? null,
+      locationName: locations.find(l => l.id === shift.location_id)?.name ?? null,
+    });
+
+    // Draft: identidad de SERVICIO, nunca "Vacante" ni no-disponibilidad.
+    if (identity.service.isDraft) {
+      return [(
+        <ServiceCalendarChip
+          key={shift.id}
+          identity={identity}
+          dateLabel={format(new Date(shift.date + "T00:00:00"), "EEEE d 'de' MMMM", { locale: es })}
+          onOpenService={() => onShiftClick(shift)}
+        />
+      )];
+    }
+
+    // Published sin personal → estado de STAFFING (sin cubrir), no de servicio.
     if (shiftAssigns.length === 0) {
       return [(
         <div
           key={shift.id}
           className={cn(
-            "rounded-md px-1.5 py-[3px] text-[10px] leading-tight cursor-pointer truncate transition-all hover:shadow-sm border-l-2 border-dashed",
-            "bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-700",
+            "rounded-md px-1.5 py-[3px] text-[10px] leading-tight cursor-pointer truncate transition-all hover:shadow-sm border-l-2",
+            "bg-amber-50 dark:bg-amber-950/30 border-amber-400 dark:border-amber-600",
           )}
           onClick={() => onShiftClick(shift)}
           onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-1", "ring-primary/30"); }}
@@ -135,13 +155,15 @@ function MonthViewImpl({
             if (data) onDropOnShift(shift.id, data);
           }}
         >
-          <span className="font-semibold text-rose-500 dark:text-rose-400 truncate">Vacant</span>
-          <span className="ml-1 text-[9px] text-rose-400 dark:text-rose-500">
-            {shift.start_time.slice(0, 5)}-{shift.end_time.slice(0, 5)}
+          <span className="font-mono text-[9px] text-muted-foreground mr-1">{identity.refLabel}</span>
+          <span className="font-semibold text-amber-700 dark:text-amber-400 truncate">Sin cubrir</span>
+          <span className="ml-1 text-[9px] text-amber-600/80 dark:text-amber-500">
+            {identity.time.label}
           </span>
         </div>
       )];
     }
+
 
     return shiftAssigns.map(assign => {
       const emp = employees.find(e => e.id === assign.employee_id);
