@@ -76,7 +76,13 @@ export interface BuildContext {
   assignments: Assignment[];
   categories?: SelectOption[];
   defaultTimezone?: string;
+  /**
+   * Mapping Connecteam de la compañía (Job / Sub item). Fuente canónica del
+   * destino; cuando existe, desactiva las reglas legacy hardcodeadas.
+   */
+  mapping?: ConnecteamMappingConfig | null;
 }
+
 
 /**
  * v1.1 export options. Defaults are SAFE-by-default to avoid silent matching
