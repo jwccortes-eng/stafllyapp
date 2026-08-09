@@ -28,7 +28,6 @@ import type { Shift, SelectOption } from "@/components/shifts/types";
 import type { BuildContext, ExportWarning } from "./connecteam-export";
 import {
   candidateSubjects,
-  hasAnyMapping,
   lookupMapping,
   type ConnecteamMappingConfig,
 } from "./connecteam-mapping";
