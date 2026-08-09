@@ -100,3 +100,23 @@ porque `SeriesServiceSnapshot.attendanceMode` está declarado como `string`
 
 Nada de esto toca payroll, time_entries, assignments, Connecteam, ELDM, auth,
 RLS, tenants, schema ni datos de producción.
+
+## Fix aplicado (P0 — FIX ATTENDANCE_MODE INVALID VALUES)
+
+| Punto | Antes | Después |
+|---|---|---|
+| `bulk-service-creation.ts:227` | `attendanceMode: "manual"` | `"clock"` |
+| `Shifts.tsx:1550` (Quick Create) | `"standard"` / `clockMethod:"mobile"` | `"clock"` / `"both"` |
+| `series-engine.ts:100` | `row.attendance_mode ?? "manual"` | `normalizeAttendanceMode(row.attendance_mode)` |
+| `recurrence.ts:71` | `attendanceMode: string` | `attendanceMode: ShiftAttendanceMode` |
+
+`normalizeAttendanceMode` vive en `src/lib/shift-attendance-mode.ts` y sólo
+aplica a valores legados leídos de la base (nunca a input de UI): el union
+canónico impide en compilación cualquier valor nuevo fuera del CHECK.
+
+Sin cambios de schema, CHECK, payroll, time_entries, RLS, tenants ni Connecteam.
+
+QA: typecheck limpio; `bulk-service-creation.test.ts` (13) y
+`recurring-service-creation.test.ts` (17) en verde; suite completa 869 passed
+con la única falla preexistente documentada en
+`DEBT_DRIVER_SYNC_ROUNDTRIP_TEST_FAILURE.md`.
