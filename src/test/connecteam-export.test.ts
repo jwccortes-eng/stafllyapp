@@ -229,15 +229,27 @@ describe("connecteam-export: validateShiftForExport", () => {
     expect(r.warnings[0].code).toBe("no_admin");
   });
 
-  it("Blocked when shift is draft / cancelled", () => {
+  it("Draft completo es exportable — publication_status es contexto, no blocker", () => {
     const r = validateShiftForExport(
       mkShift({ publication_status: "draft" }),
       buildCtx,
       adminCtx,
     );
-    expect(r.status).toBe("blocked");
-    expect(r.warnings.some(w => w.code === "not_published")).toBe(true);
+    expect(r.status).not.toBe("blocked");
+    expect(r.warnings.some(w => w.code === "not_published")).toBe(false);
+    expect(r.warnings.some(w => w.code === "draft_export_context")).toBe(true);
   });
+
+  it("Blocked cuando el turno está cancelado", () => {
+    const r = validateShiftForExport(
+      mkShift({ publication_status: "cancelled" }),
+      buildCtx,
+      adminCtx,
+    );
+    expect(r.status).toBe("blocked");
+    expect(r.warnings.some(w => w.code === "terminal_status")).toBe(true);
+  });
+
 
   it("Blocked when no Job context (no client, no location, no category)", () => {
     const r = validateShiftForExport(
