@@ -195,7 +195,7 @@ export default function AdminSidebar() {
       }
     } catch { /* noop */ }
     // Default: only the first (daily ops) group open; others collapsed for less clutter.
-    return new Set(["Daily Operations", "Platform"]);
+    return new Set(["Operación", "Plataforma"]);
   });
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
 
@@ -414,7 +414,7 @@ export default function AdminSidebar() {
         "fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out",
         "border-r border-sidebar-border/70 shadow-sm",
         "bg-sidebar/85 backdrop-blur-xl text-sidebar-foreground",
-        collapsed ? "w-[68px]" : "w-[256px]",
+        collapsed ? "w-[68px]" : "w-[240px]",
       )}
     >
       {/* ── Marca Stafly + compañía activa (identidad única del shell) ── */}
