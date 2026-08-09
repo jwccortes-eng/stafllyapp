@@ -25,6 +25,7 @@ import { ADMIN_LEX } from "@/lib/ox/lexicon";
 import { useCanExportConnecteam, EXPORT_PERMISSION_DENIED_COPY } from "@/lib/integrations/connecteam-export-permission";
 import { ExportStateBadges } from "./ExportStateBadges";
 import { useConnecteamMapping } from "@/hooks/useConnecteamMapping";
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 
 interface Props {
   open: boolean;
@@ -168,6 +169,14 @@ export function ExportConnecteamBulkDialog({
               </Badge>
             </div>
 
+            {/* Lectura del lote: los incompletos NO bloquean a los listos. */}
+            <p className="text-xs text-muted-foreground">
+              {summary.total} seleccionados · {summary.exportable} listos para Connecteam ·{" "}
+              {summary.blocked} necesitan completar. Se exportan sólo los listos.
+            </p>
+
+
+
             {summary.blocked > 0 && (
               <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-xs text-destructive flex items-start gap-2">
                 <ShieldX className="h-4 w-4 mt-0.5 shrink-0" />
@@ -188,8 +197,12 @@ export function ExportConnecteamBulkDialog({
                   {rows.slice(0, 30).map((r) => (
                     <li key={r.shift.id} className="px-3 py-2 text-xs">
                       <p className="font-medium text-foreground truncate">
+                        <span className="font-mono text-[10px] text-muted-foreground mr-1.5">
+                          {getShiftDisplayIdentity(r.shift as any).primaryRef}
+                        </span>
                         {r.shift.date} · {r.shift.title || "Sin título"}
                       </p>
+
                       <ExportStateBadges
                         className="mt-1"
                         publicationStatus={(r.shift as any).publication_status}

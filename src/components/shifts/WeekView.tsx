@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { Plus, Clock, CheckCircle2 } from "lucide-react";
 import { buildPastelMap, ASSIGNMENT_STATUS_CONFIG } from "./pastel-utils";
 import { QuickCreatePopover } from "./QuickCreatePopover";
+import { getCalendarServiceIdentity } from "@/lib/shifts/calendar-service-identity";
+import { ServiceCalendarChip } from "./calendar/ServiceCalendarChip";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 
 interface QuickCreateData {
@@ -168,17 +170,36 @@ function WeekViewImpl({
                       </div>
                     );
                   })}
-                  {/* Unassigned shifts with no workers */}
-                  {d.shifts.filter(s => !d.assigns.some(a => a.shift.id === s.id)).slice(0, 2).map(s => (
-                    <div
-                      key={s.id}
-                      className="pastel-pill w-full pastel-pill-rose opacity-70"
-                      onClick={() => onShiftClick(s)}
-                    >
-                      <Clock className="h-3 w-3 shrink-0" />
-                      <span className="truncate flex-1">{s.start_time.slice(0, 5)}</span>
-                    </div>
-                  ))}
+                  {/* Servicios sin personal: draft = identidad de servicio,
+                      publicado = estado de staffing "Sin cubrir". */}
+                  {d.shifts.filter(s => !d.assigns.some(a => a.shift.id === s.id)).map(s => {
+                    const identity = getCalendarServiceIdentity(s as any, {
+                      assignedCount: 0,
+                      clientName: clients.find(c => c.id === s.client_id)?.name ?? null,
+                      locationName: locations.find(l => l.id === s.location_id)?.name ?? null,
+                    });
+                    if (identity.service.isDraft) {
+                      return (
+                        <ServiceCalendarChip
+                          key={s.id}
+                          identity={identity}
+                          dateLabel={format(d.date, "EEEE d 'de' MMMM", { locale: es })}
+                          onOpenService={() => onShiftClick(s)}
+                        />
+                      );
+                    }
+                    return (
+                      <div
+                        key={s.id}
+                        className="pastel-pill w-full pastel-pill-orange"
+                        onClick={() => onShiftClick(s)}
+                      >
+                        <Clock className="h-3 w-3 shrink-0" />
+                        <span className="truncate flex-1">Sin cubrir · {identity.time.label}</span>
+                      </div>
+                    );
+                  })}
+
                 </>
               )}
               {overflow > 0 && (
