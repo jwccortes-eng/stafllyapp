@@ -54,6 +54,12 @@ export interface ServiceOperationalReadinessInput extends ServiceReadinessInput 
   publicationStatus?: string | null;
   /** Plazas declaradas — Connecteam usa esto como "Number of users". */
   slots?: number;
+  /**
+   * La cantidad de personal está PENDIENTE (slots = NULL), no es 0.
+   * Connecteam no exige `Number of users`: pendiente NO bloquea el export.
+   */
+  slotsPending?: boolean;
+
   /** Timezone efectiva del turno (o default de la empresa). */
   timezone?: string | null;
   /**
