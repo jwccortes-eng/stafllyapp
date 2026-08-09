@@ -470,7 +470,27 @@ export function normalizeVisualExtraction(
         message: `Agrupado por color (${meta[candidateId].colorGroup}). El color no define el lugar: confirma con el texto.`,
       });
     }
+    if (!venueRaw && !clientRaw) {
+      notices.push({
+        candidateId,
+        message: "Encontré un posible turno, pero falta confirmar el lugar o el cliente.",
+      });
+    }
+    const recurrence = detectVisualRecurrence(
+      service.notes,
+      service.extraction_notes,
+      service.source_excerpt,
+    );
+    if (recurrence) {
+      notices.push({
+        candidateId,
+        message: recurrence.times
+          ? `La imagen indica recurrencia ("${recurrence.raw}"): ${recurrence.times} ocurrencias. Se conserva como dato detectado; aquí sólo se prepara este servicio.`
+          : `La imagen indica recurrencia ("${recurrence.raw}"). Se conserva como dato detectado; aquí sólo se prepara este servicio.`,
+      });
+    }
   });
+
 
   if (services.length === 0) {
     warnings.push("No encontramos servicios legibles en el archivo.");
