@@ -48,7 +48,7 @@ describe("connecteam-mapping: lookup y persistencia", () => {
     const hit = lookupMapping(cfg, subs);
     expect(hit?.entry.job).toBe("Millennium");
     expect(hit?.entry.subItem).toBe("Events");
-    expect(hit?.key).toBe(mappingKey("location", "loc-1"));
+    expect(mappingKey(hit!.subject.kind, hit!.subject.id)).toBe(mappingKey("location", "loc-1"));
   });
 
   it("cae al cliente cuando el venue no está mapeado", () => {
