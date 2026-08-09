@@ -524,6 +524,22 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
           </ul>
         )}
 
+        {result && candidates.length === 0 && result.analysisIncomplete && selectedCompanyId && (
+          <IntakeRecoveryPanel
+            companyId={selectedCompanyId}
+            source={result.source}
+            referenceDate={new Date().toISOString().slice(0, 10)}
+            batchId={result.batchId}
+            failureKind={result.failureKind}
+            recovery={result.recovery}
+            onRecovered={(recovered) => setCandidates(recovered)}
+            onRetry={handleAnalyze}
+            onReset={reset}
+            isBusy={isProcessing}
+          />
+        )}
+
+
         {result && (candidates.length > 0 || result.unresolved.length > 0) && (
           <>
             <p className="text-xs text-muted-foreground">
