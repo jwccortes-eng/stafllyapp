@@ -95,6 +95,35 @@ export function candidateSubjects(input: {
   return out;
 }
 
+/**
+ * Sujeto MÁS REUTILIZABLE de un servicio: cliente → lugar → título.
+ *
+ * POR QUÉ NO EL MÁS ESPECÍFICO: declarar el destino en el venue solo resuelve
+ * los servicios que tienen ese venue. En la operación real, los servicios del
+ * mismo cliente alternan entre venue declarado y venue pendiente, así que el
+ * mapping a nivel cliente es el que evita volver a preguntar turno por turno.
+ * `lookupMapping` sigue respetando la precedencia venue → cliente al leer.
+ */
+export function mostReusableSubject(subjects: MappingSubject[]): MappingSubject | null {
+  return (
+    subjects.find(s => s.kind === "client") ??
+    subjects.find(s => s.kind === "location") ??
+    subjects[0] ??
+    null
+  );
+}
+
+/**
+ * SUGERENCIA (nunca aplicación automática): Connecteam usa nombres en
+ * mayúsculas del catálogo de la cuenta. Se ofrece el nombre del sujeto como
+ * punto de partida; el operador confirma o escribe el valor real.
+ */
+export function suggestJobFromSubject(subject: MappingSubject | null): string {
+  const raw = (subject?.label ?? "").trim();
+  return raw ? raw.toUpperCase() : "";
+}
+
+
 export interface MappingLookup {
   entry: ConnecteamMappingEntry;
   subject: MappingSubject;

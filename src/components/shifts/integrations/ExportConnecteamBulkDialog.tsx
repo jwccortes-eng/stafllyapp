@@ -32,6 +32,10 @@ import {
   type ExportCauseKey,
 } from "@/lib/integrations/connecteam-export-groups";
 import { ProvisionalEndPanel } from "./ProvisionalEndPanel";
+import { ConnecteamMappingSheet } from "./ConnecteamMappingSheet";
+import { connecteamSubjectsForShift } from "@/lib/integrations/connecteam-compat";
+import { mappingKey, type MappingSubject } from "@/lib/integrations/connecteam-mapping";
+
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -194,6 +198,30 @@ export function ExportConnecteamBulkDialog({
   const activeGroups = groups.filter((g) => g.items.length > 0);
   const singleCause = activeGroups.length === 1 ? activeGroups[0] : null;
 
+  // ── Destino Connecteam pendiente ────────────────────────────────────────
+  // Servicios bloqueados exclusivamente porque su cliente/lugar todavía no
+  // tiene Job/Sub item declarado en ESTA compañía. Se resuelve una vez por
+  // sujeto y se reutiliza; no se configura turno por turno.
+  const [mappingOpen, setMappingOpen] = useState(false);
+
+  const missingDestinationRows = useMemo(
+    () => rows.filter((r) => r.cause === "missing_destination"),
+    [rows],
+  );
+
+  /** Sujetos únicos (cliente/lugar/título) de los servicios sin destino. */
+  const missingDestinationSubjects = useMemo(() => {
+    const byKey = new Map<string, MappingSubject>();
+    for (const r of missingDestinationRows) {
+      for (const s of connecteamSubjectsForShift(r.shift, buildCtx)) {
+        byKey.set(mappingKey(s.kind, s.id), s);
+      }
+    }
+    return Array.from(byKey.values());
+  }, [missingDestinationRows, buildCtx]);
+
+
+
   const duplicateCount = useMemo(() => {
     const exportable = rows.filter((r) => r.validation.status !== "blocked");
     return findDuplicateRowSignatures(exportable.map((r) => r.row)).length;
@@ -334,11 +362,25 @@ export function ExportConnecteamBulkDialog({
                             {g.items.length > 0 && ` · ${g.meta.explanation}`}
                           </p>
                         </div>
-                        {g.items.length > 0 && g.meta.batchActionLabel && (
-                          <span className="text-[11px] text-muted-foreground shrink-0">
-                            {g.meta.batchActionLabel} abajo
-                          </span>
+                        {g.items.length > 0 && g.meta.key === "missing_destination" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0 h-8 text-[11px]"
+                            onClick={() => setMappingOpen(true)}
+                            disabled={missingDestinationSubjects.length === 0}
+                          >
+                            {g.meta.batchActionLabel}
+                          </Button>
                         )}
+                        {g.items.length > 0 &&
+                          g.meta.batchActionLabel &&
+                          g.meta.key !== "missing_destination" && (
+                            <span className="text-[11px] text-muted-foreground shrink-0">
+                              {g.meta.batchActionLabel} abajo
+                            </span>
+                          )}
+
                       </div>
                     ))}
                   </div>
@@ -446,7 +488,15 @@ export function ExportConnecteamBulkDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <ConnecteamMappingSheet
+        open={mappingOpen}
+        onOpenChange={setMappingOpen}
+        subjects={missingDestinationSubjects}
+        impactCount={missingDestinationRows.length}
+      />
     </Dialog>
+
   );
 }
 

@@ -14,6 +14,7 @@ import type { ValidationResult } from "./connecteam-export";
 
 export type ExportCauseKey =
   | "pending_end"
+  | "missing_destination"
   | "missing_job_site"
   | "missing_client"
   | "missing_permission"
@@ -36,6 +37,13 @@ export const EXPORT_CAUSES: ExportCauseMeta[] = [
     explanation:
       "Connecteam necesita una hora final para crear el turno. En Stafly todavía no conocemos esa información.",
     batchActionLabel: "Resolver todos",
+  },
+  {
+    key: "missing_destination",
+    label: "Falta destino Connecteam",
+    explanation:
+      "Estos clientes o lugares todavía no tienen declarado su Job / Sub item en la cuenta de Connecteam de esta empresa.",
+    batchActionLabel: "Configurar destino",
   },
   {
     key: "missing_job_site",
@@ -66,6 +74,7 @@ export const EXPORT_CAUSES: ExportCauseMeta[] = [
 const CODE_TO_CAUSE: Record<string, ExportCauseKey> = {
   missing_end: "pending_end",
   zero_duration: "pending_end",
+  missing_job_mapping: "missing_destination",
   missing_job_context: "missing_job_site",
   no_admin: "missing_permission",
   no_tenant: "missing_permission",
@@ -76,6 +85,7 @@ const CODE_TO_CAUSE: Record<string, ExportCauseKey> = {
   missing_timezone: "missing_basics",
   terminal_status: "missing_basics",
 };
+
 
 /**
  * Causa principal que impide exportar un servicio. `null` cuando el servicio
