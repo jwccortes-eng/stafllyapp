@@ -17,10 +17,8 @@
  */
 import { getShiftDisplayIdentity } from "./shift-identity";
 import { buildShiftCardTitle } from "./card-display";
-import {
-  getServiceOperationalReadiness,
-  type OperationalBlocker,
-} from "./service-operational-readiness";
+import { type OperationalBlocker } from "./service-operational-readiness";
+import { getServiceLifecycleReadiness } from "./service-lifecycle-readiness";
 
 export type ServiceStateCode = "draft" | "published" | "cancelled" | "archived";
 
