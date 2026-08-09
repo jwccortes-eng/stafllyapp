@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   newRecurrenceIntentId,
+  buildCanonicalServiceInsert,
+  buildSeriesIntent,
   freezeRecurrenceSubmit,
   parseRecurrenceRef,
   planRecurrenceOccurrences,
@@ -222,5 +224,62 @@ describe("QK-001592 — caso maestro de recurrencia real", () => {
     expect(computeRepeatDates(QK_001592_ROW.date, degradedConfig)).toHaveLength(0);
     expect(submit.occurrences.map((o) => o.date)).toEqual(frozen);
     expect(frozen).toHaveLength(4);
+  });
+
+  it("cada ocurrencia conserva cliente, título, ubicación, horario y personal del Servicio confirmado", () => {
+    const recurrence = buildSubmit();
+    const service = {
+      companyId: QK_001592_ROW.company_id,
+      clientId: QK_001592_ROW.client_id,
+      locationId: "location-elum",
+      jobSiteLocationId: "job-site-elum",
+      jobSiteAddress: "Elum Franklhall",
+      meetingPoint: "Entrada principal",
+      meetingPointLocationId: null,
+      title: QK_001592_ROW.title,
+      startTime: "16:00",
+      endTime: "21:00",
+      requestedHeadcount: 6,
+      notes: "Servicio confirmado",
+      specialInstructions: "Uniforme negro",
+      claimable: false,
+      payType: "hourly" as const,
+      dayType: "full_day" as const,
+      payOverride: false,
+      shiftAdminId: null,
+      transportRequired: false,
+      carCapacity: 0,
+      transportNotes: null,
+      driverIds: [],
+      clockMethod: "mobile" as const,
+      attendanceMode: "standard",
+      meetingTime: "15:45",
+      employeeIds: [...QK_001592_EMPLOYEE_IDS],
+      publicationIntent: "publish_base" as const,
+    };
+    const intent = buildSeriesIntent({ recurrence, service });
+    const rows = intent.recurrence.occurrences.map((occurrence) => buildCanonicalServiceInsert({
+      snapshot: intent.service,
+      date: occurrence.date,
+      sourceRef: occurrence.sourceRef,
+      createdBy: "operator-1",
+      draft: !occurrence.isBase,
+    }));
+
+    expect(rows).toHaveLength(4);
+    expect(rows.map((row) => row.date)).toEqual([...QK_001592_EXPECTED_DATES]);
+    for (const row of rows) {
+      expect(row).toMatchObject({
+        title: "Evento",
+        client_id: QK_001592_ROW.client_id,
+        location_id: "location-elum",
+        job_site_location_id: "job-site-elum",
+        job_site_address: "Elum Franklhall",
+        start_time: "16:00",
+        end_time: "21:00",
+        slots: 6,
+      });
+      expect(String(row.title).toUpperCase()).not.toBe("COCINA");
+    }
   });
 });
