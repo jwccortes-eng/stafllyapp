@@ -49,3 +49,32 @@ Captura Connecteam: `Monday, Aug 10, 2026 · 4:00 PM - 9:00 PM · Job: ELUM FRAN
 Recurrence: Every day for 4 times` con la gateway devolviendo 403 (credit limit).
 Resultado esperado: `TECHNICAL_FAILURE_WITH_EVIDENCE` con fecha, inicio, fin y job
 recuperados y la recurrencia conservada como texto.
+
+## Matriz QA ejecutada (`src/test/smart-intake-operational-recovery.test.ts`, 17 tests)
+| Caso | Resultado |
+|---|---|
+| A. Captura real + proveedor OK | extracción normal (`ANALYSIS_SUCCESS`) ✅ |
+| B. Misma captura + 403 `credit_limit_reached` | recupera 1 Servicio revisable con fecha 2026-08-10, 16:00–21:00 y Job ELUM FRANKLHALL ✅ |
+| C. Timeout / 429 / 503 / respuesta malformada | mismo principio, fallo clasificado sólo para telemetría ✅ |
+| D. Fuente sin evidencia | `NO_SERVICE_EVIDENCE`, sin inventar ✅ |
+| E. Señales parciales (fecha + Job) | supera el mínimo; horario queda `missing` ✅ |
+| F. "Every day for 4 times" | señal literal preservada, sin expandir fechas ✅ |
+| G. Retry exitoso | idempotente: no duplica candidatos equivalentes; añade sólo lo nuevo ✅ |
+| H. Corrección humana antes del retry | no se sobrescribe; se reporta conflicto ✅ |
+| I. Mobile | card apilada, sin tablas ni scroll horizontal, CTAs `min-h-11` (44px) ✅ |
+| J. Desktop | mismo componente, CTAs en fila ✅ |
+| K. Tenant distinto | `company_id` siempre del contexto autenticado, nunca del contenido ✅ |
+
+Suite completa: 827 tests en verde. Único fallo restante, `driver-sync-roundtrip`,
+es un mock preexistente ajeno a esta capa. Typecheck limpio.
+
+## Normalización de capturas
+`normalizeStructuralText()` reordena texto con etiquetas sueltas
+("Shift details / Monday, Aug 10, 2026 / Start 4:00 PM / End 9:00 PM / Job: …")
+al formato de una línea que el parser canónico ya entiende. No agrega
+información: sólo reacomoda lo que la fuente ya dice.
+
+## Confirmación
+Cuando existe evidencia suficiente de un trabajo real, Smart Intake puede continuar
+de forma segura aun si falla el proveedor de IA, preservando lo detectado para
+revisión humana sin inventar información, crear automáticamente ni perder trazabilidad.
