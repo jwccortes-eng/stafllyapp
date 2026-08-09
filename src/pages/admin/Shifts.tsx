@@ -1262,13 +1262,23 @@ function DesktopShifts() {
 
   /** Puerta única: ninguna serie se persiste sin confirmación visual previa. */
   const openSeriesPreview = (input: {
-    intent: SeriesIntent;
+    /** Una intención (Crear/Publicar/Duplicar/Repetir) o varias (Copiar semana). */
+    intent?: SeriesIntent;
+    intents?: SeriesIntent[];
     routeLabel: string;
     confirmLabel?: string;
     run: () => Promise<void>;
   }) => {
+    const list = input.intents ?? (input.intent ? [input.intent] : []);
+    const previews = list.map((i) => buildSeriesPreview(i));
+    const merged: SeriesPreview = {
+      intentId: previews[0]?.intentId ?? "",
+      total: previews.reduce((n, p) => n + p.total, 0),
+      rows: previews.flatMap((p) => p.rows),
+      pending: Array.from(new Set(previews.flatMap((p) => p.pending))),
+    };
     setSeriesPreview({
-      preview: buildSeriesPreview(input.intent),
+      preview: merged,
       routeLabel: input.routeLabel,
       confirmLabel: input.confirmLabel,
       run: input.run,
