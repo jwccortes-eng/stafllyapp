@@ -170,7 +170,19 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
         referenceDate: new Date().toISOString().slice(0, 10),
       });
       setResult(run);
-      setCandidates(run.candidates);
+      // Reintento: reconciliar sin pisar correcciones humanas ni duplicar.
+      setCandidates((prev) => {
+        if (prev.length === 0) return run.candidates;
+        const merged = reconcileAfterRetry(prev, run.candidates, humanEdited.current);
+        if (merged.conflicts.length > 0) {
+          notifyWarning({
+            title: "Mantuve tus correcciones",
+            fact: `${merged.conflicts.length} dato(s) del nuevo análisis no coinciden con lo que ya revisaste.`,
+            consequence: "Se conservó tu versión. Puedes cambiarla a mano si quieres.",
+          });
+        }
+        return merged.candidates;
+      });
       corrections.current = 0;
 
       logIntakeTelemetry(
@@ -208,10 +220,12 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
 
   const handlePatch = useCallback((candidateId: string, patch: Partial<ServiceCandidate>) => {
     corrections.current += 1;
+    humanEdited.current.add(candidateId);
     setCandidates((prev) =>
       prev.map((c) => (c.id === candidateId ? recomputeCandidate({ ...c, ...patch }) : c)),
     );
   }, []);
+
 
   const handleConfirmMatch = useCallback(
     (candidateId: string, field: "client" | "venue") => {
