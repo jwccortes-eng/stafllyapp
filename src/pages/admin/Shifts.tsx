@@ -85,6 +85,7 @@ import {
   type PersistedOccurrence,
 } from "@/lib/shifts/series-engine";
 import { SeriesPreviewDialog } from "@/components/shifts/series/SeriesPreviewDialog";
+import { BulkServiceCreationDialog } from "@/components/shifts/bulk/BulkServiceCreationDialog";
 import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import EmergencyWorkerDialog, { type EmergencyWorkerCreated } from "@/components/employee/EmergencyWorkerDialog";
