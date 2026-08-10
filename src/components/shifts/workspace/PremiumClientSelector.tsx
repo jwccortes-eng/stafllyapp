@@ -23,6 +23,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { EntityCard } from "@/components/entities/EntityCard";
+import { clientAccentColor, clientAccentSoft } from "@/lib/clients/client-accent";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
 import type { SelectOption } from "../types";
@@ -109,7 +110,14 @@ function PremiumClientSelectorImpl({ clientId, clients, onChange, onQuickAddClie
           >
             {selected ? (
               <div className="flex items-center gap-2 min-w-0">
-                <div className="h-7 w-7 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <div
+                  className="h-7 w-7 rounded-md bg-muted text-muted-foreground flex items-center justify-center shrink-0"
+                  style={
+                    clientAccentSoft(selected.id)
+                      ? { backgroundColor: clientAccentSoft(selected.id), color: clientAccentColor(selected.id) }
+                      : undefined
+                  }
+                >
                   <Building2 className="h-3.5 w-3.5" />
                 </div>
                 <div className="min-w-0">
@@ -214,6 +222,7 @@ function PremiumClientSelectorImpl({ clientId, clients, onChange, onQuickAddClie
                           bare
                           density="compact"
                           kind="client"
+                          accentClientId={c.id}
                           name={formatDisplayText(c.name, "name")}
                           code={(c as { client_code?: string | null }).client_code ?? null}
                           entityId={c.id}

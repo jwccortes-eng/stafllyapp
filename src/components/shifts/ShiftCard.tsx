@@ -151,10 +151,11 @@ export function ShiftCard({
       {/* Client accent — whisper-thin identity rail, never competes */}
       <span
         aria-hidden
+        style={color.dotStyle}
         className={cn(
           "absolute left-0 top-3 bottom-3 w-[1.5px] rounded-r-full",
-          color.dot,
-          "opacity-40 group-hover:opacity-60 transition-opacity",
+          !color.dotStyle && color.dot,
+          "opacity-60 group-hover:opacity-90 transition-opacity",
         )}
       />
 

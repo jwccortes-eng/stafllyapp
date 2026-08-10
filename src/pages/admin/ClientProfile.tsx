@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ClientAvatar } from "@/components/ui/client-avatar";
+import { ClientIdentityPack } from "@/components/clients/ClientIdentityPack";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -102,6 +103,16 @@ export default function ClientProfile() {
       >
         <ArrowLeft className="h-3.5 w-3.5" /> Clients
       </Link>
+
+      {/* Identidad canónica del Cliente (P1 — Client Identity Pack) */}
+      <ClientIdentityPack
+        clientId={client.id}
+        name={client.name}
+        reference={(client as { client_code?: string | null }).client_code ?? null}
+        status={client.deleted_at ? "archived" : client.status}
+        venueCount={locationsQ.data?.length ?? 0}
+        dataQualityLabel={client.contact_name ? null : "Sin contacto principal"}
+      />
 
       {/* Hero */}
       <Card className="p-5 sm:p-6 bg-gradient-to-br from-card to-muted/20 border-border/60">

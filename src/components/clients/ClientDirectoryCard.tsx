@@ -57,6 +57,7 @@ export function ClientDirectoryCard({
     <EntityCard
       kind="client"
       name={view.name}
+      accentClientId={truth.clientId}
       reference={view.reference}
       primaryDetail={
         view.primaryDetail ??
