@@ -453,279 +453,177 @@ export default function Clients() {
         ) : undefined}
       />
 
-      {filtered.length > 0 && (
+      {visibleTruths.length > 0 && (
         <ReportActionsBar
           title="Clientes"
-          subtitle={`${filtered.length} cliente${filtered.length !== 1 ? "s" : ""}`}
+          subtitle={`${visibleTruths.length} cliente${visibleTruths.length !== 1 ? "s" : ""}`}
           onExportCSV={() => {
-            const headers = ["Nombre", "Contacto", "Teléfono", "Email", "Estado", "Notas"];
-            const rows = filtered.map(c => [
-              c.name, c.contact_name ?? "", c.contact_phone ?? "",
-              c.contact_email ?? "", c.status, c.notes ?? "",
+            const headers = ["Código", "Nombre", "Estado", "Contacto", "Teléfono", "Email", "Lugares", "Servicios", "Connecteam"];
+            const rows = visibleTruths.map(t => [
+              t.humanReference, t.canonicalName,
+              t.lifecycle === "active" ? "Activo" : t.lifecycle === "inactive" ? "Inactivo" : "Archivado",
+              t.primaryContact?.name ?? "", t.primaryContact?.phone ?? "", t.primaryContact?.email ?? "",
+              String(t.venues.length), String(t.serviceCount),
+              t.connecteamMappingStatus === "configured" ? "Configurado" : "Falta mapping",
             ]);
             return [headers, ...rows];
           }}
         />
       )}
 
-      {/* KPI strip */}
-      {!loading && clients.length > 0 && (
+      {/* KPI strip — verdad del directorio */}
+      {!directory.isLoading && directory.clients.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-          <KpiCard size="sm" accent="primary" icon={<Building2 className="h-3.5 w-3.5" />} value={stats.active} label="Active clients" />
-          <KpiCard size="sm" accent="muted" icon={<Mail className="h-3.5 w-3.5" />} value={stats.withEmail} label="With email" />
-          <KpiCard size="sm" accent="muted" icon={<Phone className="h-3.5 w-3.5" />} value={stats.withPhone} label="With phone" />
-          <KpiCard size="sm" accent="muted" icon={<Trash2 className="h-3.5 w-3.5" />} value={stats.archived} label="Archived" />
+          <KpiCard size="sm" accent="primary" icon={<Building2 className="h-3.5 w-3.5" />} value={directory.matrix.active} label="Clientes activos" />
+          <KpiCard size="sm" accent="muted" icon={<Users className="h-3.5 w-3.5" />} value={directory.matrix.withoutContact} label="Sin contacto principal" />
+          <KpiCard size="sm" accent="muted" icon={<MapPin className="h-3.5 w-3.5" />} value={directory.matrix.withoutVenue} label="Sin lugar" />
+          <KpiCard size="sm" accent="muted" icon={<Filter className="h-3.5 w-3.5" />} value={directory.duplicatePairs.length} label="Posibles duplicados" />
         </div>
       )}
 
-      {/* Advanced toolbar */}
-      <div className="flex items-center gap-2 flex-wrap mb-6">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[180px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-          <Input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por nombre, contacto o email…"
-            className="pl-9 h-9 text-xs"
-          />
-        </div>
+      {/* Activos primero: los inactivos no compiten visualmente */}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="mb-4">
+        <TabsList>
+          <TabsTrigger value="active">Activos ({directory.matrix.active})</TabsTrigger>
+          <TabsTrigger value="inactive">
+            Inactivos / archivados ({directory.matrix.inactive + directory.matrix.archived})
+          </TabsTrigger>
+          <TabsTrigger value="duplicates">Posibles duplicados ({directory.duplicatePairs.length})</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-        {/* Status filter */}
-        <Select value={showDeleted} onValueChange={setShowDeleted}>
-          <SelectTrigger className="w-[130px] h-9 text-xs">
-            <Filter className="h-3 w-3 mr-1.5 text-muted-foreground/50" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="active">Activos</SelectItem>
-            <SelectItem value="deleted">Archivados</SelectItem>
-            <SelectItem value="all">Todos</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {activeCount > 0 && (
-          <Button variant="ghost" size="sm" className="h-9 text-xs text-muted-foreground/50 px-2" onClick={() => { setSearch(""); setShowDeleted("active"); }}>
-            <X className="h-3 w-3 mr-1" /> Limpiar
+      {tab !== "duplicates" && (
+        <div className="flex items-center gap-2 flex-wrap mb-6">
+          <div className="relative flex-1 min-w-[180px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar por nombre, código, contacto, email o lugar…"
+              className="pl-9 h-9 text-xs"
+            />
+          </div>
+          {search && (
+            <Button variant="ghost" size="sm" className="h-9 text-xs text-muted-foreground/50 px-2" onClick={() => setSearch("")}>
+              <X className="h-3 w-3 mr-1" /> Limpiar
+            </Button>
+          )}
+          <div className="flex items-center rounded-lg border border-border/30 overflow-hidden ml-auto">
+            <button
+              className={cn("h-9 w-9 flex items-center justify-center transition-colors",
+                viewMode === "grid" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50")}
+              onClick={() => setViewMode("grid")}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </button>
+            <button
+              className={cn("h-9 w-9 flex items-center justify-center transition-colors",
+                viewMode === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50")}
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <Button variant="outline" size="sm" className="h-9 text-xs" onClick={handleExport} disabled={filtered.length === 0}>
+            <Download className="h-3.5 w-3.5 mr-1.5" /> Exportar
           </Button>
-        )}
-
-        <div className="h-5 w-px bg-border/30 mx-1 hidden sm:block" />
-
-        {/* View mode toggle */}
-        <div className="flex items-center rounded-lg border border-border/30 overflow-hidden">
-          <button
-            className={cn(
-              "h-9 w-9 flex items-center justify-center transition-colors",
-              viewMode === "grid" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50"
-            )}
-            onClick={() => setViewMode("grid")}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-          </button>
-          <button
-            className={cn(
-              "h-9 w-9 flex items-center justify-center transition-colors",
-              viewMode === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50"
-            )}
-            onClick={() => setViewMode("list")}
-          >
-            <List className="h-3.5 w-3.5" />
-          </button>
         </div>
-
-        {/* Export */}
-        <Button variant="outline" size="sm" className="h-9 text-xs ml-auto" onClick={handleExport} disabled={filtered.length === 0}>
-          <Download className="h-3.5 w-3.5 mr-1.5" /> Exportar
-        </Button>
-      </div>
+      )}
 
       {/* Content */}
-      {loading ? (
-        <div className={cn(
-          viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-2"
-        )}>
+      {tab === "duplicates" ? (
+        <ClientDuplicatesPanel
+          pairs={directory.duplicatePairs}
+          truths={directory.clients}
+          canEdit={canEdit}
+        />
+      ) : directory.isLoading ? (
+        <div className={cn(viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-2")}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className={cn("animate-pulse bg-muted rounded-2xl", viewMode === "grid" ? "h-40" : "h-16")} />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
-        <EmptyState icon={Building2} title="No se encontraron clientes" description={search ? "Intenta con otro término" : "Agrega tu primer cliente"} />
+      ) : visibleTruths.length === 0 ? (
+        <EmptyState
+          icon={Building2}
+          title={tab === "active" ? "Sin clientes activos" : "Sin clientes inactivos"}
+          description={search ? "Intenta con otro término, código o contacto" : "Crea el primer cliente sólo con su nombre"}
+        />
       ) : viewMode === "grid" ? (
-        /* ─── Grid View ─── */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map(c => {
-            const phone = cleanPhone(c.contact_phone);
-            return (
-              <div
-                key={c.id}
-                className={cn(
-                  "group relative rounded-2xl border border-border/40 bg-card p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden",
-                  c.deleted_at && "opacity-60"
-                )}
-              >
-                {/* decorative blob */}
-                <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-primary/5 -translate-y-8 translate-x-8 group-hover:scale-[2] transition-transform duration-700" />
-
-                <button
-                  type="button"
-                  onClick={() => navigate(`/app/clients/${c.id}`)}
-                  className="relative z-10 flex items-start gap-3 w-full text-left rounded-xl -m-1 p-1 hover:bg-muted/30 transition-colors"
-                  title="Open client profile"
-                >
-                  <ClientAvatar name={c.name} size="lg" />
-
-                  <div className="min-w-0 flex-1 pt-0.5">
-                    <p className="text-sm font-bold text-foreground truncate leading-tight flex items-center gap-1.5">
-                      {formatDisplayText(c.name, "name")}
-                      <ExternalLink className="h-3 w-3 text-muted-foreground/40 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </p>
-                    <span className={cn(
-                      "inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
-                      c.deleted_at
-                        ? "bg-muted text-muted-foreground"
-                        : c.status === "active"
-                          ? "bg-primary/10 text-primary"
-                          : "bg-muted text-muted-foreground"
-                    )}>
-                      {c.deleted_at ? "Archivado" : c.status === "active" ? "Activo" : "Inactivo"}
-                    </span>
-
-                    <div className="mt-2 space-y-0.5">
-                      {c.contact_name && (
-                        <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
-                          <Users className="h-3 w-3 shrink-0" /> {formatPersonName(c.contact_name)}
-                        </p>
-                      )}
-                      {c.contact_email && (
-                        <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
-                          <Mail className="h-3 w-3 shrink-0" /> {c.contact_email}
-                        </p>
-                      )}
-                      {c.contact_phone && (
-                        <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
-                          <Phone className="h-3 w-3 shrink-0" /> {c.contact_phone}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </button>
-
-                {/* Quick contact + Actions */}
-                <div className="relative z-10 flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-border/30">
-                  {phone && (
-                    <>
-                      <a
-                        href={`tel:${phone}`}
-                        className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-earning/10 text-earning hover:bg-earning/20 transition-colors"
-                      >
-                        <Phone className="h-3 w-3 shrink-0" /> Llamar
-                      </a>
-                      <a
-                        href={`https://wa.me/${phone.replace('+', '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-earning/10 text-earning hover:bg-earning/20 transition-colors"
-                      >
-                        <MessageCircle className="h-3 w-3 shrink-0" /> WhatsApp
-                      </a>
-                    </>
-                  )}
-                  <button
-                    onClick={() => navigate(`/app/clients/${c.id}`)}
-                    className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                  >
-                    <ExternalLink className="h-3 w-3 shrink-0" /> Open
-                  </button>
-                  {canEdit && !c.deleted_at && (
-                    <button
-                      onClick={() => openEdit(c)}
-                      className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-muted/40 text-foreground hover:bg-muted/70 transition-colors"
-                    >
-                      <Pencil className="h-3 w-3 shrink-0" /> Editar
-                    </button>
-                  )}
-                  {canDelete && !c.deleted_at && (
-                    <button
-                      onClick={() => handleArchive(c.id)}
-                      className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                    >
-                      <Trash2 className="h-3 w-3 shrink-0" /> Archivar
-                    </button>
-                  )}
-                  {c.deleted_at && canEdit && (
-                    <button
-                      onClick={() => handleRestore(c.id)}
-                      className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                    >
-                      <RotateCcw className="h-3 w-3 shrink-0" /> Restaurar
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {visibleTruths.map((t) => (
+            <ClientDirectoryCard
+              key={t.clientId}
+              truth={t}
+              highlighted={focusId === t.clientId}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              onOpen={() => navigate(`/app/clients/${t.clientId}`)}
+              onEdit={() => { const rec = recordById[t.clientId]; if (rec) openEdit(rec); }}
+              onArchive={() => handleArchive(t.clientId)}
+              onRestore={() => handleRestore(t.clientId)}
+            />
+          ))}
         </div>
       ) : (
-        /* ─── List View ─── */
         <div className="rounded-2xl border border-border/40 bg-card overflow-hidden shadow-xs">
-          {/* Table header */}
-          <div className="grid grid-cols-[1fr_140px_160px_140px_100px_100px] gap-2 px-4 py-2.5 bg-muted/30 border-b border-border/20 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+          <div className="grid grid-cols-[110px_1fr_160px_120px_120px_100px] gap-2 px-4 py-2.5 bg-muted/30 border-b border-border/20 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+            <span>Código</span>
             <span>Cliente</span>
-            <span>Contacto</span>
-            <span>Email</span>
-            <span>Teléfono</span>
-            <span>Estado</span>
+            <span>Contacto principal</span>
+            <span>Lugares / Servicios</span>
+            <span>Calidad</span>
             <span className="text-right">Acciones</span>
           </div>
-          {filtered.map((c, idx) => (
+          {visibleTruths.map((t, idx) => (
             <div
-              key={c.id}
+              key={t.clientId}
               role="button"
               tabIndex={0}
-              onClick={() => navigate(`/app/clients/${c.id}`)}
-              onKeyDown={(e) => { if (e.key === "Enter") navigate(`/app/clients/${c.id}`); }}
+              onClick={() => navigate(`/app/clients/${t.clientId}`)}
+              onKeyDown={(e) => { if (e.key === "Enter") navigate(`/app/clients/${t.clientId}`); }}
               className={cn(
-                "grid grid-cols-[1fr_140px_160px_140px_100px_100px] gap-2 px-4 py-3 items-center text-xs hover:bg-muted/30 transition-colors cursor-pointer",
-                idx < filtered.length - 1 && "border-b border-border/10",
-                c.deleted_at && "opacity-60"
+                "grid grid-cols-[110px_1fr_160px_120px_120px_100px] gap-2 px-4 py-3 items-center text-xs hover:bg-muted/30 transition-colors cursor-pointer",
+                idx < visibleTruths.length - 1 && "border-b border-border/10",
+                !t.isActive && "opacity-70",
+                focusId === t.clientId && "ring-1 ring-primary/50",
               )}
             >
+              <span className="font-mono text-[10px] text-muted-foreground">{t.humanReference}</span>
               <div className="flex items-center gap-2.5 min-w-0">
-                <ClientAvatar name={c.name} size="sm" />
-                <span className="font-semibold text-foreground truncate">{formatDisplayText(c.name, "name")}</span>
+                <ClientAvatar name={t.canonicalName} size="sm" />
+                <span className="font-semibold text-foreground truncate">{formatDisplayText(t.canonicalName, "name")}</span>
+                {!t.isActive && (
+                  <Badge variant="secondary" className="text-[9px] shrink-0">
+                    {t.lifecycle === "archived" ? "Archivado" : "Inactivo"}
+                  </Badge>
+                )}
               </div>
-              <span className="text-muted-foreground truncate text-[11px]">{c.contact_name ? formatPersonName(c.contact_name) : "—"}</span>
-              <span className="text-muted-foreground truncate text-[11px]">{c.contact_email ?? "—"}</span>
-              <span className="text-muted-foreground truncate text-[11px]">{c.contact_phone ?? "—"}</span>
-              <span>
-                <span className={cn(
-                  "inline-block px-2 py-0.5 rounded-full text-[9px] font-bold",
-                  c.deleted_at
-                    ? "bg-muted text-muted-foreground"
-                    : c.status === "active"
-                      ? "bg-primary/10 text-primary"
-                      : "bg-muted text-muted-foreground"
-                )}>
-                  {c.deleted_at ? "Archivado" : c.status === "active" ? "Activo" : "Inactivo"}
-                </span>
+              <span className="text-muted-foreground truncate text-[11px]">
+                {t.primaryContact ? formatPersonName(t.primaryContact.name) : "Sin contacto principal"}
+              </span>
+              <span className="text-muted-foreground text-[11px]">
+                {t.venues.length} lugar(es) · {t.serviceCount} servicio(s)
+              </span>
+              <span className="text-[11px] text-muted-foreground truncate">
+                {t.dataQuality.gaps.length === 0 ? "Completo" : `Pendiente: ${t.dataQuality.gaps.map(g => g.label).join(", ")}`}
               </span>
               <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => navigate(`/app/clients/${c.id}`)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Open profile">
+                <button onClick={() => navigate(`/app/clients/${t.clientId}`)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Abrir ficha">
                   <ExternalLink className="h-3.5 w-3.5" />
                 </button>
-                {canEdit && !c.deleted_at && (
-                  <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Edit">
+                {canEdit && t.lifecycle !== "archived" && (
+                  <button onClick={() => { const rec = recordById[t.clientId]; if (rec) openEdit(rec); }} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Editar">
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                 )}
-                {canDelete && !c.deleted_at && (
-                  <button onClick={() => handleArchive(c.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Archive">
+                {canDelete && t.lifecycle !== "archived" && (
+                  <button onClick={() => handleArchive(t.clientId)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Archivar">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 )}
-                {c.deleted_at && canEdit && (
-                  <button onClick={() => handleRestore(c.id)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Restore">
+                {t.lifecycle === "archived" && canEdit && (
+                  <button onClick={() => handleRestore(t.clientId)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Restaurar">
                     <RotateCcw className="h-3.5 w-3.5" />
                   </button>
                 )}
@@ -734,6 +632,14 @@ export default function Clients() {
           ))}
         </div>
       )}
+
+      <QuickCreateClientDialog
+        open={quickCreateOpen}
+        onOpenChange={setQuickCreateOpen}
+        companyId={selectedCompanyId ?? null}
+        onResolved={() => { loadClients(); directory.refetch(); }}
+      />
+
 
       {/* Audit trail */}
       <div className="mt-8">
