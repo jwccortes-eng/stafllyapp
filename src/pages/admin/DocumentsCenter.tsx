@@ -387,107 +387,72 @@ export default function DocumentsCenter() {
               description="Ajusta los filtros o el término de búsqueda."
             />
           ) : (
-            <>
-              {/* Mobile (<md): tappable rows + drawer-per-row.
-                  Desktop (md+): existing 7-col table, untouched. */}
-              <div className="md:hidden space-y-2">
-                {filtered.map((r) => (
-                  <MobileQueueRow
-                    key={r.id}
-                    onClick={() => setDrawerRow(r)}
-                    primary={r.document_type}
-                    secondary={r.worker_name}
-                    topMeta={
-                      <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5", STATUS_TONE[r.status])}>
-                        {DOC_STATUS_LABEL[r.status]}
-                      </Badge>
-                    }
-                    rightSlot={
-                      <span className="text-[10px] text-muted-foreground tabular-nums">
-                        {fmtDate(r.created_at)}
-                      </span>
-                    }
-                  />
-                ))}
-              </div>
+            <div className="max-w-4xl space-y-2">
+              {byPerson.map((person) => {
+                const review = person.docs.filter((d) => d.status !== "approved").length;
+                const expired = person.docs.filter((d) => d.status === "expired").length;
+                return (
+                  <div key={person.employeeId} className="rounded-xl border border-border/50 bg-card overflow-hidden">
+                    <EntityCard
+                      bare
+                      density="compact"
+                      kind="worker"
+                      entityId={person.employeeId}
+                      name={person.name}
+                      primaryDetail={`${person.docs.length} documento${person.docs.length === 1 ? "" : "s"}`}
+                      status={expired > 0 ? "blocked" : review > 0 ? "attention" : "operational"}
+                      badges={[
+                        ...(expired > 0 ? [{ key: "exp", label: `${expired} vencido${expired === 1 ? "" : "s"}`, tone: "critical" as const }] : []),
+                        ...(review > 0 ? [{ key: "rev", label: `${review} por revisar`, tone: "warning" as const }] : []),
+                      ]}
+                      maxBadges={2}
+                      className="bg-muted/30"
+                      actions={
+                        <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[11px]">
+                          <Link to={`/app/employees/${person.employeeId}`}>
+                            <UserSearch className="h-3 w-3 mr-1" />
+                            Perfil
+                          </Link>
+                        </Button>
+                      }
+                    />
 
-              <div className="hidden md:block rounded-md border overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Persona</TableHead>
-                      <TableHead>Tipo de documento</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Vencimiento</TableHead>
-                      <TableHead>Origen</TableHead>
-                      <TableHead>Subido</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="font-medium">{r.worker_name}</TableCell>
-                        <TableCell>{r.document_type}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={STATUS_TONE[r.status]}>
-                            {DOC_STATUS_LABEL[r.status]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          <ExpirationCell row={r} onSaved={refresh} />
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{DOC_SOURCE_LABEL[r.source]}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="inline-flex gap-1">
-                            {(() => {
-                              // "Revisar" for anything not yet approved (opens the
-                              // same preview modal + AssistedExtractionPanel with
-                              // status chip). "Preview" stays for approved rows.
-                              const isReview = r.status !== "approved" && !!r.file_path;
-                              return (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 px-2 text-[11px]"
-                                  onClick={() => handleView(r)}
-                                  disabled={!r.file_path}
-                                  title={isReview ? "Abrir para revisar (edición de metadata, no aprueba)" : "Vista previa"}
-                                >
-                                  {isReview ? (
-                                    <ClipboardCheck className="h-3 w-3 mr-1" />
-                                  ) : (
-                                    <Eye className="h-3 w-3 mr-1" />
-                                  )}
-                                  {isReview ? "Revisar" : "Preview"}
-                                </Button>
-                              );
-                            })()}
+                    <div className="divide-y divide-border/20 border-t border-border/30">
+                      {person.docs.map((r) => {
+                        const isReview = r.status !== "approved" && !!r.file_path;
+                        return (
+                          <div
+                            key={r.id}
+                            className="flex items-center gap-3 px-3 py-2 hover:bg-accent/30 transition-colors"
+                          >
+                            <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <span className="min-w-0 flex-1 truncate text-[13px]">{r.document_type}</span>
+                            <Badge variant="outline" className={cn("shrink-0 text-[10px] py-0 px-1.5", STATUS_TONE[r.status])}>
+                              {DOC_STATUS_LABEL[r.status]}
+                            </Badge>
+                            <span className="hidden sm:block shrink-0 text-[11px] text-muted-foreground min-w-[110px] text-right">
+                              <ExpirationCell row={r} onSaved={refresh} />
+                            </span>
                             <Button
-                              variant="ghost"
+                              variant={isReview ? "outline" : "ghost"}
                               size="sm"
-                              className="h-7 px-2 text-[11px]"
-                              onClick={() => handleOpenInTab(r)}
+                              className="h-7 shrink-0 px-2 text-[11px]"
+                              onClick={() => handleView(r)}
                               disabled={!r.file_path}
-                              title="Open in new tab"
+                              title={isReview ? "Abrir para revisar" : "Vista previa"}
                             >
-                              <ExternalLink className="h-3 w-3" />
-                            </Button>
-                            <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[11px]">
-                              <Link to={`/app/employees/${r.employee_id}`}>
-                                <UserSearch className="h-3 w-3 mr-1" />
-                                Perfil
-                              </Link>
+                              {isReview ? <ClipboardCheck className="h-3 w-3 sm:mr-1" /> : <Eye className="h-3 w-3 sm:mr-1" />}
+                              <span className="hidden sm:inline">{isReview ? "Revisar" : "Preview"}</span>
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
           )}
       </div>
 
