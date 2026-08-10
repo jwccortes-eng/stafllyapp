@@ -209,8 +209,8 @@ export function ShiftEditDialog({
 
   const hasAcceptedAssignments = shiftAssignedIds.length > 0;
 
-  if (!shift) return null;
-  if (shift.status === "locked") return null;
+  // NOTE: los early-returns viven DESPUÉS de todos los hooks (reglas de React).
+
 
   const handleSave = async () => {
     if (saving) return; // double-tap guard — never allows a second UPDATE
