@@ -406,6 +406,7 @@ export function ShiftFormFields({
   companyId = null,
   renderInlineSummary = true,
   layout = "stack",
+  copilotStages,
 }: ShiftFormFieldsProps) {
   const signals = useShiftFormSignals({
     v,
