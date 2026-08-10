@@ -201,7 +201,7 @@ export function OperationalWorkspace({
           <div className="sticky top-12 md:top-16 z-20 -mx-4 px-4 md:-mx-8 md:px-8 bg-background/92 backdrop-blur-md border-b border-border/50">
             {breadcrumb ? <div className="pt-2 text-[11px]">{breadcrumb}</div> : null}
 
-            <div className="flex items-center gap-3 py-2.5 min-w-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5 min-w-0">
               {!isGlobalMode && selectedCompany ? (
                 <CompanyLogo
                   name={selectedCompany.name}
@@ -213,7 +213,7 @@ export function OperationalWorkspace({
                 />
               ) : null}
 
-              <div className="min-w-0">
+              <div className="min-w-0 mr-auto">
                 {hostLabel ? (
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground truncate leading-3">
                     {hostLabel}
@@ -223,11 +223,11 @@ export function OperationalWorkspace({
               </div>
 
               {search ? (
-                <div className="ml-auto hidden md:block w-full max-w-[320px] min-w-0">{search}</div>
+                <div className="hidden md:block w-full max-w-[320px] min-w-0">{search}</div>
               ) : null}
 
               {action ? (
-                <div className={cn("flex items-center gap-1.5 shrink-0", !search && "ml-auto")}>{action}</div>
+                <div className="flex flex-wrap items-center justify-end gap-1.5 min-w-0">{action}</div>
               ) : null}
             </div>
 
