@@ -142,6 +142,8 @@ export function buildServiceEventModel(
 
     coverageComplete: complete,
     isDraft: identity.service.isDraft,
+    infoPending: PLACEHOLDER_TITLE.test(dedupeSegments((identity.title ?? "").trim())),
+
     accent: resolveAccent(identity),
     team,
   };
