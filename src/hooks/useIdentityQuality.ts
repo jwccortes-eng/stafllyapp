@@ -229,6 +229,7 @@ export interface IdentityQualityTotals {
   portalInconsistentGroups: number;
   suspiciousAssignments: number;
   highRiskAssignments: number;
+  reviewedGroups: number;
 }
 
 export interface IdentityQualityModel {
