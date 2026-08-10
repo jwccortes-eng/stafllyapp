@@ -1499,65 +1499,8 @@ export default function Employees() {
         </>
       )}
 
-      {/* ─── Premium Filter Bar ─── */}
-      <PremiumFilterBar
-        search={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Search by name, phone, email, or Stafly ID…"
-        quickFilters={
-          <>
-            {uniqueRoles.length > 0 && (
-              <Select value={filterRole} onValueChange={setFilterRole}>
-                <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
-                <SelectContent><SelectItem value="all">All roles</SelectItem>{uniqueRoles.map(r => (<SelectItem key={r} value={r}>{formatDisplayText(r, "label")}</SelectItem>))}</SelectContent>
-              </Select>
-            )}
-            {uniqueGroups.length > 0 && (
-              <Select value={filterGroup} onValueChange={setFilterGroup}>
-                <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Group" /></SelectTrigger>
-                <SelectContent><SelectItem value="all">All groups</SelectItem>{uniqueGroups.map(g => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
-              </Select>
-            )}
-            {/* v4 Sort control — visible "Ordenar por" with asc/desc toggle */}
-            <Select
-              value={sort.key}
-              onValueChange={(v) => setSort({ key: v as SortKey, direction: sort.direction })}
-            >
-              <SelectTrigger className="w-[170px] h-8 text-xs" aria-label="Ordenar por">
-                <ArrowUpDown className="h-3 w-3 mr-1 text-muted-foreground" />
-                <SelectValue placeholder="Ordenar por" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name">Ordenar: Nombre</SelectItem>
-                <SelectItem value="code">Ordenar: ID Stafly</SelectItem>
-                <SelectItem value="last_activity">Ordenar: Última actividad</SelectItem>
-                <SelectItem value="photo">Ordenar: Foto</SelectItem>
-                <SelectItem value="role">Ordenar: Rol</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2 text-[11px]"
-              onClick={() => setSort({ key: sort.key, direction: sort.direction === "asc" ? "desc" : "asc" })}
-              title={sort.direction === "asc" ? "Ascendente" : "Descendente"}
-            >
-              {sort.direction === "asc" ? "Asc ↑" : "Desc ↓"}
-            </Button>
-          </>
-        }
-        activeChips={activeChips}
-        resultCount={filtered.length}
-        onReset={clearFilters}
-        rightSlot={
-          <>
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setColPrefsOpen(true)} title="Column preferences">
-              <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
-            </Button>
-            <ViewSwitcher value={viewMode} onChange={setViewMode} modes={["roster", "table", "compact"]} />
-          </>
-        }
-      />
+
+
 
       {/* ─── Photo Review Queue v1 — Foto requerida tab header ─── */}
       {statusTab === "no-photo" && (
