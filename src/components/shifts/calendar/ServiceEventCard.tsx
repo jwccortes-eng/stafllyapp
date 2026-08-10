@@ -130,7 +130,7 @@ function ServiceEventCardImpl({
           )}
           {model.infoPending && (
             <span className="shrink-0 rounded-sm bg-muted px-1 text-[8px] font-medium tracking-wide text-muted-foreground">
-              INFO PENDIENTE
+              INFO
             </span>
           )}
         </span>
