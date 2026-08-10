@@ -146,6 +146,10 @@ export function buildServiceEventModel(
     infoPending: PLACEHOLDER_TITLE.test(dedupeSegments((identity.title ?? "").trim())),
 
     accent: resolveAccent(identity),
+    /** Identidad heredada del Cliente (Venue sólo modula la intensidad). */
+    accentColor:
+      clientAccentColor(shift.client_id, venueAccentIntensity(shift.location_id)) ?? null,
     team,
+
   };
 }
