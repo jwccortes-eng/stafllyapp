@@ -11,6 +11,12 @@ import type { EmployeeInvitation } from "@/hooks/useEmployeeInvitations";
 import { isInviteStatusFailure, isInviteStatusInFlight } from "@/lib/invitation-status";
 import { formatDistanceToNow } from "date-fns";
 import { enUS } from "date-fns/locale";
+import {
+  resolvePortalStatus,
+  type PortalStatus,
+  type PortalStatusEmployeeLike,
+} from "@/lib/portal/portal-status";
+
 
 /**
  * Estados de badge. Son una proyección 1:1 del resolver canónico
