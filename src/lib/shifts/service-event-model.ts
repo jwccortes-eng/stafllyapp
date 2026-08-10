@@ -165,6 +165,8 @@ export function buildServiceEventModel(
     accentColor:
       clientAccentColor(shift.client_id, venueAccentIntensity(shift.location_id)) ?? null,
     team,
+    preparation,
 
   };
 }
+
