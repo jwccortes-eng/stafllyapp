@@ -627,7 +627,7 @@ export default function DocumentsCenter() {
           </>
         )}
       </MobileQueueDrawer>
-    </div>
+    </OperationalWorkspace>
   );
 }
 
