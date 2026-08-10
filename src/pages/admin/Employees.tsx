@@ -1829,144 +1829,67 @@ export default function Employees() {
           <div className="rounded-2xl border border-border/50 bg-card overflow-hidden divide-y divide-border/30">
             {filtered.map((e) => {
               const phone = e.phone_number?.replace(/[^+\d]/g, "") ?? "";
-              const status: PremiumAvatarStatus = e.is_active === false
-                ? "inactive"
-                : isMissingDocs(e) ? "missing-docs"
-                : isNew(e) ? "new"
-                : isDriver(e) ? "driver"
-                : !e.user_id ? "pending"
-                : "active";
               const risks = riskAnalysis.byId.get(e.id) ?? [];
-              const lastSeen = lastActivityDate(e);
+              const ps = photoStatusFor(e);
+              const view = buildWorkerEntityView(
+                e as unknown as WorkerEntityInput,
+                {
+                  blocked: isMissingDocs(e),
+                  attention: ps === "required" || ps === "invalid" || risks.length > 0,
+                  isDriver: isDriver(e),
+                  photoRequired: ps === "required" || ps === "invalid",
+                },
+                formatPersonName(`${e.first_name} ${e.last_name}`),
+              );
+              const riskBadges = risks.map((k) => {
+                const meta = getRiskMeta(k);
+                return {
+                  key: `risk-${k}`,
+                  label: meta.label,
+                  hint: meta.description,
+                  tone: (meta.tone === "destructive"
+                    ? "critical"
+                    : meta.tone === "warning"
+                      ? "warning"
+                      : "info") as "critical" | "warning" | "info",
+                };
+              });
               return (
-                <div
+                <EntityCard
                   key={e.id}
+                  bare
+                  kind="worker"
+                  name={view.name}
+                  reference={view.reference}
+                  avatarUrl={e.avatar_url}
+                  primaryDetail={e.phone_number ?? e.email ?? undefined}
+                  status={view.status}
+                  statusLabel={view.statusLabel}
+                  badges={[...riskBadges, ...view.badges]}
                   onClick={() => navigate(`/app/employees/${e.id}`)}
-                  className={cn(
-                    "group flex items-center gap-3 px-3 sm:px-4 py-2.5 hover:bg-accent/30 transition-colors cursor-pointer",
-                    !e.is_active && "opacity-60",
-                  )}
-                >
-                  {/* Avatar — protagonist */}
-                  <PremiumAvatar
-                    firstName={e.first_name}
-                    lastName={e.last_name}
-                    avatarUrl={e.avatar_url}
-                    size="lg"
-                    status={status}
-                  />
-
-                  {/* Identity block */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <p className="text-sm font-semibold truncate leading-tight">
-                        {formatPersonName(`${e.first_name} ${e.last_name}`)}
-                      </p>
-                      {!e.is_active && (
-                        <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                          Histórico
-                        </span>
+                  actions={
+                    <>
+                      <EmpStatusBadge
+                        employee={e}
+                        invitation={invitations[e.id]}
+                        showInvite
+                        onInvite={() => { setViewEmployee(e); setInviteOpen(true); }}
+                        onCopyLink={copyInviteLink}
+                      />
+                      {phone && (
+                        <a
+                          href={`https://wa.me/${phone.replace(/^\+/, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hidden sm:inline-flex items-center justify-center h-7 w-7 rounded-lg text-emerald-600 hover:bg-emerald-500/10 transition"
+                          aria-label={`WhatsApp ${e.first_name}`}
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                        </a>
                       )}
-                      {isDriver(e) && (
-                        <Car className="h-3 w-3 text-sky-500 shrink-0" aria-label="Driver" />
-                      )}
-                    </div>
-                    <div className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
-                      {e.employer_identification && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="font-mono tabular-nums">
-                              ID Stafly · {e.employer_identification}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="text-xs">Referencia de payroll</TooltipContent>
-                        </Tooltip>
-                      )}
-                      {e.phone_number && (
-                        <>
-                          <span className="text-muted-foreground/40">·</span>
-                          <span className="truncate hidden md:inline">{e.phone_number}</span>
-                        </>
-                      )}
-                      {e.email && (
-                        <>
-                          <span className="text-muted-foreground/40 hidden lg:inline">·</span>
-                          <span className="truncate hidden lg:inline">{e.email}</span>
-                        </>
-                      )}
-                    </div>
-                    {/* Status line — max 2 risks + photo chip, rest behind +N */}
-                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                      <WorkerRiskTags risks={risks} max={2} />
-                      {(() => {
-                        const ps = photoStatusFor(e);
-                        // Roster hygiene: always surface "Foto requerida" and
-                        // "Foto no válida" (rejected — needs worker action).
-                        // "Pendiente" stays inside the no-photo audit tab so
-                        // the main roster does not get spammed.
-                        const showHere =
-                          ps === "required" ||
-                          ps === "invalid" ||
-                          (ps === "pending" && statusTab === "no-photo") ||
-                          (ps === "approved" && statusTab === "no-photo" && photoFilter === "approved");
-                        if (!showHere || !ps) return null;
-                        const tip =
-                          ps === "required"
-                            ? "Foto tipo documento: rostro claro, fondo limpio y buena iluminación."
-                            : ps === "invalid"
-                              ? (e.photo_rejection_reason || "Foto marcada como no válida. Pide al trabajador una nueva foto.")
-                              : ps === "approved"
-                                ? "Foto aprobada por un administrador."
-                                : "Foto cargada — pendiente de revisión manual.";
-                        return (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span>
-                                <WorkerPhotoStatusChip status={ps} />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs max-w-[240px]">
-                              {tip}
-                            </TooltipContent>
-                          </Tooltip>
-                        );
-                      })()}
-                    </div>
-                  </div>
-
-                  {/* Last activity (desktop only) */}
-                  {lastSeen && (
-                    <div className="hidden xl:flex flex-col items-end text-right shrink-0 w-[110px]">
-                      <span className="text-[9px] uppercase tracking-wide text-muted-foreground/70">Last Activity</span>
-                      <span className="text-[10.5px] text-muted-foreground">
-                        {formatDistanceToNow(lastSeen, { addSuffix: true, locale: enUS })}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Status + quick actions */}
-                  <div className="shrink-0 flex items-center gap-1.5">
-                    <EmpStatusBadge
-                      employee={e}
-                      invitation={invitations[e.id]}
-                      showInvite
-                      onInvite={() => { setViewEmployee(e); setInviteOpen(true); }}
-                      onCopyLink={copyInviteLink}
-                    />
-                    {phone && (
-                      <a
-                        href={`https://wa.me/${phone.replace(/^\+/, "")}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(ev) => ev.stopPropagation()}
-                        className="hidden sm:inline-flex items-center justify-center h-7 w-7 rounded-lg text-emerald-600 hover:bg-emerald-500/10 transition"
-                        aria-label={`WhatsApp ${e.first_name}`}
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                      </a>
-                    )}
-                  </div>
-                </div>
+                    </>
+                  }
+                />
               );
             })}
           </div>
