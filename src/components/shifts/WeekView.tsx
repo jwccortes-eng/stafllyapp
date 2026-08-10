@@ -1,12 +1,18 @@
+/**
+ * WeekView — "Cuadrícula" semanal.
+ *
+ * SEMÁNTICA (documentada en docs/qa/P1_PREMIUM_SERVICE_CALENDAR_SYSTEM.md):
+ *   Cuadrícula = SERVICIOS por día. La unidad es el Servicio, nunca el worker.
+ *   El staffing por persona vive en "Agrupar por → Equipo" (WeekByEmployeeView).
+ */
 import { useMemo, useState, useCallback, memo } from "react";
 import { isSameDay, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Plus, Clock, CheckCircle2 } from "lucide-react";
-import { buildPastelMap, ASSIGNMENT_STATUS_CONFIG } from "./pastel-utils";
+import { Plus } from "lucide-react";
 import { QuickCreatePopover } from "./QuickCreatePopover";
-import { getCalendarServiceIdentity } from "@/lib/shifts/calendar-service-identity";
-import { ServiceCalendarChip } from "./calendar/ServiceCalendarChip";
+import { buildServiceEventModel } from "@/lib/shifts/service-event-model";
+import { ServiceEventCard } from "./calendar/ServiceEventCard";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 
 interface QuickCreateData {
@@ -29,7 +35,7 @@ interface WeekViewProps {
   onOpenFull?: (data: QuickCreateData) => void;
 }
 
-const DEFAULT_MAX_PILLS = 4;
+const DEFAULT_MAX_CARDS = 5;
 
 function WeekViewImpl({
   weekDays, shifts, assignments, locations, clients, employees = [],
@@ -46,31 +52,24 @@ function WeekViewImpl({
     });
   }, []);
 
-  const getShiftsForDay = (day: Date) =>
-    shifts.filter(s => isSameDay(new Date(s.date + "T00:00:00"), day));
-
-  const getEmployeeName = (empId: string) => {
-    const emp = employees.find(e => e.id === empId);
-    return emp ? emp.first_name : "—";
-  };
-
-  // Stable pastel color per employee
-  const empIds = useMemo(() => employees.map(e => e.id), [employees]);
-  const colorMap = useMemo(() => buildPastelMap(empIds), [empIds]);
-
-  // Build day → pills data
   const dayData = useMemo(() => {
     return weekDays.map(day => {
-      const dayShifts = getShiftsForDay(day);
-      const dayAssigns = dayShifts.flatMap(s =>
-        assignments.filter(a => a.shift_id === s.id).map(a => ({
-          ...a,
-          shift: s,
-        }))
-      );
-      return { date: day, dateStr: format(day, "yyyy-MM-dd"), shifts: dayShifts, assigns: dayAssigns };
+      const dateStr = format(day, "yyyy-MM-dd");
+      const services = shifts
+        .filter(s => isSameDay(new Date(s.date + "T00:00:00"), day))
+        .sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""))
+        .map(shift => ({
+          shift,
+          model: buildServiceEventModel(shift as any, {
+            assignments,
+            employees,
+            clientName: clients.find(c => c.id === shift.client_id)?.name ?? null,
+            locationName: locations.find(l => l.id === shift.location_id)?.name ?? null,
+          }),
+        }));
+      return { date: day, dateStr, services };
     });
-  }, [weekDays, shifts, assignments]);
+  }, [weekDays, shifts, assignments, employees, clients, locations]);
 
   const handleDayDrop = (e: React.DragEvent, day: Date) => {
     e.preventDefault();
@@ -83,15 +82,15 @@ function WeekViewImpl({
   };
 
   return (
-    <div className="overflow-x-auto">
-      <div className="grid grid-cols-7 gap-px min-w-[600px]">
-        {/* Day headers */}
+    <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-px lg:gap-1">
+        {/* Day headers (desktop) */}
         {dayData.map(d => {
           const isToday = isSameDay(d.date, new Date());
           return (
-            <div key={d.dateStr} className="text-center pb-4">
+            <div key={`h-${d.dateStr}`} className="hidden lg:block text-center pb-2">
               <p className={cn(
-                "text-xs font-semibold uppercase tracking-wider",
+                "text-[10px] font-semibold uppercase tracking-wider",
                 isToday ? "text-primary" : "text-muted-foreground/60"
               )}>
                 {format(d.date, "EEE", { locale: es })}
@@ -102,23 +101,27 @@ function WeekViewImpl({
               )}>
                 {format(d.date, "d")}
               </p>
+              <p className="text-[9px] text-muted-foreground/50 mt-0.5">
+                {d.services.length} servicio{d.services.length !== 1 ? "s" : ""}
+              </p>
             </div>
           );
         })}
 
-        {/* Pill columns */}
+        {/* Service columns */}
         {dayData.map(d => {
           const isToday = isSameDay(d.date, new Date());
           const isExpanded = expandedDays.has(d.dateStr);
-          const maxPills = isExpanded ? Infinity : DEFAULT_MAX_PILLS;
-          const overflow = d.assigns.length - DEFAULT_MAX_PILLS;
+          const visible = isExpanded ? d.services : d.services.slice(0, DEFAULT_MAX_CARDS);
+          const overflow = d.services.length - visible.length;
+          const dateLabel = format(d.date, "EEEE d 'de' MMMM", { locale: es });
 
           return (
             <div
-              key={`pills-${d.dateStr}`}
+              key={`col-${d.dateStr}`}
               className={cn(
-                "space-y-1.5 px-1 min-h-[140px] rounded-xl transition-colors",
-                isToday && "bg-primary/[0.02]"
+                "space-y-1.5 p-1 min-h-[140px] rounded-xl transition-colors border border-transparent",
+                isToday && "bg-primary/[0.03] border-primary/15"
               )}
               onDragOver={e => {
                 e.preventDefault();
@@ -129,7 +132,12 @@ function WeekViewImpl({
               }}
               onDrop={e => handleDayDrop(e, d.date)}
             >
-              {d.assigns.length === 0 && d.shifts.length === 0 ? (
+              {/* Day label on mobile/tablet stacking */}
+              <p className="lg:hidden text-[11px] font-semibold capitalize text-muted-foreground">
+                {format(d.date, "EEE d", { locale: es })} · {d.services.length}
+              </p>
+
+              {d.services.length === 0 ? (
                 onAddShift ? (
                   onQuickCreate && onOpenFull ? (
                     <QuickCreatePopover
@@ -156,81 +164,55 @@ function WeekViewImpl({
                 )
               ) : (
                 <>
-                  {d.assigns.slice(0, maxPills).map(a => {
-                    const pillClass = colorMap.get(a.employee_id) || "pastel-pill-sky";
-                    const statusDot = ASSIGNMENT_STATUS_CONFIG[a.status]?.dotClass || "bg-amber-400";
-                    return (
-                      <div
-                        key={a.id}
-                        className={cn("pastel-pill w-full", pillClass)}
-                        onClick={() => onShiftClick(a.shift)}
-                      >
-                        <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", statusDot)} />
-                        <span className="truncate flex-1">{getEmployeeName(a.employee_id)}</span>
-                      </div>
-                    );
-                  })}
-                  {/* Servicios sin personal: draft = identidad de servicio,
-                      publicado = estado de staffing "Sin cubrir". */}
-                  {d.shifts.filter(s => !d.assigns.some(a => a.shift.id === s.id)).map(s => {
-                    const identity = getCalendarServiceIdentity(s as any, {
-                      assignedCount: 0,
-                      clientName: clients.find(c => c.id === s.client_id)?.name ?? null,
-                      locationName: locations.find(l => l.id === s.location_id)?.name ?? null,
-                    });
-                    if (identity.service.isDraft) {
-                      return (
-                        <ServiceCalendarChip
-                          key={s.id}
-                          identity={identity}
-                          dateLabel={format(d.date, "EEEE d 'de' MMMM", { locale: es })}
-                          onOpenService={() => onShiftClick(s)}
-                        />
-                      );
-                    }
-                    return (
-                      <div
-                        key={s.id}
-                        className="pastel-pill w-full pastel-pill-orange"
-                        onClick={() => onShiftClick(s)}
-                      >
-                        <Clock className="h-3 w-3 shrink-0" />
-                        <span className="truncate flex-1">Sin cubrir · {identity.time.label}</span>
-                      </div>
-                    );
-                  })}
-
-                </>
-              )}
-              {overflow > 0 && (
-                <button
-                  onClick={() => toggleExpand(d.dateStr)}
-                  className="w-full text-[10px] text-primary/70 hover:text-primary font-semibold text-center py-1 rounded-lg hover:bg-primary/5 transition-colors cursor-pointer"
-                >
-                  {isExpanded ? "− Ver menos" : `+${overflow} más`}
-                </button>
-              )}
-              {onAddShift && d.assigns.length > 0 && (
-                onQuickCreate && onOpenFull ? (
-                  <QuickCreatePopover
-                    date={d.dateStr}
-                    clients={clients}
-                    locations={locations as any}
-                    onQuickCreate={onQuickCreate}
-                    onOpenFull={onOpenFull}
-                  >
-                    <button className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/25 hover:text-primary hover:bg-primary/5 rounded-lg py-1 mt-0.5 transition-all">
-                      <Plus className="h-2.5 w-2.5" />
+                  {visible.map(({ shift, model }) => (
+                    <ServiceEventCard
+                      key={shift.id}
+                      model={model}
+                      density="week"
+                      dateLabel={dateLabel}
+                      onOpen={() => onShiftClick(shift)}
+                      onDropAssignment={(data) => onDropOnShift(shift.id, data)}
+                    />
+                  ))}
+                  {overflow > 0 && (
+                    <button
+                      onClick={() => toggleExpand(d.dateStr)}
+                      className="w-full text-[10px] text-primary/70 hover:text-primary font-semibold text-center py-1 rounded-lg hover:bg-primary/5 transition-colors cursor-pointer"
+                    >
+                      +{overflow} más
                     </button>
-                  </QuickCreatePopover>
-                ) : (
-                  <button
-                    onClick={() => onAddShift(d.dateStr)}
-                    className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/25 hover:text-primary hover:bg-primary/5 rounded-lg py-1 mt-0.5 transition-all"
-                  >
-                    <Plus className="h-2.5 w-2.5" />
-                  </button>
-                )
+                  )}
+                  {isExpanded && d.services.length > DEFAULT_MAX_CARDS && (
+                    <button
+                      onClick={() => toggleExpand(d.dateStr)}
+                      className="w-full text-[10px] text-muted-foreground hover:text-foreground font-semibold text-center py-1 rounded-lg transition-colors cursor-pointer"
+                    >
+                      − Ver menos
+                    </button>
+                  )}
+                  {onAddShift && (
+                    onQuickCreate && onOpenFull ? (
+                      <QuickCreatePopover
+                        date={d.dateStr}
+                        clients={clients}
+                        locations={locations as any}
+                        onQuickCreate={onQuickCreate}
+                        onOpenFull={onOpenFull}
+                      >
+                        <button className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/25 hover:text-primary hover:bg-primary/5 rounded-lg py-1 mt-0.5 transition-all">
+                          <Plus className="h-2.5 w-2.5" />
+                        </button>
+                      </QuickCreatePopover>
+                    ) : (
+                      <button
+                        onClick={() => onAddShift(d.dateStr)}
+                        className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/25 hover:text-primary hover:bg-primary/5 rounded-lg py-1 mt-0.5 transition-all"
+                      >
+                        <Plus className="h-2.5 w-2.5" />
+                      </button>
+                    )
+                  )}
+                </>
               )}
             </div>
           );
