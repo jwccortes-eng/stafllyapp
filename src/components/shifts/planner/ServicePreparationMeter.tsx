@@ -23,7 +23,7 @@ export function PreparationDot({
 }) {
   return (
     <span
-      aria-label={`Preparación ${preparation.score}% · ${preparation.bandLabel}`}
+      aria-label={`Readiness ${preparation.score}% · ${preparation.bandLabel}`}
       className={cn(
         "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
         BAND_TONE[preparation.band].dot,
@@ -63,7 +63,7 @@ function ServicePreparationMeterImpl({ preparation, variant = "full", className 
     <div className={cn("space-y-1.5", className)}>
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Preparación
+          Readiness
         </span>
         <span className={cn("text-[12px] font-bold tabular-nums", tone.text)}>
           {preparation.score}% · {preparation.bandLabel}
