@@ -75,6 +75,8 @@ export interface Employee {
   /** Authoritative driver flag — boolean column on employees. */
   can_drive?: boolean | null;
   is_active?: boolean;
+  /** Origen del alta (p. ej. "Pending approval"). Usado por el contrato canónico de asignables. */
+  added_via?: string | null;
   /** Stable per-company identifier shown in the worker selector. */
   employer_identification?: string | null;
   /** Profile readiness — drives "Incomplete profile" badge in the selector. */
