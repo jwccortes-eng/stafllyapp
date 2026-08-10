@@ -37,7 +37,7 @@ import { Calendar as CalendarWidget } from "@/components/ui/calendar";
 import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Unlock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText, Car, UserX, Map, MapPin, Copy, Settings2, CalendarRange, Download } from "lucide-react";
 import { formatDisplayText } from "@/lib/format-helpers";
 import { PageHeader } from "@/components/ui/page-header";
-import { OpsKpiStrip, type OpsKpiItem } from "@/components/operations/OpsKpiStrip";
+import { type OpsKpiItem } from "@/components/operations/OpsKpiStrip";
 import { OperationalWorkspace, type WorkspaceMetric } from "@/components/stafly-ui/OperationalWorkspace";
 import { OpsToolbar } from "@/components/operations/OpsToolbar";
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
