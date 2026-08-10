@@ -138,6 +138,16 @@ export interface ShiftFormFieldsProps {
    *    Activate from the create/edit dialogs on lg+ viewports.
    */
   layout?: "stack" | "workspace";
+
+  /**
+   * SERVICE COPILOT — contenido de solo lectura de las etapas que el formulario
+   * no posee (Tiempo e Historial). Cuando se provee en modo edición, el editor
+   * se organiza por etapas en vez de un formulario largo.
+   */
+  copilotStages?: {
+    tiempo?: React.ReactNode;
+    historial?: React.ReactNode;
+  };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
