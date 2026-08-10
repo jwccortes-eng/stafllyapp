@@ -25,11 +25,30 @@ import {
 const EMPLOYEE_COLUMNS =
   "id, company_id, first_name, last_name, preferred_name, phone_number, email, connecteam_employee_id, employer_identification, user_id, is_active, employee_role, added_via, worker_type, identity_status, requires_identity_resolution, payroll_approval_blocked, onboarding_status, created_at, updated_at";
 
+const LEGAL_DOC_HINTS = ["w9", "w-9", "i9", "i-9", "tax", "contract", "contrato", "legal", "id", "ssn"];
+
 interface RawIdentityData {
   employees: IdentityRecord[];
   assignments: Record<string, { count: number; last: string | null }>;
-  timeEntryEmployeeIds: Set<string>;
-  documentCounts: Record<string, number>;
+  timeEntries: Record<string, { total: number; approved: number }>;
+  documents: Record<string, { total: number; legal: number }>;
+  payroll: Record<string, number>;
+  availability: Set<string>;
+  reviewsByEmployee: Record<string, number>;
+  identityReviews: IdentityReviewRow[];
+}
+
+export interface IdentityReviewRow {
+  id: string;
+  group_key: string;
+  employee_ids: string[];
+  decision: string;
+  confirmed_primary_employee_id: string | null;
+  recommended_primary_employee_id: string | null;
+  verdict_at_review: string | null;
+  notes: string | null;
+  merge_plan: unknown;
+  updated_at: string;
 }
 
 async function fetchAll<T>(
@@ -49,7 +68,16 @@ async function fetchAll<T>(
 }
 
 async function fetchIdentityData(companyId: string): Promise<RawIdentityData> {
-  const [employees, assignmentRows, timeRows, docRows] = await Promise.all([
+  const [
+    employees,
+    assignmentRows,
+    timeRows,
+    docRows,
+    payrollRows,
+    availabilityRows,
+    reviewRows,
+    identityReviewRows,
+  ] = await Promise.all([
     fetchAll<IdentityRecord>((from, to) =>
       supabase
         .from("employees")
@@ -64,17 +92,48 @@ async function fetchIdentityData(companyId: string): Promise<RawIdentityData> {
         .eq("company_id", companyId)
         .range(from, to) as never,
     ),
-    fetchAll<{ employee_id: string }>((from, to) =>
+    fetchAll<{ employee_id: string; status: string | null }>((from, to) =>
       supabase
         .from("time_entries")
+        .select("employee_id, status")
+        .eq("company_id", companyId)
+        .range(from, to) as never,
+    ),
+    fetchAll<{ employee_id: string; category: string | null; name: string | null }>(
+      (from, to) =>
+        supabase
+          .from("employee_documents")
+          .select("employee_id, category, name")
+          .eq("company_id", companyId)
+          .range(from, to) as never,
+    ),
+    fetchAll<{ employee_id: string }>((from, to) =>
+      supabase
+        .from("period_base_pay")
         .select("employee_id")
         .eq("company_id", companyId)
         .range(from, to) as never,
     ),
     fetchAll<{ employee_id: string }>((from, to) =>
       supabase
-        .from("employee_documents")
+        .from("employee_availability_config")
         .select("employee_id")
+        .eq("company_id", companyId)
+        .range(from, to) as never,
+    ),
+    fetchAll<{ evaluated_entity_id: string | null }>((from, to) =>
+      supabase
+        .from("review_submissions")
+        .select("evaluated_entity_id")
+        .eq("company_id", companyId)
+        .range(from, to) as never,
+    ),
+    fetchAll<IdentityReviewRow>((from, to) =>
+      supabase
+        .from("employee_identity_reviews")
+        .select(
+          "id, group_key, employee_ids, decision, confirmed_primary_employee_id, recommended_primary_employee_id, verdict_at_review, notes, merge_plan, updated_at",
+        )
         .eq("company_id", companyId)
         .range(from, to) as never,
     ),
@@ -90,21 +149,52 @@ async function fetchIdentityData(companyId: string): Promise<RawIdentityData> {
     assignments[row.employee_id] = entry;
   }
 
-  const documentCounts: Record<string, number> = {};
+  const timeEntries: RawIdentityData["timeEntries"] = {};
+  for (const row of timeRows) {
+    if (!row.employee_id) continue;
+    const entry = timeEntries[row.employee_id] ?? { total: 0, approved: 0 };
+    entry.total += 1;
+    if ((row.status ?? "").toLowerCase() === "approved") entry.approved += 1;
+    timeEntries[row.employee_id] = entry;
+  }
+
+  const documents: RawIdentityData["documents"] = {};
   for (const row of docRows) {
     if (!row.employee_id) continue;
-    documentCounts[row.employee_id] = (documentCounts[row.employee_id] ?? 0) + 1;
+    const entry = documents[row.employee_id] ?? { total: 0, legal: 0 };
+    entry.total += 1;
+    const hay = `${row.category ?? ""} ${row.name ?? ""}`.toLowerCase();
+    if (LEGAL_DOC_HINTS.some((h) => hay.includes(h))) entry.legal += 1;
+    documents[row.employee_id] = entry;
+  }
+
+  const payroll: Record<string, number> = {};
+  for (const row of payrollRows) {
+    if (!row.employee_id) continue;
+    payroll[row.employee_id] = (payroll[row.employee_id] ?? 0) + 1;
+  }
+
+  const reviewsByEmployee: Record<string, number> = {};
+  for (const row of reviewRows) {
+    const id = row.evaluated_entity_id;
+    if (!id) continue;
+    reviewsByEmployee[id] = (reviewsByEmployee[id] ?? 0) + 1;
   }
 
   return {
     employees,
     assignments,
-    timeEntryEmployeeIds: new Set(
-      timeRows.map((r) => r.employee_id).filter(Boolean) as string[],
+    timeEntries,
+    documents,
+    payroll,
+    availability: new Set(
+      availabilityRows.map((r) => r.employee_id).filter(Boolean) as string[],
     ),
-    documentCounts,
+    reviewsByEmployee,
+    identityReviews: identityReviewRows,
   };
 }
+
 
 export interface IdentityQualityTotals {
   total: number;
