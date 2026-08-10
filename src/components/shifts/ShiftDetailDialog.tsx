@@ -45,6 +45,7 @@ const ShiftChatPanel = lazy(() =>
 const ShiftLiveMapPanel = lazy(() => import("./ShiftLiveMapPanel"));
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { cn } from "@/lib/utils";
+import { hasPortalAccess } from "@/lib/portal/portal-status";
 import { formatDisplayText } from "@/lib/format-helpers";
 import { searchEmployees } from "@/lib/employee-search";
 import { format, parseISO, differenceInMinutes } from "date-fns";
@@ -885,7 +886,7 @@ export function ShiftDetailDialog({
                 });
                 const noPortalCount = shiftAssignments.filter(a => {
                   const emp = employees.find(e => e.id === a.employee_id);
-                  return emp && !emp.user_id && a.status !== "rejected";
+                  return emp && !hasPortalAccess(emp) && a.status !== "rejected";
                 }).length;
 
                 return (
@@ -1134,7 +1135,7 @@ export function ShiftDetailDialog({
                     const emp = employees.find(e => e.id === a.employee_id);
                     if (!emp) return null;
                     const empIsDriver = isEmployeeDriver(emp);
-                    const noPortal = !emp.user_id;
+                    const noPortal = !hasPortalAccess(emp);
                     return (
                       <div
                         key={a.id}
@@ -1166,7 +1167,7 @@ export function ShiftDetailDialog({
                               <span className="h-3.5 px-1 rounded bg-primary/15 text-primary text-[7px] font-bold shrink-0 ring-1 ring-primary/20">ADMIN</span>
                             )}
                             {noPortal && (
-                              <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0" title="Sin portal — no tiene cuenta activa">Sin portal</span>
+                              <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0" title="Sin portal — no tiene cuenta vinculada al portal (no depende del estado del turno)">Sin portal</span>
                             )}
                             <IdentityBadges employee={emp} size="xs" />
                           </div>

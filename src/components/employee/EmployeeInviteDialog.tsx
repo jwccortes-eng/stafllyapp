@@ -11,6 +11,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { isInviteStatusFailure, isInviteStatusInFlight, mapEmailLogStatusToInviteStatus, type InviteDeliveryStatus } from "@/lib/invitation-status";
+import { resolvePortalStatus } from "@/lib/portal/portal-status";
 import { humanizeInvitationError, type HumanInvitationError } from "@/lib/invitation-error-messages";
 import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -514,7 +515,12 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
 
   const statusConfig = STATUS_CONFIG[inviteStatus] ?? STATUS_CONFIG.created;
   const StatusIcon = statusConfig.icon;
-  const isAccepted = inviteStatus === "accepted";
+  // Verdad canónica: "Cuenta activada" exige acceso real (employees.user_id).
+  // Una invitación "accepted" sin cuenta vinculada NO es portal activo.
+  const portalStatus = resolvePortalStatus(employee as never, { status: inviteStatus });
+  const isAccepted = portalStatus.status === "active";
+  const isAcceptedUnlinked = portalStatus.status === "activation_unlinked";
+
   const isFailed = isInviteStatusFailure(inviteStatus);
   const isQueued = inviteStatus === "queued" || inviteStatus === "processing";
   const hasEmailAttempt = inviteChannel === "email" && inviteStatus !== "created";
@@ -670,7 +676,22 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
             </div>
           )}
 
-          {!isAccepted && !companyMismatch && (
+          {/* Invitación aceptada pero sin cuenta vinculada en ESTE registro */}
+          {isAcceptedUnlinked && (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <div className="h-14 w-14 rounded-full bg-warning/10 flex items-center justify-center">
+                <AlertTriangle className="h-7 w-7 text-warning" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground">Activación sin vincular</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                La invitación fue aceptada, pero este registro no tiene cuenta vinculada. Suele indicar
+                un registro duplicado de la misma persona: revisa Calidad de identidad antes de reenviar.
+              </p>
+            </div>
+          )}
+
+          {!isAccepted && !isAcceptedUnlinked && !companyMismatch && (
+
             <>
               {/* Readiness checklist */}
               <div className="rounded-lg border border-border/40 p-3 space-y-1.5">

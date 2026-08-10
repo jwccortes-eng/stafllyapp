@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { portalStatusLabel } from "@/lib/portal/portal-status";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
@@ -146,11 +147,7 @@ export function IdentityGroupReviewDialog({
                     </span>
                     <span className="text-xs text-muted-foreground">{r.id.slice(0, 8)}</span>
                     {isTarget && <Badge>Registro recomendado</Badge>}
-                    {r.user_id ? (
-                      <Badge variant="outline">Portal activo</Badge>
-                    ) : (
-                      <Badge variant="outline">Sin portal</Badge>
-                    )}
+                    <Badge variant="outline">{portalStatusLabel(r)}</Badge>
                     {r.is_active === false && <Badge variant="outline">Inactivo</Badge>}
                     <Button
                       size="sm"

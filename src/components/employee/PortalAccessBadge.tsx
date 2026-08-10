@@ -11,45 +11,48 @@ import type { EmployeeInvitation } from "@/hooks/useEmployeeInvitations";
 import { isInviteStatusFailure, isInviteStatusInFlight } from "@/lib/invitation-status";
 import { formatDistanceToNow } from "date-fns";
 import { enUS } from "date-fns/locale";
+import {
+  resolvePortalStatus,
+  type PortalStatus,
+  type PortalStatusEmployeeLike,
+} from "@/lib/portal/portal-status";
 
+
+/**
+ * Estados de badge. Son una proyección 1:1 del resolver canónico
+ * `resolvePortalStatus` (src/lib/portal/portal-status.ts). No agregar
+ * lógica de estado aquí: cambiar el resolver.
+ */
 export type PortalAccessState =
-  | "active"       // has user_id (accessed portal)
-  | "invited"      // has invitation record, no user_id, last attempt healthy
-  | "failed"       // has invitation, last attempt failed/bounced
-  | "ready"        // has phone + PIN, no user_id, no invitation
-  | "incomplete"   // missing phone or PIN
+  | "active"       // user_id presente → acceso real
+  | "invited"      // invitación viva sin cuenta
+  | "failed"       // último intento de invitación falló
+  | "unlinked"     // invitación aceptada pero este registro no tiene cuenta
+  | "ready"        // sin portal, con teléfono + PIN
+  | "incomplete"   // sin portal y faltan datos
   | "inactive";    // is_active = false
 
-interface EmployeeLike {
-  user_id?: string | null;
-  is_active?: boolean;
-  /**
-   * Phase B: do NOT read `access_pin` value from the row anymore.
-   * Pass `has_access_pin` (boolean) resolved via the
-   * `employee_has_access_pin` RPC. We accept legacy `access_pin` only
-   * to compute existence as a fallback during the transition.
-   */
-  has_access_pin?: boolean | null;
-  /** @deprecated frontend should not consume the raw value; use has_access_pin */
-  access_pin?: string | null;
-  phone_number?: string | null;
-}
+type EmployeeLike = PortalStatusEmployeeLike;
 
 function resolveHasPin(emp: EmployeeLike): boolean {
   if (typeof emp.has_access_pin === "boolean") return emp.has_access_pin;
   return !!(emp.access_pin ?? "").toString().trim();
 }
 
+const CANONICAL_TO_BADGE: Record<PortalStatus, PortalAccessState> = {
+  active: "active",
+  invited: "invited",
+  invite_failed: "failed",
+  activation_unlinked: "unlinked",
+  ready_to_invite: "ready",
+  incomplete: "incomplete",
+  inactive: "inactive",
+};
+
 export function getPortalAccessState(emp: EmployeeLike, invitation?: EmployeeInvitation | null): PortalAccessState {
-  if (emp.is_active === false) return "inactive";
-  if (emp.user_id) return "active";
-  const hasPhone = !!(emp.phone_number ?? "").replace(/\D/g, "");
-  const hasPin = resolveHasPin(emp);
-  if (invitation) {
-    return isInviteStatusFailure(invitation.status) ? "failed" : "invited";
-  }
-  return hasPhone && hasPin ? "ready" : "incomplete";
+  return CANONICAL_TO_BADGE[resolvePortalStatus(emp, invitation).status];
 }
+
 
 function getMissingItems(emp: EmployeeLike): string[] {
   const items: string[] = [];
@@ -90,48 +93,56 @@ const STATE_CONFIG: Record<PortalAccessState, {
   Icon: typeof CheckCircle2;
 }> = {
   active: {
-    label: "Portal active",
-    tooltip: "Worker has accessed the portal",
+    label: "Portal activo",
+    tooltip: "La cuenta está vinculada y puede entrar al portal",
     dotClass: "bg-earning",
     badgeClass: "bg-earning/10 text-earning",
     Icon: CheckCircle2,
   },
   invited: {
-    label: "Invited",
-    tooltip: "Invitation sent — pending activation",
+    label: "Invitado",
+    tooltip: "Invitación enviada — pendiente de activar",
     dotClass: "bg-primary animate-pulse",
     badgeClass: "bg-primary/10 text-primary",
     Icon: MailCheck,
   },
   failed: {
-    label: "Invite failed",
-    tooltip: "Last invitation attempt failed — re-invite recommended",
+    label: "Invitación fallida",
+    tooltip: "El último intento falló — se recomienda reenviar",
     dotClass: "bg-destructive",
     badgeClass: "bg-destructive/10 text-destructive",
     Icon: AlertTriangle,
   },
+  unlinked: {
+    label: "Activación sin vincular",
+    tooltip: "Invitación aceptada pero este registro no tiene cuenta vinculada — posible duplicado",
+    dotClass: "bg-warning",
+    badgeClass: "bg-warning/10 text-warning",
+    Icon: AlertTriangle,
+  },
   ready: {
-    label: "No portal",
-    tooltip: "Has phone and PIN — ready to invite",
+    label: "Sin portal",
+    tooltip: "Tiene teléfono y PIN — listo para invitar",
     dotClass: "bg-warning",
     badgeClass: "bg-warning/10 text-warning",
     Icon: Send,
   },
   incomplete: {
-    label: "Incomplete",
+    label: "Sin portal",
     tooltip: "",
     dotClass: "bg-destructive/60",
     badgeClass: "bg-destructive/10 text-destructive",
     Icon: AlertTriangle,
   },
   inactive: {
-    label: "Inactive",
-    tooltip: "Worker is deactivated",
+    label: "Inactivo",
+    tooltip: "El trabajador está desactivado",
     dotClass: "bg-muted-foreground/40",
     badgeClass: "bg-muted text-muted-foreground",
     Icon: WifiOff,
   },
 };
+
 
 interface PortalAccessBadgeProps {
   employee: EmployeeLike;
