@@ -11,11 +11,13 @@
  *   de identidad/estado) y añade únicamente lo que la tarjeta necesita pintar
  *   (equipo asignado como METADATA del Servicio, nunca como evento propio).
  */
+import { clientAccentColor, venueAccentIntensity } from "@/lib/clients/client-accent";
 import {
   getCalendarServiceIdentity,
   type CalendarServiceIdentity,
   type CalendarShiftLike,
 } from "./calendar-service-identity";
+
 
 export type ServiceAccent = "positive" | "warning" | "draft" | "critical" | "neutral";
 
