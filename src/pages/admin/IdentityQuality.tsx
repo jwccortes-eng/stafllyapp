@@ -308,6 +308,7 @@ export default function IdentityQuality() {
           />
         </>
       )}
-    </div>
+    </OperationalWorkspace>
+
   );
 }
