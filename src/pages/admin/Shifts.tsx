@@ -1628,7 +1628,7 @@ function DesktopShifts() {
         key: "shift-update-desktop",
         title: `No pudimos guardar ${ADMIN_LEX.theEntity}`,
         fact: saveResult.status === "noop" ? "No había cambios que aplicar." : saveResult.message,
-        consequence: `${ADMIN_LEX.Entity} sigue como estaba. Revisa e inténtalo de nuevo.`,
+        consequence: `Nada cambió: ${ADMIN_LEX.theEntity} sigue como estaba. Revisa e inténtalo de nuevo.`,
       });
       return;
     }
