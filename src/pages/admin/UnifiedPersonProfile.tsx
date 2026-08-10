@@ -23,6 +23,7 @@ import { useEmployeeReadiness } from "@/hooks/useEmployeeReadiness";
 import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
 import { useToast } from "@/hooks/use-toast";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
+import { buildWhatsAppTargets } from "@/lib/phone";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -895,7 +896,7 @@ export default function UnifiedPersonProfile() {
                   // link, instead of opening a broken chat.
                   const wa = buildWhatsAppTargets(
                     employee.phone_number,
-                    `Hola ${formatPersonName(employee.first_name, employee.last_name) || ""}`.trim(),
+                    `Hola ${formatPersonName(employee.first_name) || ""}`.trim(),
                   );
                   if (!wa.phoneWithCountry) return null;
                   return (
