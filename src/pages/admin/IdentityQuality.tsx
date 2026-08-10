@@ -13,8 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ShieldAlert, Users, IdCard, History } from "lucide-react";
-import { useIdentityQuality } from "@/hooks/useIdentityQuality";
+import { ShieldAlert, Users, IdCard, History, CheckCircle2 } from "lucide-react";
+import {
+  useIdentityQuality,
+  IDENTITY_DECISION_LABELS,
+  type IdentityReviewDecision,
+  type IdentityReviewRow,
+} from "@/hooks/useIdentityQuality";
+import { IdentityGroupReviewDialog } from "@/components/identity/IdentityGroupReviewDialog";
 import {
   IDENTITY_VERDICT_LABELS,
   maskEmail,
@@ -42,8 +48,15 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
-function GroupCard({ group }: { group: IdentityGroup }) {
-  const [open, setOpen] = useState(false);
+function GroupCard({
+  group,
+  review,
+  onReview,
+}: {
+  group: IdentityGroup;
+  review?: IdentityReviewRow;
+  onReview: (g: IdentityGroup) => void;
+}) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
@@ -55,8 +68,14 @@ function GroupCard({ group }: { group: IdentityGroup }) {
           <Badge variant={RISK_VARIANT[group.risk]}>
             {IDENTITY_VERDICT_LABELS[group.verdict]}
           </Badge>
-          <Button size="sm" variant="outline" onClick={() => setOpen((v) => !v)}>
-            {open ? "Ocultar" : "Revisar"}
+          {review && (
+            <Badge variant="outline">
+              {IDENTITY_DECISION_LABELS[review.decision as IdentityReviewDecision] ??
+                review.decision}
+            </Badge>
+          )}
+          <Button size="sm" variant="outline" onClick={() => onReview(group)}>
+            {review ? "Ver revisión" : "Revisar"}
           </Button>
         </div>
       </CardHeader>
@@ -77,76 +96,66 @@ function GroupCard({ group }: { group: IdentityGroup }) {
           </ul>
         )}
 
-        {open && (
-          <div className="space-y-2">
-            {group.records.map((r) => {
-              const isPrimary = group.primary?.candidateId === r.id;
-              return (
-                <div
-                  key={r.id}
-                  className="rounded-lg border p-3 text-sm"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">
-                      {[r.first_name, r.last_name].filter(Boolean).join(" ") || "Sin nombre"}
-                    </span>
-                    {isPrimary && <Badge variant="secondary">Candidato principal</Badge>}
-                    {r.user_id ? (
-                      <Badge variant="outline">Portal activo</Badge>
-                    ) : (
-                      <Badge variant="outline">Sin portal</Badge>
-                    )}
-                    {r.is_active === false && <Badge variant="outline">Inactivo</Badge>}
-                  </div>
-                  <div className="mt-2 grid gap-x-6 gap-y-1 text-muted-foreground sm:grid-cols-2">
-                    <span>Teléfono: {maskPhone(r.phone_number)}</span>
-                    <span>Email: {maskEmail(r.email)}</span>
-                    <span>ID externo: {maskExternalId(r.connecteam_employee_id)}</span>
-                    <span>
-                      Servicios: {r.assignments_count ?? 0} · Documentos:{" "}
-                      {r.documents_count ?? 0}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-            {group.primary && (
-              <p className="text-xs text-muted-foreground">
-                Candidato principal por: {group.primary.reason} (confianza{" "}
-                {Math.round(group.primary.confidence * 100)}%). Es una hipótesis
-                explicable, no una decisión: no se consolida nada en esta fase.
-              </p>
-            )}
-          </div>
-        )}
+        <div className="grid gap-2 sm:grid-cols-2">
+          {group.records.map((r) => (
+            <div key={r.id} className="rounded-lg border p-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">
+                  {[r.first_name, r.last_name].filter(Boolean).join(" ") || "Sin nombre"}
+                </span>
+                {group.primary?.candidateId === r.id && (
+                  <Badge variant="secondary">Candidato principal</Badge>
+                )}
+              </div>
+              <div className="mt-1 text-muted-foreground">
+                {maskPhone(r.phone_number)} · {maskEmail(r.email)} ·{" "}
+                {maskExternalId(r.connecteam_employee_id)}
+              </div>
+              <div className="text-muted-foreground">
+                Servicios: {r.assignments_count ?? 0} · Documentos: {r.documents_count ?? 0}
+              </div>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
+
 export default function IdentityQuality() {
-  const { model, loading, hasCompany } = useIdentityQuality();
+  const { model, loading, hasCompany, recordDecision } = useIdentityQuality();
+  const [activeGroup, setActiveGroup] = useState<IdentityGroup | null>(null);
 
   const duplicateGroups = useMemo(
     () =>
-      model?.groups.filter(
+      model?.openGroups.filter(
         (g) => g.verdict === "EXACT_MATCH" || g.verdict === "PROBABLE_DUPLICATE",
       ) ?? [],
     [model],
   );
   const reviewGroups = useMemo(
     () =>
-      model?.groups.filter(
+      model?.openGroups.filter(
         (g) => g.verdict === "POSSIBLE_DUPLICATE" || g.verdict === "AMBIGUOUS",
       ) ?? [],
     [model],
+  );
+
+  const renderGroup = (g: IdentityGroup) => (
+    <GroupCard
+      key={g.key}
+      group={g}
+      review={model?.reviewByGroup[g.key]}
+      onReview={setActiveGroup}
+    />
   );
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <OperationalScreenHeader
         title="Calidad de identidad"
-        context="Revisión de personas repetidas y fragmentadas. Solo lectura: nada se fusiona ni se modifica."
+        context="Revisión asistida de personas repetidas. Las decisiones se registran; nada se fusiona automáticamente."
       />
 
       {!hasCompany && (
@@ -174,7 +183,7 @@ export default function IdentityQuality() {
             <Metric label="Históricos" value={model.totals.historical} />
             <Metric label="Duplicados probables" value={model.totals.probableGroups} />
             <Metric label="Duplicados posibles" value={model.totals.possibleGroups} />
-            <Metric label="Portal inconsistente" value={model.totals.portalInconsistentGroups} />
+            <Metric label="Grupos revisados" value={model.totals.reviewedGroups} />
             <Metric label="Asignaciones sospechosas" value={model.totals.suspiciousAssignments} />
           </div>
 
@@ -182,7 +191,8 @@ export default function IdentityQuality() {
             <ShieldAlert className="h-4 w-4" />
             <AlertDescription>
               Esta pantalla no fusiona registros ni mueve documentos, horas, pagos o
-              accesos. La consolidación se planifica aparte, con evidencia.
+              accesos. La consolidación se planifica en seco, con evidencia y bloqueos
+              explícitos.
             </AlertDescription>
           </Alert>
 
@@ -195,6 +205,10 @@ export default function IdentityQuality() {
               <TabsTrigger value="review">Requieren criterio ({reviewGroups.length})</TabsTrigger>
               <TabsTrigger value="portal">
                 Portal inconsistente ({model.portalInconsistent.length})
+              </TabsTrigger>
+              <TabsTrigger value="reviewed">
+                <CheckCircle2 className="mr-1.5 h-4 w-4" />
+                Revisados ({model.reviewedGroups.length})
               </TabsTrigger>
               <TabsTrigger value="identifier">
                 <IdCard className="mr-1.5 h-4 w-4" />
@@ -209,25 +223,29 @@ export default function IdentityQuality() {
             <TabsContent value="duplicates" className="mt-4 space-y-3">
               {duplicateGroups.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  No hay grupos con evidencia fuerte de duplicado.
+                  No hay grupos pendientes con evidencia fuerte de duplicado.
                 </p>
               )}
-              {duplicateGroups.map((g) => (
-                <GroupCard key={g.key} group={g} />
-              ))}
+              {duplicateGroups.map(renderGroup)}
             </TabsContent>
 
             <TabsContent value="review" className="mt-4 space-y-3">
-              {reviewGroups.map((g) => (
-                <GroupCard key={g.key} group={g} />
-              ))}
+              {reviewGroups.map(renderGroup)}
             </TabsContent>
 
             <TabsContent value="portal" className="mt-4 space-y-3">
-              {model.portalInconsistent.map((g) => (
-                <GroupCard key={g.key} group={g} />
-              ))}
+              {model.portalInconsistent.map(renderGroup)}
             </TabsContent>
+
+            <TabsContent value="reviewed" className="mt-4 space-y-3">
+              {model.reviewedGroups.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Todavía no hay decisiones registradas.
+                </p>
+              )}
+              {model.reviewedGroups.map(renderGroup)}
+            </TabsContent>
+
 
             <TabsContent value="identifier" className="mt-4 space-y-2">
               {model.withoutStrongIdentifier.slice(0, 200).map((r) => (
@@ -268,6 +286,14 @@ export default function IdentityQuality() {
                 ))}
             </TabsContent>
           </Tabs>
+
+          <IdentityGroupReviewDialog
+            group={activeGroup}
+            evidence={model.evidence}
+            open={!!activeGroup}
+            onOpenChange={(o) => !o && setActiveGroup(null)}
+            onDecision={recordDecision}
+          />
         </>
       )}
     </div>

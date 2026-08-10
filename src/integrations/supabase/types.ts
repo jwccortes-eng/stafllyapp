@@ -4418,6 +4418,103 @@ export type Database = {
           },
         ]
       }
+      employee_identity_reviews: {
+        Row: {
+          company_id: string
+          confirmed_primary_employee_id: string | null
+          created_at: string
+          decision: string
+          employee_ids: string[]
+          group_key: string
+          id: string
+          merge_plan: Json | null
+          notes: string | null
+          recommended_primary_employee_id: string | null
+          reviewed_by: string | null
+          signals_at_review: Json
+          updated_at: string
+          verdict_at_review: string | null
+          version: number
+        }
+        Insert: {
+          company_id: string
+          confirmed_primary_employee_id?: string | null
+          created_at?: string
+          decision: string
+          employee_ids?: string[]
+          group_key: string
+          id?: string
+          merge_plan?: Json | null
+          notes?: string | null
+          recommended_primary_employee_id?: string | null
+          reviewed_by?: string | null
+          signals_at_review?: Json
+          updated_at?: string
+          verdict_at_review?: string | null
+          version?: number
+        }
+        Update: {
+          company_id?: string
+          confirmed_primary_employee_id?: string | null
+          created_at?: string
+          decision?: string
+          employee_ids?: string[]
+          group_key?: string
+          id?: string
+          merge_plan?: Json | null
+          notes?: string | null
+          recommended_primary_employee_id?: string | null
+          reviewed_by?: string | null
+          signals_at_review?: Json
+          updated_at?: string
+          verdict_at_review?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_identity_reviews_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_identity_reviews_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_identity_reviews_confirmed_primary_employee_id_fkey"
+            columns: ["confirmed_primary_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_identity_reviews_confirmed_primary_employee_id_fkey"
+            columns: ["confirmed_primary_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_identity_reviews_recommended_primary_employee_id_fkey"
+            columns: ["recommended_primary_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_identity_reviews_recommended_primary_employee_id_fkey"
+            columns: ["recommended_primary_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_invitations: {
         Row: {
           accepted_at: string | null
