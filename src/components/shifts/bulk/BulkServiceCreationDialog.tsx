@@ -427,7 +427,7 @@ export function BulkServiceCreationDialog({
                   <EntityField
                     value={applyClient.id}
                     raw={applyClient.raw}
-                    catalog={clients}
+                    catalog={clientCatalog}
                     placeholder="Imperial…"
                     onChange={setApplyClient}
                   />
@@ -568,7 +568,7 @@ export function BulkServiceCreationDialog({
                           {dateError && <p className="mt-1 text-[10px] text-destructive">{dateError}</p>}
                         </td>
                         <td className="px-2 py-2">
-                          <EntityField value={row.clientId} raw={row.clientRaw} catalog={clients} placeholder="Cliente"
+                          <EntityField value={row.clientId} raw={row.clientRaw} catalog={clientCatalog} onQuickCreate={(name) => setQuickClient({ target: row.id, name })} placeholder="Cliente"
                             onChange={(v2) => patchRow(row.id, { clientId: v2.id, clientRaw: v2.raw })} />
                           {identityError && <p className="mt-1 text-[10px] text-destructive">{identityError}</p>}
                         </td>
@@ -635,7 +635,7 @@ export function BulkServiceCreationDialog({
                       onChange={(e) => patchRow(row.id, { date: e.target.value })}
                     />
                     {dateError && <p className="text-[11px] text-destructive">{dateError}</p>}
-                    <EntityField value={row.clientId} raw={row.clientRaw} catalog={clients} placeholder="Cliente"
+                    <EntityField value={row.clientId} raw={row.clientRaw} catalog={clientCatalog} onQuickCreate={(name) => setQuickClient({ target: row.id, name })} placeholder="Cliente"
                       onChange={(v2) => patchRow(row.id, { clientId: v2.id, clientRaw: v2.raw })} />
                     {identityError && <p className="text-[11px] text-destructive">{identityError}</p>}
                     <EntityField value={row.locationId} raw={row.locationRaw} catalog={locations} placeholder="Lugar"
