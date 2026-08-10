@@ -246,9 +246,46 @@
     --parceros-glow: 0 8px 32px -8px hsl(8 95% 64% / 0.4);
     --gradient-parceros: linear-gradient(135deg, hsl(8 95% 64%), hsl(14 100% 70%) 50%, hsl(35 100% 62%));
     --gradient-parceros-dark: linear-gradient(135deg, hsl(230 25% 6%) 0%, hsl(230 22% 9%) 50%, hsl(8 35% 12%) 100%);
+
+    /* ── Client Visual Identity (accent por Cliente) ──
+       Misma saturación y luminosidad en toda la paleta: nada fluorescente,
+       nada oscuro, siempre legible sobre blanco. Identidad, nunca estado. */
+    --client-accent-emerald: 152 52% 44%;
+    --client-accent-teal: 174 52% 40%;
+    --client-accent-cyan: 190 54% 42%;
+    --client-accent-blue: 214 58% 50%;
+    --client-accent-indigo: 236 48% 56%;
+    --client-accent-violet: 262 48% 58%;
+    --client-accent-purple: 284 42% 54%;
+    --client-accent-rose: 342 52% 54%;
+    --client-accent-coral: 8 62% 56%;
+    --client-accent-orange: 24 62% 52%;
+    --client-accent-amber: 38 60% 48%;
+    --client-accent-gold: 46 54% 44%;
+    --client-accent-lime: 88 42% 42%;
+    --client-accent-olive: 70 34% 38%;
+    --client-accent-mint: 138 40% 44%;
+    --client-accent-sky: 202 56% 48%;
   }
 
   .dark {
+    --client-accent-emerald: 152 46% 58%;
+    --client-accent-teal: 174 46% 54%;
+    --client-accent-cyan: 190 48% 56%;
+    --client-accent-blue: 214 56% 64%;
+    --client-accent-indigo: 236 48% 68%;
+    --client-accent-violet: 262 48% 70%;
+    --client-accent-purple: 284 42% 66%;
+    --client-accent-rose: 342 50% 66%;
+    --client-accent-coral: 8 58% 66%;
+    --client-accent-orange: 24 58% 62%;
+    --client-accent-amber: 38 56% 58%;
+    --client-accent-gold: 46 50% 56%;
+    --client-accent-lime: 88 38% 54%;
+    --client-accent-olive: 70 32% 50%;
+    --client-accent-mint: 138 38% 56%;
+    --client-accent-sky: 202 52% 60%;
+
     --background: 220 22% 7%;
     --foreground: 216 18% 95%;
     --card: 220 20% 10%;
