@@ -22,6 +22,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { EntityCard } from "@/components/entities/EntityCard";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
 import type { SelectOption } from "../types";
