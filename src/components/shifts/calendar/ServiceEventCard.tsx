@@ -128,7 +128,13 @@ function ServiceEventCardImpl({
               BORRADOR
             </span>
           )}
+          {model.infoPending && (
+            <span className="shrink-0 rounded-sm bg-muted px-1 text-[8px] font-medium tracking-wide text-muted-foreground">
+              INFO PENDIENTE
+            </span>
+          )}
         </span>
+
         <span className="block truncate text-[12px] font-semibold uppercase leading-tight text-foreground">
           {model.primaryLabel}
         </span>
