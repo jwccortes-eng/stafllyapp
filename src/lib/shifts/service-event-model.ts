@@ -71,6 +71,34 @@ function resolveAccent(identity: CalendarServiceIdentity): ServiceAccent {
   return "warning";
 }
 
+/** Títulos que NO identifican al Servicio: si conocemos cliente/venue, mandan ellos. */
+const PLACEHOLDER_TITLE = /^(informaci[oó]n?\s+pendien\w*|sin\s+t[ií]tulo|turno|servicio|pendiente)$/i;
+
+/** "IMPERIAL — IMPERIAL" → "IMPERIAL". Sólo dedupe visual, nunca datos. */
+function dedupeSegments(raw: string): string {
+  const parts = raw.split(/\s+[—·|-]\s+/).map((p) => p.trim()).filter(Boolean);
+  const seen = new Set<string>();
+  const unique = parts.filter((p) => {
+    const k = p.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  return unique.length > 0 ? unique.join(" · ") : raw;
+}
+
+/**
+ * Jerarquía de identidad: cliente/venue → tipo/título → QK.
+ * "Información pendiente" es un ESTADO, nunca el título principal.
+ */
+function resolvePrimaryLabel(title: string, input: ServiceEventInput): string {
+  const clean = dedupeSegments((title ?? "").trim());
+  const client = (input.clientName ?? "").trim();
+  const location = (input.locationName ?? "").trim();
+  if (PLACEHOLDER_TITLE.test(clean)) return client || location || clean;
+  return clean;
+}
+
 export function buildServiceEventModel(
   shift: CalendarShiftLike & { id?: string | null },
   input: ServiceEventInput,
