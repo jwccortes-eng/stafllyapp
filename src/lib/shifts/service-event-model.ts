@@ -111,8 +111,8 @@ function daysUntilDate(date?: string | null): number | null {
 }
 
 /**
-
  * Jerarquía de identidad: cliente/venue → tipo/título → QK.
+
  * "Información pendiente" es un ESTADO, nunca el título principal.
  */
 function resolvePrimaryLabel(title: string, input: ServiceEventInput): string {
