@@ -1,3 +1,4 @@
+import { getAssignableWorkers } from "@/lib/shifts/assignable-workers";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -55,8 +56,9 @@ export function ReplacementSuggestionDialog({
     // 1. Get all active employees for this company, excluding already assigned
     const { data: employees } = await supabase
       .from("employees")
-      .select("id, first_name, last_name, phone_number, avatar_url, employee_role, has_car, user_id")
+      .select("id, first_name, last_name, phone_number, avatar_url, employee_role, has_car, user_id, is_active, added_via, worker_type, identity_status, requires_identity_resolution, payroll_approval_blocked")
       .eq("company_id", companyId)
+      .is("deleted_at", null)
       .eq("is_active", true);
 
     if (!employees || employees.length === 0) {
@@ -65,7 +67,10 @@ export function ReplacementSuggestionDialog({
       return;
     }
 
-    const available = employees.filter(e => !excludeEmployeeIds.includes(e.id));
+    // Misma población canónica que el resto de superficies de staffing.
+    const available = getAssignableWorkers(employees as never[]).filter(
+      (e: any) => !excludeEmployeeIds.includes(e.id),
+    ) as typeof employees;
 
     // 2. Check for overlapping shifts on the same date
     const { data: busyAssignments } = await supabase
