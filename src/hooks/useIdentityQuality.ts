@@ -217,6 +217,12 @@ export interface IdentityQualityTotals {
 export interface IdentityQualityModel {
   records: IdentityRecord[];
   groups: IdentityGroup[];
+  /** Grupos sin decisión registrada. */
+  openGroups: IdentityGroup[];
+  /** Grupos ya revisados por un administrador. */
+  reviewedGroups: IdentityGroup[];
+  reviewByGroup: Record<string, IdentityReviewRow>;
+  evidence: Record<string, RecordEvidence>;
   assignmentAudit: AssignmentAuditRow[];
   portalInconsistent: IdentityGroup[];
   withoutStrongIdentifier: IdentityRecord[];
@@ -227,6 +233,7 @@ export interface IdentityQualityModel {
 
 export function useIdentityQuality() {
   const { selectedCompanyId } = useCompany();
+  const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ["identity-quality", selectedCompanyId],
@@ -243,10 +250,33 @@ export function useIdentityQuality() {
       ...e,
       assignments_count: raw.assignments[e.id]?.count ?? 0,
       last_assignment_at: raw.assignments[e.id]?.last ?? null,
-      documents_count: raw.documentCounts[e.id] ?? 0,
+      documents_count: raw.documents[e.id]?.total ?? 0,
     }));
 
+    const evidence: Record<string, RecordEvidence> = {};
+    for (const e of records) {
+      evidence[e.id] = {
+        employeeId: e.id,
+        assignments: raw.assignments[e.id]?.count ?? 0,
+        lastAssignmentAt: raw.assignments[e.id]?.last ?? null,
+        timeEntries: raw.timeEntries[e.id]?.total ?? 0,
+        approvedTimeEntries: raw.timeEntries[e.id]?.approved ?? 0,
+        payrollReferences: raw.payroll[e.id] ?? 0,
+        documents: raw.documents[e.id]?.total ?? 0,
+        legalDocuments: raw.documents[e.id]?.legal ?? 0,
+        hasAvailability: raw.availability.has(e.id),
+        reviews: raw.reviewsByEmployee[e.id] ?? 0,
+        authUserId: e.user_id ?? null,
+        externalId: e.connecteam_employee_id ?? null,
+        governmentIdentifier: e.employer_identification ?? null,
+        companyId: e.company_id ?? null,
+      };
+    }
+
     const groups = buildIdentityGroups(records);
+
+    const reviewByGroup: Record<string, IdentityReviewRow> = {};
+    for (const r of raw.identityReviews) reviewByGroup[r.group_key] = r;
 
     const groupByRecord = new Map<string, IdentityGroup>();
     for (const g of groups) for (const r of g.records) groupByRecord.set(r.id, g);
@@ -259,7 +289,7 @@ export function useIdentityQuality() {
           employeeId: r.id,
           assignmentsCount: r.assignments_count ?? 0,
           lastAssignmentAt: r.last_assignment_at ?? null,
-          hasTimeEntries: raw.timeEntryEmployeeIds.has(r.id),
+          hasTimeEntries: (raw.timeEntries[r.id]?.total ?? 0) > 0,
           hasDocuments: (r.documents_count ?? 0) > 0,
           duplicateGroupKey: group?.key ?? null,
           groupPrimaryId: group?.primary?.candidateId ?? null,
@@ -281,6 +311,9 @@ export function useIdentityQuality() {
     const buckets = { assignable: 0, placeholder: 0, historical: 0, pending_approval: 0, inactive: 0 };
     for (const r of records) buckets[classifyWorkerAssignability(r).bucket] += 1;
 
+    const reviewedGroups = groups.filter((g) => !!reviewByGroup[g.key]);
+    const openGroups = groups.filter((g) => !reviewByGroup[g.key]);
+
     const totals: IdentityQualityTotals = {
       total: records.length,
       assignable: buckets.assignable,
@@ -301,11 +334,16 @@ export function useIdentityQuality() {
       highRiskAssignments: assignmentAudit.filter(
         (a) => a.verdict === "HIGH_RISK_DO_NOT_TOUCH",
       ).length,
+      reviewedGroups: reviewedGroups.length,
     };
 
     return {
       records,
       groups,
+      openGroups,
+      reviewedGroups,
+      reviewByGroup,
+      evidence,
       assignmentAudit,
       portalInconsistent,
       withoutStrongIdentifier,
@@ -319,11 +357,51 @@ export function useIdentityQuality() {
     };
   }, [query.data]);
 
+  /**
+   * Registra la decisión humana sobre un grupo. NO fusiona, no reasigna, no
+   * mueve horas, documentos, nómina ni cuentas: solo deja constancia.
+   */
+  const recordDecision = useCallback(
+    async (input: {
+      group: IdentityGroup;
+      decision: IdentityReviewDecision;
+      confirmedPrimaryId?: string | null;
+      mergePlan?: unknown;
+      notes?: string | null;
+    }) => {
+      if (!selectedCompanyId) throw new Error("Falta el contexto de empresa.");
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await supabase.from("employee_identity_reviews").upsert(
+        {
+          company_id: selectedCompanyId,
+          group_key: input.group.key,
+          employee_ids: input.group.records.map((r) => r.id),
+          decision: input.decision,
+          recommended_primary_employee_id: input.group.primary?.candidateId ?? null,
+          confirmed_primary_employee_id: input.confirmedPrimaryId ?? null,
+          verdict_at_review: input.group.verdict,
+          signals_at_review: input.group.signals as never,
+          merge_plan: (input.mergePlan ?? null) as never,
+          notes: input.notes ?? null,
+          reviewed_by: auth.user?.id ?? null,
+        },
+        { onConflict: "company_id,group_key" },
+      );
+      if (error) throw error;
+      await queryClient.invalidateQueries({
+        queryKey: ["identity-quality", selectedCompanyId],
+      });
+    },
+    [selectedCompanyId, queryClient],
+  );
+
   return {
     model,
     loading: query.isLoading,
     error: query.error as Error | null,
     refetch: query.refetch,
+    recordDecision,
     hasCompany: !!selectedCompanyId,
   };
 }
+
