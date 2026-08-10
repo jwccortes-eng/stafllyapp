@@ -12,44 +12,41 @@ import { isInviteStatusFailure, isInviteStatusInFlight } from "@/lib/invitation-
 import { formatDistanceToNow } from "date-fns";
 import { enUS } from "date-fns/locale";
 
+/**
+ * Estados de badge. Son una proyección 1:1 del resolver canónico
+ * `resolvePortalStatus` (src/lib/portal/portal-status.ts). No agregar
+ * lógica de estado aquí: cambiar el resolver.
+ */
 export type PortalAccessState =
-  | "active"       // has user_id (accessed portal)
-  | "invited"      // has invitation record, no user_id, last attempt healthy
-  | "failed"       // has invitation, last attempt failed/bounced
-  | "ready"        // has phone + PIN, no user_id, no invitation
-  | "incomplete"   // missing phone or PIN
+  | "active"       // user_id presente → acceso real
+  | "invited"      // invitación viva sin cuenta
+  | "failed"       // último intento de invitación falló
+  | "unlinked"     // invitación aceptada pero este registro no tiene cuenta
+  | "ready"        // sin portal, con teléfono + PIN
+  | "incomplete"   // sin portal y faltan datos
   | "inactive";    // is_active = false
 
-interface EmployeeLike {
-  user_id?: string | null;
-  is_active?: boolean;
-  /**
-   * Phase B: do NOT read `access_pin` value from the row anymore.
-   * Pass `has_access_pin` (boolean) resolved via the
-   * `employee_has_access_pin` RPC. We accept legacy `access_pin` only
-   * to compute existence as a fallback during the transition.
-   */
-  has_access_pin?: boolean | null;
-  /** @deprecated frontend should not consume the raw value; use has_access_pin */
-  access_pin?: string | null;
-  phone_number?: string | null;
-}
+type EmployeeLike = PortalStatusEmployeeLike;
 
 function resolveHasPin(emp: EmployeeLike): boolean {
   if (typeof emp.has_access_pin === "boolean") return emp.has_access_pin;
   return !!(emp.access_pin ?? "").toString().trim();
 }
 
+const CANONICAL_TO_BADGE: Record<PortalStatus, PortalAccessState> = {
+  active: "active",
+  invited: "invited",
+  invite_failed: "failed",
+  activation_unlinked: "unlinked",
+  ready_to_invite: "ready",
+  incomplete: "incomplete",
+  inactive: "inactive",
+};
+
 export function getPortalAccessState(emp: EmployeeLike, invitation?: EmployeeInvitation | null): PortalAccessState {
-  if (emp.is_active === false) return "inactive";
-  if (emp.user_id) return "active";
-  const hasPhone = !!(emp.phone_number ?? "").replace(/\D/g, "");
-  const hasPin = resolveHasPin(emp);
-  if (invitation) {
-    return isInviteStatusFailure(invitation.status) ? "failed" : "invited";
-  }
-  return hasPhone && hasPin ? "ready" : "incomplete";
+  return CANONICAL_TO_BADGE[resolvePortalStatus(emp, invitation).status];
 }
+
 
 function getMissingItems(emp: EmployeeLike): string[] {
   const items: string[] = [];
