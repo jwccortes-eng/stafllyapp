@@ -286,6 +286,14 @@ export default function IdentityQuality() {
                 ))}
             </TabsContent>
           </Tabs>
+
+          <IdentityGroupReviewDialog
+            group={activeGroup}
+            evidence={model.evidence}
+            open={!!activeGroup}
+            onOpenChange={(o) => !o && setActiveGroup(null)}
+            onDecision={recordDecision}
+          />
         </>
       )}
     </div>
