@@ -17,6 +17,10 @@ import type {
   GateResult,
   ServiceLifecycleReadiness,
 } from "@/lib/shifts/service-lifecycle-readiness";
+import { getLifecyclePreparation } from "@/lib/shifts/service-preparation";
+import { ServicePreparationMeter } from "@/components/shifts/planner/ServicePreparationMeter";
+import { NextStepCard } from "@/components/shifts/planner/NextStepCard";
+
 
 interface Props {
   lifecycle: ServiceLifecycleReadiness;
