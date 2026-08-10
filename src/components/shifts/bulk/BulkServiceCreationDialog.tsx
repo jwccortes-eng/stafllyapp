@@ -117,7 +117,7 @@ function EntityField({
         onBlur={() => window.setTimeout(() => setFocused(false), 150)}
         onChange={(e) => onChange({ id: null, raw: e.target.value })}
       />
-      {focused && suggestions.length > 0 && (
+      {focused && (suggestions.length > 0 || (onQuickCreate && raw.trim().length >= 2)) && (
         <div className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-popover shadow-md">
           {suggestions.slice(0, 4).map((s) => (
             <button
@@ -131,11 +131,22 @@ function EntityField({
               <span className="ml-1 text-[10px] text-muted-foreground">{s.reason}</span>
             </button>
           ))}
+          {onQuickCreate && raw.trim().length >= 2 && (
+            <button
+              type="button"
+              className="w-full border-t border-border/50 px-2 py-1.5 text-left text-xs font-semibold text-primary hover:bg-accent"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onQuickCreate(raw.trim())}
+            >
+              Crear cliente “{raw.trim()}”
+            </button>
+          )}
         </div>
       )}
     </div>
   );
 }
+
 
 export function BulkServiceCreationDialog({
   open, onOpenChange, companyId, userId, clients, locations, referenceDate, onCreated,
