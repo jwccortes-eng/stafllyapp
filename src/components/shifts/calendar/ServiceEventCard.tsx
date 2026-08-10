@@ -122,7 +122,7 @@ function ServiceEventCardImpl({
         </span>
       </button>
     ) : (
-      <button type="button" onClick={onOpen} className={cn(base, "px-2 py-2 space-y-1")} {...dnd}>
+      <button type="button" onClick={onOpen} style={identityStyle} className={cn(base, "px-2 py-2 space-y-1")} {...dnd}>
         <span className="flex items-center gap-1.5 min-w-0">
           {identity.ref && (
             <span className="shrink-0 font-mono text-[9px] text-muted-foreground">
