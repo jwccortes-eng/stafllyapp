@@ -1,10 +1,21 @@
+/**
+ * WEEK BY EMPLOYEE — Worker Scheduler Layout (P1).
+ *
+ * El calendario es el protagonista; los trabajadores son el índice izquierdo
+ * (EntityRow, columna congelada de 280px). Sólo layout: ninguna lógica de
+ * asignaciones, drag & drop, disponibilidad ni payroll cambia aquí.
+ */
+
 import { isSameDay, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
-import { Clock, Users, Timer, CalendarDays, Ban } from "lucide-react";
+import { Users, Timer, CalendarDays, Ban } from "lucide-react";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-import { memo } from "react";
+import { EntityRow } from "@/components/entities";
+import { formatEntityRef } from "@/lib/entities/entity-identity";
+import { memo, useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { getClientColor } from "./types";
 import { isEmployeeAvailable, type AvailabilityConfig, type AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
@@ -22,48 +33,52 @@ interface WeekByEmployeeViewProps {
   availabilityOverrides: AvailabilityOverride[];
 }
 
+/** Ancho de la columna de trabajadores: fija en desktop, reducida en tablet. */
+const INDEX_COL = "w-[200px] lg:w-[280px] shrink-0";
+
+function minutesBetween(start: string, end: string) {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  let diff = (eh * 60 + em) - (sh * 60 + sm);
+  if (diff < 0) diff += 24 * 60;
+  return diff;
+}
+
+function formatHours(totalMinutes: number) {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h}:${String(m).padStart(2, "0")}`;
+}
+
 function WeekByEmployeeViewImpl({
-  weekDays, shifts, assignments, locations, clients, employees,
+  weekDays, shifts, assignments, clients, employees,
   onShiftClick, onDropOnShift, availabilityConfigs, availabilityOverrides,
 }: WeekByEmployeeViewProps) {
+  const isMobile = useIsMobile();
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const clientIds = clients.map(c => c.id);
 
   const getClientName = (id: string | null) => clients.find(c => c.id === id)?.name;
 
-  // Day header stats
   const getDayStats = (day: Date) => {
     const dayShifts = shifts.filter(s => isSameDay(new Date(s.date + "T00:00:00"), day));
-    let totalMinutes = 0;
-    for (const s of dayShifts) {
-      const [sh, sm] = s.start_time.split(":").map(Number);
-      const [eh, em] = s.end_time.split(":").map(Number);
-      let diff = (eh * 60 + em) - (sh * 60 + sm);
-      if (diff < 0) diff += 24 * 60;
-      totalMinutes += diff;
-    }
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
+    const totalMinutes = dayShifts.reduce((sum, s) => sum + minutesBetween(s.start_time, s.end_time), 0);
     const uniqueEmps = new Set(
       assignments.filter(a => dayShifts.some(s => s.id === a.shift_id)).map(a => a.employee_id)
     ).size;
-    return { hours: `${h}:${String(m).padStart(2, "0")}`, shifts: dayShifts.length, users: uniqueEmps };
+    return { hours: formatHours(totalMinutes), shifts: dayShifts.length, users: uniqueEmps };
   };
 
-  // Employee stats for the week
   const getEmployeeStats = (empId: string) => {
     const empAssigns = assignments.filter(a => a.employee_id === empId);
     const empShifts = empAssigns.map(a => shifts.find(s => s.id === a.shift_id)).filter(Boolean) as Shift[];
-    let totalMinutes = 0;
-    for (const s of empShifts) {
-      const [sh, sm] = s.start_time.split(":").map(Number);
-      const [eh, em] = s.end_time.split(":").map(Number);
-      let diff = (eh * 60 + em) - (sh * 60 + sm);
-      if (diff < 0) diff += 24 * 60;
-      totalMinutes += diff;
-    }
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-    return { hours: `${h}:${String(m).padStart(2, "0")}`, shifts: empShifts.length };
+    const totalMinutes = empShifts.reduce((sum, s) => sum + minutesBetween(s.start_time, s.end_time), 0);
+    const today = new Date();
+    const todayCount = empShifts.filter(s => isSameDay(new Date(s.date + "T00:00:00"), today)).length;
+    const unavailableDays = weekDays.filter(day =>
+      !isEmployeeAvailable(empId, format(day, "yyyy-MM-dd"), availabilityConfigs, availabilityOverrides).available
+    ).length;
+    return { hours: formatHours(totalMinutes), shifts: empShifts.length, todayCount, unavailableDays };
   };
 
   const getShiftsForDayAndEmployee = (day: Date, empId: string) => {
@@ -72,7 +87,6 @@ function WeekByEmployeeViewImpl({
       .sort((a, b) => a.start_time.localeCompare(b.start_time));
   };
 
-  // Only employees with shifts or availability issues
   const activeEmployees = employees.filter(emp => {
     const hasShifts = assignments.some(a => a.employee_id === emp.id && shifts.some(s => s.id === a.shift_id));
     const hasUnavailability = weekDays.some(day => {
@@ -82,14 +96,12 @@ function WeekByEmployeeViewImpl({
     return hasShifts || hasUnavailability;
   });
 
-  // Unassigned shifts
   const getUnassignedForDay = (day: Date) =>
     shifts.filter(s =>
       isSameDay(new Date(s.date + "T00:00:00"), day) &&
       !assignments.some(a => a.shift_id === s.id)
     );
 
-  // Coverage bar for day header (% assigned)
   const getDayCoverage = (day: Date) => {
     const dayShifts = shifts.filter(s => isSameDay(new Date(s.date + "T00:00:00"), day));
     if (dayShifts.length === 0) return 0;
@@ -98,158 +110,220 @@ function WeekByEmployeeViewImpl({
     return Math.min(100, Math.round((assigned / totalSlots) * 100));
   };
 
-  return (
-    <div className="space-y-0 overflow-x-auto">
-      {/* Day headers */}
-      <div className="grid grid-cols-[220px_repeat(7,1fr)] gap-px rounded-t-xl overflow-hidden border-b border-border/10 pb-1 min-w-[900px]">
-        <div className="p-2" />
-        {weekDays.map(day => {
-          const isToday = isSameDay(day, new Date());
-          const stats = getDayStats(day);
-          const coverage = getDayCoverage(day);
+  /** Bloque de evento: Cliente → Hora → Estado. */
+  const renderEvent = (shift: Shift, opts?: { unassigned?: boolean }) => {
+    const color = getClientColor(shift.client_id, clientIds);
+    const clientName = getClientName(shift.client_id);
+    const slots = shift.slots ?? 1;
+    const filled = assignments.filter(a => a.shift_id === shift.id).length;
+    const title = clientName ? formatDisplayText(clientName, "name") : shift.title;
+    return (
+      <button
+        type="button"
+        key={shift.id}
+        onClick={() => onShiftClick(shift)}
+        className={cn(
+          "w-full rounded-lg border-l-[3px] px-2.5 py-2 text-left transition-all hover:shadow-md",
+          "bg-card/80 backdrop-blur-[1px]",
+          opts?.unassigned ? "border-l-status-danger bg-status-danger-bg/40" : cn(color.border, color.bg),
+        )}
+      >
+        <div className="truncate text-[11px] font-bold uppercase leading-tight tracking-[0.02em] text-foreground">
+          {title}
+        </div>
+        <div className="mt-1 text-[12px] font-semibold tabular-nums leading-none text-foreground/80">
+          {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
+        </div>
+        <div
+          className={cn(
+            "mt-1 text-[10px] font-semibold leading-none",
+            opts?.unassigned ? "text-status-danger" : filled >= slots ? "text-status-success" : "text-status-warning",
+          )}
+        >
+          {filled}/{slots}
+        </div>
+      </button>
+    );
+  };
+
+  /* ── Mobile: vista por trabajador, sin scheduler ─────────────────────── */
+  if (isMobile) {
+    return (
+      <div className="space-y-3">
+        {activeEmployees.map(emp => {
+          const stats = getEmployeeStats(emp.id);
           return (
-            <div key={day.toISOString()} className={cn("text-center py-2 px-1 rounded-xl", isToday && "bg-primary/[0.06]")}>
-              <div className={cn("text-[9px] font-semibold uppercase tracking-[0.08em]", isToday ? "text-primary" : "text-muted-foreground/50")}>
-                {format(day, "EEE", { locale: es })}
-              </div>
-              <div className={cn("text-base font-bold mt-0.5 leading-none", isToday ? "text-primary" : "text-foreground/75")}>
-                {format(day, "d/M")}
-              </div>
-              <div className="flex items-center justify-center gap-1.5 text-[8px] text-muted-foreground/40 mt-1.5">
-                <span className="flex items-center gap-0.5"><Timer className="h-2.5 w-2.5" />{stats.hours}</span>
-                <span className="flex items-center gap-0.5"><CalendarDays className="h-2.5 w-2.5" />{stats.shifts}</span>
-                <span className="flex items-center gap-0.5"><Users className="h-2.5 w-2.5" />{stats.users}</span>
-              </div>
-              {/* Coverage bar */}
-              <div className="mx-auto mt-1.5 h-1 w-4/5 rounded-full bg-muted/30 overflow-hidden">
-                <div
-                  className={cn("h-full rounded-full transition-all", coverage >= 100 ? "bg-emerald-400" : coverage >= 50 ? "bg-amber-400" : "bg-rose-400")}
-                  style={{ width: `${coverage}%` }}
+            <div key={emp.id} className="rounded-xl border border-border/40 bg-card/50 overflow-hidden">
+              <div className={INDEX_COL.replace("w-[200px] lg:w-[280px] shrink-0", "w-full")}>
+                <EntityRow
+                  avatar={<EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="sm" />}
+                  name={`${emp.first_name} ${emp.last_name}`}
+                  role={emp.employee_role}
+                  reference={formatEntityRef("worker", { number: emp.employer_identification, id: emp.id })}
+                  metric={`${stats.hours} h`}
+                  tone={stats.shifts > 0 ? "assigned" : "operational"}
                 />
               </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Employee rows */}
-      {activeEmployees.map(emp => {
-        const stats = getEmployeeStats(emp.id);
-        return (
-          <div key={emp.id} className="grid grid-cols-[220px_repeat(7,1fr)] gap-px border-b border-border/10 min-w-[900px] hover:bg-accent/5 transition-colors">
-            {/* Employee info */}
-            <div className="flex items-start gap-2.5 p-2.5">
-              <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="sm" />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold truncate">{emp.first_name} {emp.last_name}</p>
-                <div className="flex items-center gap-2.5 text-[9px] text-muted-foreground/60 mt-0.5">
-                  <span className="flex items-center gap-0.5"><Clock className="h-2.5 w-2.5" />{stats.hours}</span>
-                  <span className="flex items-center gap-0.5"><CalendarDays className="h-2.5 w-2.5" />{stats.shifts}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Day cells */}
-            {weekDays.map(day => {
-              const dateStr = format(day, "yyyy-MM-dd");
-              const empShifts = getShiftsForDayAndEmployee(day, emp.id);
-              const avail = isEmployeeAvailable(emp.id, dateStr, availabilityConfigs, availabilityOverrides);
-
-              return (
-                <div
-                  key={day.toISOString()}
-                  className="p-1.5 space-y-1 min-h-[60px]"
-                  onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-1", "ring-primary/20", "bg-primary/5"); }}
-                  onDragLeave={e => { e.currentTarget.classList.remove("ring-1", "ring-primary/20", "bg-primary/5"); }}
-                  onDrop={e => {
-                    e.preventDefault();
-                    e.currentTarget.classList.remove("ring-1", "ring-primary/20", "bg-primary/5");
-                    const data = e.dataTransfer.getData("application/assignment");
-                    if (data && empShifts[0]) onDropOnShift(empShifts[0].id, data);
-                  }}
-                >
-                  {empShifts.map(shift => {
-                    const color = getClientColor(shift.client_id, clientIds);
-                    const clientName = getClientName(shift.client_id);
-                    return (
-                      <div
-                        key={shift.id}
-                        className={cn(
-                          "rounded-lg px-2 py-1.5 text-[10px] cursor-pointer border-l-[3px] transition-all hover:shadow-sm",
-                          "bg-white/70 dark:bg-card/60",
-                          color.border, color.bg
-                        )}
-                        onClick={() => onShiftClick(shift)}
-                      >
-                        <div className="font-semibold truncate text-[10px]">{shift.title}</div>
-                        <div className="text-muted-foreground/70 flex items-center gap-1 mt-0.5">
-                          <Clock className="h-2.5 w-2.5" />
-                          {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
-                        </div>
-                        {clientName && (
-                          <div className={cn("truncate mt-0.5 font-medium text-[9px]", color.text)}>
-                            {formatDisplayText(clientName, "name")}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {!avail.available && empShifts.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full min-h-[40px] text-rose-500 dark:text-rose-400">
-                      <Ban className="h-3 w-3 mb-0.5 opacity-60" />
-                      <span className="text-[9px] font-semibold">No disponible</span>
-                      {avail.reason && <span className="text-[8px] opacity-60 truncate max-w-full">{avail.reason}</span>}
-                    </div>
-                  )}
-                  {!avail.available && empShifts.length > 0 && (
-                    <div className="text-[8px] text-rose-500 font-medium text-center mt-0.5">⚠ No disponible</div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        );
-      })}
-
-      {/* Unassigned row */}
-      {weekDays.some(day => getUnassignedForDay(day).length > 0) && (
-        <div className="grid grid-cols-[220px_repeat(7,1fr)] gap-px border-b border-border/10 min-w-[900px] bg-rose-50/30 dark:bg-rose-950/10">
-          <div className="flex items-center gap-2.5 p-2.5">
-            <div className="h-7 w-7 rounded-full bg-rose-200 dark:bg-rose-800 flex items-center justify-center text-[10px] font-bold text-rose-600 dark:text-rose-300 shrink-0">?</div>
-            <p className="text-xs font-medium text-rose-600 dark:text-rose-400">Sin asignar</p>
-          </div>
-          {weekDays.map(day => {
-            const unassigned = getUnassignedForDay(day);
-            return (
-              <div key={day.toISOString()} className="p-1.5 space-y-1 min-h-[60px]">
-                {unassigned.map(shift => {
-                  const color = getClientColor(shift.client_id, clientIds);
+              <div className="space-y-2 px-3 pb-3">
+                {weekDays.map(day => {
+                  const empShifts = getShiftsForDayAndEmployee(day, emp.id);
+                  if (empShifts.length === 0) return null;
                   return (
-                    <div
-                      key={shift.id}
-                      className="rounded-lg px-2 py-1.5 text-[10px] cursor-pointer border-l-[3px] border-l-rose-300 bg-rose-50/60 dark:bg-rose-950/20 transition-all hover:shadow-sm"
-                      onClick={() => onShiftClick(shift)}
-                    >
-                      <div className="font-semibold truncate text-[10px]">{shift.title}</div>
-                      <div className="text-muted-foreground/70 flex items-center gap-1 mt-0.5">
-                        <Clock className="h-2.5 w-2.5" />
-                        {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
+                    <div key={day.toISOString()}>
+                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                        {format(day, "EEE d/M", { locale: es })}
                       </div>
-                      <div className="text-rose-500 font-semibold mt-0.5 text-[9px]">
-                        {(shift.slots ?? 1)} vacante{(shift.slots ?? 1) > 1 ? "s" : ""}
-                      </div>
+                      <div className="space-y-1.5">{empShifts.map(s => renderEvent(s))}</div>
                     </div>
                   );
                 })}
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          );
+        })}
+        {activeEmployees.length === 0 && (
+          <div className="py-16 text-center text-sm text-muted-foreground/60">No hay turnos asignados en este período</div>
+        )}
+      </div>
+    );
+  }
 
-      {activeEmployees.length === 0 && (
-        <div className="text-center py-16 text-sm text-muted-foreground/50">No hay turnos asignados en este período</div>
-      )}
+  /* ── Desktop / tablet: scheduler con columna congelada ───────────────── */
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border/40">
+      <div className="min-w-[880px]">
+        {/* Cabecera de días */}
+        <div className="sticky top-0 z-30 flex border-b border-border/40 bg-background/95 backdrop-blur">
+          <div className={cn(INDEX_COL, "sticky left-0 z-40 border-r border-border/40 bg-background/95 px-3 py-2")}>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+              Trabajadores
+            </span>
+          </div>
+          <div className="grid flex-1 grid-cols-7">
+            {weekDays.map(day => {
+              const isToday = isSameDay(day, new Date());
+              const stats = getDayStats(day);
+              const coverage = getDayCoverage(day);
+              return (
+                <div key={day.toISOString()} className={cn("border-l border-border/20 px-2 py-2 text-center", isToday && "bg-primary/[0.05]")}>
+                  <div className={cn("text-[10px] font-semibold uppercase tracking-[0.08em]", isToday ? "text-primary" : "text-muted-foreground/60")}>
+                    {format(day, "EEE", { locale: es })}
+                  </div>
+                  <div className={cn("mt-0.5 text-base font-bold leading-none", isToday ? "text-primary" : "text-foreground/80")}>
+                    {format(day, "d/M")}
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-center gap-1.5 text-[9px] text-muted-foreground/50">
+                    <span className="flex items-center gap-0.5"><Timer className="h-2.5 w-2.5" />{stats.hours}</span>
+                    <span className="flex items-center gap-0.5"><CalendarDays className="h-2.5 w-2.5" />{stats.shifts}</span>
+                    <span className="flex items-center gap-0.5"><Users className="h-2.5 w-2.5" />{stats.users}</span>
+                  </div>
+                  <div className="mx-auto mt-1.5 h-1 w-4/5 overflow-hidden rounded-full bg-muted/30">
+                    <div
+                      className={cn("h-full rounded-full transition-all", coverage >= 100 ? "bg-status-success" : coverage >= 50 ? "bg-status-warning" : "bg-status-danger")}
+                      style={{ width: `${coverage}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Filas de trabajadores */}
+        {activeEmployees.map(emp => {
+          const stats = getEmployeeStats(emp.id);
+          const selected = selectedEmployeeId === emp.id;
+          return (
+            <div
+              key={emp.id}
+              className={cn(
+                "group flex border-b border-border/25 transition-colors",
+                selected ? "bg-primary/[0.04]" : "hover:bg-accent/20",
+              )}
+            >
+              <div className={cn(INDEX_COL, "sticky left-0 z-20 border-r border-border/40", selected ? "bg-primary/[0.06]" : "bg-background")}>
+                <EntityRow
+                  avatar={<EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="sm" />}
+                  name={`${emp.first_name} ${emp.last_name}`}
+                  role={emp.employee_role}
+                  reference={formatEntityRef("worker", { number: emp.employer_identification, id: emp.id })}
+                  metric={`${stats.hours} h`}
+                  tone={stats.shifts > 0 ? "assigned" : "operational"}
+                  selected={selected}
+                  onClick={() => setSelectedEmployeeId(selected ? null : emp.id)}
+                  hover={
+                    <div className="space-y-0.5 text-[11px]">
+                      <div className="font-semibold text-foreground">{emp.first_name} {emp.last_name}</div>
+                      <div>Asignados hoy: {stats.todayCount}</div>
+                      <div>Horas de la semana: {stats.hours}</div>
+                      <div>
+                        Disponibilidad: {stats.unavailableDays === 0 ? "Completa" : `${stats.unavailableDays} día(s) no disponible`}
+                      </div>
+                    </div>
+                  }
+                />
+              </div>
+
+              <div className="grid flex-1 grid-cols-7">
+                {weekDays.map(day => {
+                  const dateStr = format(day, "yyyy-MM-dd");
+                  const empShifts = getShiftsForDayAndEmployee(day, emp.id);
+                  const avail = isEmployeeAvailable(emp.id, dateStr, availabilityConfigs, availabilityOverrides);
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className="min-h-[76px] space-y-1.5 border-l border-border/20 p-2"
+                      onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-1", "ring-primary/20", "bg-primary/5"); }}
+                      onDragLeave={e => { e.currentTarget.classList.remove("ring-1", "ring-primary/20", "bg-primary/5"); }}
+                      onDrop={e => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove("ring-1", "ring-primary/20", "bg-primary/5");
+                        const data = e.dataTransfer.getData("application/assignment");
+                        if (data && empShifts[0]) onDropOnShift(empShifts[0].id, data);
+                      }}
+                    >
+                      {empShifts.map(shift => renderEvent(shift))}
+                      {!avail.available && empShifts.length === 0 && (
+                        <div className="flex h-full min-h-[52px] flex-col items-center justify-center text-status-danger">
+                          <Ban className="mb-0.5 h-3 w-3 opacity-60" />
+                          <span className="text-[10px] font-semibold">No disponible</span>
+                        </div>
+                      )}
+                      {!avail.available && empShifts.length > 0 && (
+                        <div className="text-center text-[9px] font-medium text-status-danger">No disponible</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Fila de servicios sin asignar */}
+        {weekDays.some(day => getUnassignedForDay(day).length > 0) && (
+          <div className="flex border-b border-border/25 bg-status-danger-bg/20">
+            <div className={cn(INDEX_COL, "sticky left-0 z-20 flex items-center gap-3 border-r border-border/40 bg-background px-3 py-2.5")}>
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-status-danger-bg text-[11px] font-bold text-status-danger">?</div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-status-danger">Sin asignar</p>
+                <p className="text-[11px] text-muted-foreground">Vacantes abiertas</p>
+              </div>
+            </div>
+            <div className="grid flex-1 grid-cols-7">
+              {weekDays.map(day => (
+                <div key={day.toISOString()} className="min-h-[76px] space-y-1.5 border-l border-border/20 p-2">
+                  {getUnassignedForDay(day).map(shift => renderEvent(shift, { unassigned: true }))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeEmployees.length === 0 && (
+          <div className="py-16 text-center text-sm text-muted-foreground/60">No hay turnos asignados en este período</div>
+        )}
+      </div>
     </div>
   );
 }
