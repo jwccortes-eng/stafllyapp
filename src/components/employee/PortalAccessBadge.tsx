@@ -93,48 +93,56 @@ const STATE_CONFIG: Record<PortalAccessState, {
   Icon: typeof CheckCircle2;
 }> = {
   active: {
-    label: "Portal active",
-    tooltip: "Worker has accessed the portal",
+    label: "Portal activo",
+    tooltip: "La cuenta está vinculada y puede entrar al portal",
     dotClass: "bg-earning",
     badgeClass: "bg-earning/10 text-earning",
     Icon: CheckCircle2,
   },
   invited: {
-    label: "Invited",
-    tooltip: "Invitation sent — pending activation",
+    label: "Invitado",
+    tooltip: "Invitación enviada — pendiente de activar",
     dotClass: "bg-primary animate-pulse",
     badgeClass: "bg-primary/10 text-primary",
     Icon: MailCheck,
   },
   failed: {
-    label: "Invite failed",
-    tooltip: "Last invitation attempt failed — re-invite recommended",
+    label: "Invitación fallida",
+    tooltip: "El último intento falló — se recomienda reenviar",
     dotClass: "bg-destructive",
     badgeClass: "bg-destructive/10 text-destructive",
     Icon: AlertTriangle,
   },
+  unlinked: {
+    label: "Activación sin vincular",
+    tooltip: "Invitación aceptada pero este registro no tiene cuenta vinculada — posible duplicado",
+    dotClass: "bg-warning",
+    badgeClass: "bg-warning/10 text-warning",
+    Icon: AlertTriangle,
+  },
   ready: {
-    label: "No portal",
-    tooltip: "Has phone and PIN — ready to invite",
+    label: "Sin portal",
+    tooltip: "Tiene teléfono y PIN — listo para invitar",
     dotClass: "bg-warning",
     badgeClass: "bg-warning/10 text-warning",
     Icon: Send,
   },
   incomplete: {
-    label: "Incomplete",
+    label: "Sin portal",
     tooltip: "",
     dotClass: "bg-destructive/60",
     badgeClass: "bg-destructive/10 text-destructive",
     Icon: AlertTriangle,
   },
   inactive: {
-    label: "Inactive",
-    tooltip: "Worker is deactivated",
+    label: "Inactivo",
+    tooltip: "El trabajador está desactivado",
     dotClass: "bg-muted-foreground/40",
     badgeClass: "bg-muted text-muted-foreground",
     Icon: WifiOff,
   },
 };
+
 
 interface PortalAccessBadgeProps {
   employee: EmployeeLike;
