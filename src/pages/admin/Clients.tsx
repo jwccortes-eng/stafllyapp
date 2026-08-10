@@ -24,6 +24,8 @@ import {
   LayoutGrid, List, Download, Phone, Mail, MessageCircle, Filter, X, Users, MapPin, Car, ExternalLink
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { OperationalWorkspace, type WorkspaceMetric } from "@/components/stafly-ui/OperationalWorkspace";
+
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { ClientAvatar } from "@/components/ui/client-avatar";
 import { EmptyState } from "@/components/ui/empty-state";
