@@ -63,6 +63,8 @@ const InviteEmployees = lazy(() => import("./pages/admin/InviteEmployees"));
 const EmployeeMerge = lazy(() => import("./pages/admin/EmployeeMerge"));
 const Directory = lazy(() => import("./pages/admin/Directory"));
 const Clients = lazy(() => import("./pages/admin/Clients"));
+const IdentityQuality = lazy(() => import("./pages/admin/IdentityQuality"));
+
 const ClientProfile = lazy(() => import("./pages/admin/ClientProfile"));
 const LocationProfile = lazy(() => import("./pages/admin/LocationProfile"));
 const Locations = lazy(() => import("./pages/admin/Locations"));
