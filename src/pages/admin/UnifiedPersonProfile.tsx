@@ -130,6 +130,10 @@ export default function UnifiedPersonProfile() {
   const [identityOpen, setIdentityOpen] = useState(false);
   const [companyRoster, setCompanyRoster] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<string>("info");
+  // Deep tabs panel is collapsed by default. Every card CTA that targets a tab
+  // MUST open it, otherwise the click has no visible effect (dead button).
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const deepTabsRef = useRef<HTMLDivElement | null>(null);
 
   // Snapshot data
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
