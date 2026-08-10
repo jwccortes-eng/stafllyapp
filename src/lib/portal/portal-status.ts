@@ -141,7 +141,7 @@ export function resolvePortalStatus(
   } else if (e.is_active === false) {
     status = "inactive";
   } else if (invitation?.status) {
-    if (isInviteStatusFailure(invitation.status)) status = "invite_failed";
+    if (isInviteStatusFailure(invitation.status as never)) status = "invite_failed";
     else if (invitation.status === "accepted") status = "activation_unlinked";
     else status = "invited";
   } else {
