@@ -77,6 +77,26 @@ export default function Clients() {
   const [showDeleted, setShowDeleted] = useState("active");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
+  // ── CLIENT TRUTH LAYER V1 ──
+  // El directorio se lee del modelo canónico (código humano, contactos,
+  // lugares, actividad de servicios y estado Connecteam). Sólo lectura.
+  const directory = useClientDirectory();
+  const [tab, setTab] = useState<"active" | "inactive" | "duplicates">("active");
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const focusId = searchParams.get("focus");
+
+  const recordById = useMemo(() => {
+    const map: Record<string, Client> = {};
+    directory.records.forEach((r) => (map[r.id] = r as unknown as Client));
+    return map;
+  }, [directory.records]);
+
+  const visibleTruths = useMemo(() => {
+    const base = tab === "active" ? directory.active : directory.inactive;
+    return base.filter((t) => clientMatchesQuery(t, search));
+  }, [tab, directory.active, directory.inactive, search]);
+
+
   // Form state
   const [name, setName] = useState("");
   const [contactName, setContactName] = useState("");
