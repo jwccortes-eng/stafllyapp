@@ -8,12 +8,12 @@
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
-  ShieldCheck,
   Users,
   FileText,
   Info,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { OperationalWorkspace } from "@/components/stafly-ui/OperationalWorkspace";
 import { Badge } from "@/components/ui/badge";
 import {
   REQUIREMENT_CATALOG,
@@ -23,33 +23,25 @@ import {
 
 export default function ComplianceCenter() {
   return (
-    <div className="space-y-5 p-4 md:p-6">
-      {/* Header */}
-      <header className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Cumplimiento</h1>
-          <Badge variant="outline" className="ml-1 text-[10px] uppercase tracking-wider">
-            Phase 1 · Vista previa
-          </Badge>
+    <OperationalWorkspace
+      title="Cumplimiento"
+      context="Vista de solo lectura: define qué datos pediremos al equipo. Las acciones llegan en fases siguientes."
+      action={
+        <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
+          Vista previa
+        </Badge>
+      }
+      adminTitle="Alcance de esta vista"
+      admin={
+        <div className="flex items-start gap-2 text-[12px] text-muted-foreground">
+          <Info className="h-4 w-4 mt-0.5 shrink-0" />
+          <p>
+            Esta vista no bloquea personas, no cambia pagos, no cambia turnos ni
+            notificaciones. El equipo ya puede ver su checklist en su portal.
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground max-w-2xl">
-          Centro de cumplimiento de trabajadores. En esta fase es solo lectura:
-          define qué datos pediremos a los trabajadores. Las acciones (fechas
-          límite, restricciones, recordatorios automáticos) llegan en fases
-          siguientes con aprobación previa.
-        </p>
-      </header>
-
-      {/* Safety note */}
-      <div className="flex items-start gap-2 rounded-xl border border-border/60 bg-muted/30 p-3 text-[12px] text-muted-foreground">
-        <Info className="h-4 w-4 mt-0.5 shrink-0" />
-        <p>
-          Esta vista no bloquea trabajadores, no cambia payroll, no cambia
-          turnos ni notificaciones. Los trabajadores ya pueden ver su checklist
-          en <code className="font-mono text-[11px]">/portal/update-center</code>.
-        </p>
-      </div>
+      }
+    >
 
       {/* Quick links to existing tools */}
       <div className="grid gap-3 sm:grid-cols-2">
@@ -139,6 +131,6 @@ export default function ComplianceCenter() {
           ))}
         </div>
       </Card>
-    </div>
+    </OperationalWorkspace>
   );
 }
