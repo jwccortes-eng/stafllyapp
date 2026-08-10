@@ -410,13 +410,13 @@ export default function DocumentsCenter() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Worker</TableHead>
-                      <TableHead>Document type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Expiration</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Uploaded</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>Persona</TableHead>
+                      <TableHead>Tipo de documento</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Vencimiento</TableHead>
+                      <TableHead>Origen</TableHead>
+                      <TableHead>Subido</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -603,13 +603,13 @@ export default function DocumentsCenter() {
         {drawerRow && (
           <>
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <DocMetaCell label="Expiration" value={
+              <DocMetaCell label="Vencimiento" value={
                 drawerRow.expires_at
                   ? formatExpirationDisplay(drawerRow.expires_at)
                   : (expirationPolicyFor(drawerRow.category) === "required" || expirationPolicyFor(drawerRow.category) === "recommended" ? "Falta" : "—")
               } />
-              <DocMetaCell label="Uploaded" value={fmtDate(drawerRow.created_at)} />
-              <DocMetaCell label="Source" value={DOC_SOURCE_LABEL[drawerRow.source]} />
+              <DocMetaCell label="Subido" value={fmtDate(drawerRow.created_at)} />
+              <DocMetaCell label="Origen" value={DOC_SOURCE_LABEL[drawerRow.source]} />
               <DocMetaCell label="Category" value={String(drawerRow.category)} />
             </div>
 
@@ -667,7 +667,7 @@ function ExpirationCell({
       if (!isNaN(d.getTime())) return formatDateUS(d) || "—";
     }
     if (policy === "not_applicable") return "—";
-    if (policy === "required" || policy === "recommended") return "Missing";
+    if (policy === "required" || policy === "recommended") return "Falta";
     return "—";
   })();
 
@@ -697,7 +697,7 @@ function ExpirationCell({
       toast({ title: "Could not save expiration", description: error, variant: "destructive" });
       return;
     }
-    toast({ title: "Expiration updated" });
+    toast({ title: "Vencimiento actualizado" });
     setOpen(false);
     await onSaved();
   };
@@ -723,14 +723,14 @@ function ExpirationCell({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-3 space-y-2" align="start">
-        <div className="text-[11px] font-semibold">Edit expiration date</div>
+        <div className="text-[11px] font-semibold">Editar fecha de vencimiento</div>
         <SmartDateInput value={value} onChange={setValue} allowClear showCalendar />
         <div className="text-[10px] text-muted-foreground">
-          Leave empty if this document has no expiration.
+          Déjalo vacío si el documento no vence.
         </div>
         <div className="flex justify-end gap-1.5 pt-1">
-          <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
-          <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+          <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={saving}>Cancelar</Button>
+          <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? "Guardando…" : "Guardar"}</Button>
         </div>
       </PopoverContent>
     </Popover>
