@@ -514,7 +514,12 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
 
   const statusConfig = STATUS_CONFIG[inviteStatus] ?? STATUS_CONFIG.created;
   const StatusIcon = statusConfig.icon;
-  const isAccepted = inviteStatus === "accepted";
+  // Verdad canónica: "Cuenta activada" exige acceso real (employees.user_id).
+  // Una invitación "accepted" sin cuenta vinculada NO es portal activo.
+  const portalStatus = resolvePortalStatus(employee as never, { status: inviteStatus });
+  const isAccepted = portalStatus.status === "active";
+  const isAcceptedUnlinked = portalStatus.status === "activation_unlinked";
+
   const isFailed = isInviteStatusFailure(inviteStatus);
   const isQueued = inviteStatus === "queued" || inviteStatus === "processing";
   const hasEmailAttempt = inviteChannel === "email" && inviteStatus !== "created";
