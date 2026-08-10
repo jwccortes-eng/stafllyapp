@@ -31,7 +31,7 @@ export type EmployeeRosterScope = "shifts";
 
 const SCOPE_COLUMNS: Record<EmployeeRosterScope, string> = {
   shifts:
-    "id, first_name, last_name, phone_number, email, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive, is_active, employer_identification, profile_status, onboarding_status," +
+    "id, first_name, last_name, phone_number, email, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive, is_active, added_via, employer_identification, profile_status, onboarding_status," +
     // Phase 1 identity columns — needed by EmployeeCombobox / IdentityBadges.
     " worker_type, identity_status, requires_identity_resolution, payroll_approval_blocked, original_placeholder_name, identity_source, identity_notes",
 };

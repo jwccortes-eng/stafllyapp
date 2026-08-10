@@ -92,15 +92,14 @@ const isDriver = (e: Employee) => isEmployeeDriver(e);
  * kept for forward compatibility even though they don't exist in the DB
  * today — the OR-fallback is conservative and safe.
  */
-import { isPlaceholderWorker as isIdentityPlaceholder } from "@/lib/employee-identity";
-const PLACEHOLDER_TYPES = new Set(["placeholder", "system", "external", "external_labor", "agency", "temp"]);
-function isPlaceholderLike(e: Employee): boolean {
-  if (isIdentityPlaceholder(e as any)) return true;
-  if (e.payroll_safe === false) return true;
-  const t = (e.person_type_guess ?? "").toLowerCase().trim();
-  if (t && PLACEHOLDER_TYPES.has(t)) return true;
-  return false;
-}
+import {
+  classifyWorkerAssignability,
+  isAssignableWorker,
+  NON_ASSIGNABLE_GROUP_LABELS,
+} from "@/lib/shifts/assignable-workers";
+
+/** Contrato canónico único: ver src/lib/shifts/assignable-workers.ts */
+const isNonAssignable = (e: Employee) => !isAssignableWorker(e);
 
 /** Profile readiness derived from `employees.profile_status` (best-effort, UI hint only). */
 function isProfileIncomplete(e: Employee): boolean {
@@ -120,10 +119,9 @@ export function EmployeeCombobox({
   // React 18 native debouncing: keeps input snappy while heavy filtering uses the deferred value.
   const deferredSearch = useDeferredValue(search);
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
-  // S1: inactivos/históricos ocultos por defecto. Toggle explícito para mostrarlos.
-  const [showInactive, setShowInactive] = useState(false);
-  // S2: placeholders / system / external ocultos por defecto.
-  const [showPlaceholders, setShowPlaceholders] = useState(false);
+  // Contrato canónico: solo trabajadores asignables por defecto.
+  // Acción explícita para revelar pendientes / históricos / placeholders / inactivos.
+  const [showNonAssignable, setShowNonAssignable] = useState(false);
 
   const conflictMap = useMemo(() => {
     const map = new Map<string, ConflictInfo[]>();
@@ -145,7 +143,7 @@ export function EmployeeCombobox({
   }, [employees, shiftDate, availabilityConfigs, availabilityOverrides]);
 
   const getGroup = (emp: Employee): GroupKey => {
-    if (emp.is_active === false) return "inactive";
+    if (isNonAssignable(emp)) return "inactive";
     if (unavailableMap.has(emp.id)) return "blocked";
     if (conflictMap.has(emp.id)) return "warning";
     return "ready";
@@ -189,21 +187,16 @@ export function EmployeeCombobox({
       list = list.filter((e) => matchScoreById.has(e.id));
     }
     if (quickFilter === "available") list = list.filter(e => getGroup(e) === "ready");
-    else if (quickFilter === "drivers") list = list.filter(e => isDriver(e) && e.is_active !== false);
-    else if (quickFilter === "incomplete") list = list.filter(e => e.is_active !== false && isProfileIncomplete(e));
+    else if (quickFilter === "drivers") list = list.filter(e => isDriver(e) && isAssignableWorker(e));
+    else if (quickFilter === "incomplete") list = list.filter(e => isAssignableWorker(e) && isProfileIncomplete(e));
     else if (quickFilter === "no-conflict") list = list.filter(e => !conflictMap.has(e.id));
     // S1: por defecto ocultar inactivos/históricos, salvo que ya estén asignados
     // (visualización de histórico) o el toggle esté activo.
-    if (!showInactive) {
-      list = list.filter(e => e.is_active !== false || selected.includes(e.id));
-    }
-    // S2: por defecto ocultar placeholders/system/external/payroll-unsafe,
-    // salvo que ya estén asignados (histórico) o el toggle esté activo.
-    if (!showPlaceholders) {
-      list = list.filter(e => !isPlaceholderLike(e) || selected.includes(e.id));
+    if (!showNonAssignable) {
+      list = list.filter(e => isAssignableWorker(e) || selected.includes(e.id));
     }
     return list;
-  }, [employees, deferredSearch, matchScoreById, quickFilter, unavailableMap, conflictMap, showInactive, showPlaceholders, selected]);
+  }, [employees, deferredSearch, matchScoreById, quickFilter, unavailableMap, conflictMap, showNonAssignable, selected]);
 
   // Smart sort: when searching, relevance score dominates so the most precise
   // match (exact ID/phone, then last name, then first name, then phonetic) leads.
@@ -247,29 +240,31 @@ export function EmployeeCombobox({
   const handleToggle = (id: string) => {
     // Inactive workers cannot be (re)assigned from the selector.
     const target = employees.find(e => e.id === id);
-    if (target?.is_active === false && !selected.includes(id)) return;
-    // S2: placeholders/system/external/payroll-unsafe cannot be newly assigned
-    // unless the operator has explicitly revealed them via the toggle.
-    if (target && isPlaceholderLike(target) && !selected.includes(id) && !showPlaceholders) return;
+    if (target && isNonAssignable(target) && !selected.includes(id)) return;
     if (availabilityBlockMode === "hard" && unavailableMap.has(id) && !selected.includes(id)) return;
     onToggle(id);
   };
 
   const readyCount = filtered.filter(e => getGroup(e) === "ready").length;
-  const activeCount = useMemo(() => employees.filter(e => e.is_active !== false).length, [employees]);
-  const driverCount = useMemo(() => employees.filter(e => isDriver(e) && e.is_active !== false).length, [employees]);
+  const activeCount = useMemo(() => employees.filter(e => isAssignableWorker(e)).length, [employees]);
+  const driverCount = useMemo(() => employees.filter(e => isDriver(e) && isAssignableWorker(e)).length, [employees]);
   const incompleteCount = useMemo(
-    () => employees.filter(e => e.is_active !== false && isProfileIncomplete(e)).length,
+    () => employees.filter(e => isAssignableWorker(e) && isProfileIncomplete(e)).length,
     [employees],
   );
-  const inactiveHiddenCount = useMemo(
-    () => employees.filter(e => e.is_active === false && !selected.includes(e.id)).length,
+  const nonAssignableHiddenCount = useMemo(
+    () => employees.filter(e => isNonAssignable(e) && !selected.includes(e.id)).length,
     [employees, selected],
   );
-  const placeholderHiddenCount = useMemo(
-    () => employees.filter(e => isPlaceholderLike(e) && !selected.includes(e.id)).length,
-    [employees, selected],
-  );
+  const nonAssignableBreakdown = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const e of employees) {
+      if (!isNonAssignable(e) || selected.includes(e.id)) continue;
+      const b = classifyWorkerAssignability(e).bucket as keyof typeof NON_ASSIGNABLE_GROUP_LABELS;
+      counts.set(b, (counts.get(b) ?? 0) + 1);
+    }
+    return [...counts.entries()].map(([b, n]) => `${NON_ASSIGNABLE_GROUP_LABELS[b as keyof typeof NON_ASSIGNABLE_GROUP_LABELS]}: ${n}`);
+  }, [employees, selected]);
 
   // Bulk actions
   const selectAllReady = () => {
@@ -399,70 +394,39 @@ export function EmployeeCombobox({
         )}
       </div>
 
-      {/* S1: Inactive visibility toggle + count */}
-      {(inactiveHiddenCount > 0 || showInactive) && (
-        <div className="flex items-center justify-between gap-2 px-0.5 py-1 rounded-md bg-muted/30 border border-border/30">
-          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            <PauseCircle className="h-3 w-3" />
-            {showInactive ? (
-              <span>
-                Mostrando inactivos/históricos al final.{" "}
-                <span className="text-warning font-semibold">No disponibles para asignación normal.</span>
-              </span>
-            ) : (
-              <span>
-                Inactivos ocultos: <span className="font-semibold text-foreground">{inactiveHiddenCount}</span>
-              </span>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowInactive(v => !v)}
-            className={cn(
-              "text-[9px] font-bold px-2 py-0.5 rounded-full transition-all shrink-0",
-              showInactive
-                ? "bg-warning/15 text-warning hover:bg-warning/25"
-                : "bg-muted text-muted-foreground hover:bg-muted/80",
-            )}
-          >
-            {showInactive ? "Ocultar inactivos" : "Incluir inactivos/históricos"}
-          </button>
-        </div>
-      )}
-
-      {/* S2: Placeholder / system / external visibility toggle + count */}
-      {(placeholderHiddenCount > 0 || showPlaceholders) && (
+      {/* Acción administrativa explícita: revelar población no asignable. */}
+      {(nonAssignableHiddenCount > 0 || showNonAssignable) && (
         <div className="flex items-center justify-between gap-2 px-0.5 py-1 rounded-md bg-muted/30 border border-border/30">
           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <ShieldAlert className="h-3 w-3" />
-            {showPlaceholders ? (
+            {showNonAssignable ? (
               <span>
-                Mostrando placeholders / emergency / unresolved.{" "}
-                <span className="text-warning font-semibold">Identidad no verificada — no asignar a payroll sin resolver.</span>
+                Mostrando no asignables al final.{" "}
+                <span className="text-warning font-semibold">No disponibles para staffing normal.</span>
               </span>
             ) : (
               <span>
-                Placeholders / emergency / unresolved ocultos:{" "}
-                <span className="font-semibold text-foreground">{placeholderHiddenCount}</span>
+                No asignables ocultos: <span className="font-semibold text-foreground">{nonAssignableHiddenCount}</span>
+                {nonAssignableBreakdown.length > 0 && (
+                  <span className="opacity-70"> · {nonAssignableBreakdown.join(" · ")}</span>
+                )}
               </span>
             )}
           </div>
           <button
             type="button"
-            onClick={() => setShowPlaceholders(v => !v)}
+            onClick={() => setShowNonAssignable(v => !v)}
             className={cn(
               "text-[9px] font-bold px-2 py-0.5 rounded-full transition-all shrink-0",
-              showPlaceholders
+              showNonAssignable
                 ? "bg-warning/15 text-warning hover:bg-warning/25"
                 : "bg-muted text-muted-foreground hover:bg-muted/80",
             )}
           >
-            {showPlaceholders ? "Ocultar" : "Mostrar unresolved / emergency"}
+            {showNonAssignable ? "Ocultar no asignables" : "Mostrar no asignables"}
           </button>
         </div>
       )}
-
-
 
       {debugMode && debugContext && (
         <details className="rounded-lg bg-muted/40 border border-border/40 text-[10px] font-mono text-muted-foreground">
@@ -535,11 +499,8 @@ export function EmployeeCombobox({
       <div className="flex items-center justify-between text-[9px] text-muted-foreground px-0.5">
         <span>
           {filtered.length} {filtered.length === 1 ? "trabajador" : "trabajadores"}
-          {!showInactive && inactiveHiddenCount > 0 && (
-            <span className="opacity-70"> · {inactiveHiddenCount} inactivos ocultos</span>
-          )}
-          {!showPlaceholders && placeholderHiddenCount > 0 && (
-            <span className="opacity-70"> · {placeholderHiddenCount} placeholders ocultos</span>
+          {!showNonAssignable && nonAssignableHiddenCount > 0 && (
+            <span className="opacity-70"> · {nonAssignableHiddenCount} no asignables ocultos</span>
           )}
         </span>
         {selected.length > 0 && (
@@ -765,7 +726,7 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
                   ready: { label: `Disponibles · ${readyCount}`, color: "text-earning", icon: <UserCheck className="h-2.5 w-2.5" /> },
                   warning: { label: "Con conflicto", color: "text-warning", icon: <AlertTriangle className="h-2.5 w-2.5" /> },
                   blocked: { label: "No disponibles", color: "text-destructive", icon: <CalendarOff className="h-2.5 w-2.5" /> },
-                  inactive: { label: "Inactivos / históricos — no disponibles para asignación normal", color: "text-muted-foreground", icon: <PauseCircle className="h-2.5 w-2.5" /> },
+                  inactive: { label: "No asignables — pendientes, históricos, placeholders e inactivos", color: "text-muted-foreground", icon: <PauseCircle className="h-2.5 w-2.5" /> },
                 };
                 const g = labels[item.group];
                 return (
