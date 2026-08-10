@@ -541,7 +541,7 @@ export function ProfileSummaryGrid({
             className="h-7 text-[11px] gap-1"
             onClick={() => onOpenTab("access")}
           >
-            <KeyRound className="h-3 w-3" /> {hasPin ? "Resetear PIN" : "Generar PIN"}
+            <KeyRound className="h-3 w-3" /> {hasPin ? "Gestionar PIN" : "Generar PIN"}
           </Button>
         </div>
       </SectionCard>
@@ -609,7 +609,7 @@ export function ProfileSummaryGrid({
               size="sm"
               variant="ghost"
               className="h-7 text-[11px] gap-1"
-              onClick={() => onOpenTab("log")}
+              onClick={() => onOpenTab("activity")}
             >
               Log completo <ExternalLink className="h-3 w-3" />
             </Button>
