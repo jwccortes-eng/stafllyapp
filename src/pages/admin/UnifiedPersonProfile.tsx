@@ -1275,6 +1275,7 @@ export default function UnifiedPersonProfile() {
             </Card>
           </CollapsibleContent>
         </Collapsible>
+        </div>
       )}
 
       {/* ─── RECENT SHIFTS ─── */}
