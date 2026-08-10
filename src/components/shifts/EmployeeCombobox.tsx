@@ -187,8 +187,8 @@ export function EmployeeCombobox({
       list = list.filter((e) => matchScoreById.has(e.id));
     }
     if (quickFilter === "available") list = list.filter(e => getGroup(e) === "ready");
-    else if (quickFilter === "drivers") list = list.filter(e => isDriver(e) && e.is_active !== false);
-    else if (quickFilter === "incomplete") list = list.filter(e => e.is_active !== false && isProfileIncomplete(e));
+    else if (quickFilter === "drivers") list = list.filter(e => isDriver(e) && isAssignableWorker(e));
+    else if (quickFilter === "incomplete") list = list.filter(e => isAssignableWorker(e) && isProfileIncomplete(e));
     else if (quickFilter === "no-conflict") list = list.filter(e => !conflictMap.has(e.id));
     // S1: por defecto ocultar inactivos/históricos, salvo que ya estén asignados
     // (visualización de histórico) o el toggle esté activo.

@@ -22,6 +22,7 @@
  *  - Worker portal unaffected. Desktop unaffected. Payroll/RLS untouched.
  */
 
+import { isAssignableWorker } from "@/lib/shifts/assignable-workers";
 import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { createContext, memo, useContext, useEffect, useMemo, useState } from "react";
 import {
@@ -1432,7 +1433,7 @@ function RecommendedTab({
   // Build the eligible base list (active + not already assigned + not hard-blocked).
   const eligible = useMemo(() => {
     return employees
-      .filter(e => e.is_active !== false)
+      .filter(e => isAssignableWorker(e))
       .filter(e => !takenIds.has(e.id))
       .map(e => ({ e, r: readinessFor(e, statusMap) }))
       .filter(x => x.r.state !== "inactive" && x.r.state !== "needs_review");
