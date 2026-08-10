@@ -299,14 +299,106 @@ export default function Clients() {
     return { active, archived, withEmail, withPhone };
   }, [clients]);
 
+  /* ── P0 Operational First Layout — piezas de la jerarquía canónica ── */
+  const searchField = tab !== "duplicates" ? (
+    <div className="relative w-full">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+      <Input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Buscar cliente, código o contacto…"
+        className="pl-9 h-8 text-xs"
+      />
+    </div>
+  ) : undefined;
+
+  const metricChips: WorkspaceMetric[] = (!directory.isLoading && directory.clients.length > 0)
+    ? [
+        { label: "activos", value: directory.matrix.active, tone: "primary" as const },
+        { label: "sin contacto", value: directory.matrix.withoutContact, tone: directory.matrix.withoutContact > 0 ? ("warning" as const) : undefined },
+        { label: "sin lugar", value: directory.matrix.withoutVenue },
+        { label: "posibles duplicados", value: directory.duplicatePairs.length, tone: directory.duplicatePairs.length > 0 ? ("warning" as const) : undefined },
+      ]
+    : [];
+
+  const tabsNode = (
+    <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+      <TabsList className="h-8">
+        <TabsTrigger value="active" className="text-xs">Activos ({directory.matrix.active})</TabsTrigger>
+        <TabsTrigger value="inactive" className="text-xs">
+          Inactivos ({directory.matrix.inactive + directory.matrix.archived})
+        </TabsTrigger>
+        <TabsTrigger value="duplicates" className="text-xs">Duplicados ({directory.duplicatePairs.length})</TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+
+  const filtersNode = tab !== "duplicates" ? (
+    <div className="flex items-center gap-2 flex-wrap">
+      {search && (
+        <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground/60 px-2" onClick={() => setSearch("")}>
+          <X className="h-3 w-3 mr-1" /> Limpiar
+        </Button>
+      )}
+      <div className="flex items-center rounded-lg border border-border/30 overflow-hidden">
+        <button
+          className={cn("h-8 w-8 flex items-center justify-center transition-colors",
+            viewMode === "grid" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50")}
+          onClick={() => setViewMode("grid")}
+        >
+          <LayoutGrid className="h-3.5 w-3.5" />
+        </button>
+        <button
+          className={cn("h-8 w-8 flex items-center justify-center transition-colors",
+            viewMode === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50")}
+          onClick={() => setViewMode("list")}
+        >
+          <List className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {canEdit && (
+        <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setQuickCreateOpen(true)}>
+          <Plus className="h-3.5 w-3.5 mr-1.5" /> Crear rápido
+        </Button>
+      )}
+      <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleExport} disabled={visibleTruths.length === 0}>
+        <Download className="h-3.5 w-3.5 mr-1.5" /> Exportar
+      </Button>
+      <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+        {visibleTruths.length} visible{visibleTruths.length !== 1 ? "s" : ""}
+      </span>
+    </div>
+  ) : undefined;
+
+  const adminNode = visibleTruths.length > 0 ? (
+    <ReportActionsBar
+      title="Clientes"
+      subtitle={`${visibleTruths.length} cliente${visibleTruths.length !== 1 ? "s" : ""}`}
+      onExportCSV={() => {
+        const headers = ["Código", "Nombre", "Estado", "Contacto", "Teléfono", "Email", "Lugares", "Servicios", "Connecteam"];
+        const rows = visibleTruths.map(t => [
+          t.humanReference, t.canonicalName,
+          t.lifecycle === "active" ? "Activo" : t.lifecycle === "inactive" ? "Inactivo" : "Archivado",
+          t.primaryContact?.name ?? "", t.primaryContact?.phone ?? "", t.primaryContact?.email ?? "",
+          String(t.venues.length), String(t.serviceCount),
+          t.connecteamMappingStatus === "configured" ? "Configurado" : "Falta mapping",
+        ]);
+        return [headers, ...rows];
+      }}
+    />
+  ) : undefined;
+
   return (
-    <div>
-      <PageHeader
-        variant="1"
-        icon={Building2}
-        title="Clientes"
-        subtitle={`${filtered.length} cliente${filtered.length !== 1 ? "s" : ""}`}
-        rightSlot={canEdit ? (
+    <OperationalWorkspace
+      title="Clientes"
+      search={searchField}
+      metrics={metricChips}
+      tabs={tabsNode}
+      filters={filtersNode}
+      admin={adminNode}
+      adminHint="Exportación y calidad del directorio"
+      action={canEdit ? (
+
           <Dialog open={formOpen} onOpenChange={(o) => { setFormOpen(o); if (!o) resetForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Nuevo cliente</Button>
