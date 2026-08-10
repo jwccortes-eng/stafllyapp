@@ -17,6 +17,8 @@ import {
   type CalendarServiceIdentity,
   type CalendarShiftLike,
 } from "./calendar-service-identity";
+import { getServicePreparation, type ServicePreparation } from "./service-preparation";
+
 
 
 export type ServiceAccent = "positive" | "warning" | "draft" | "critical" | "neutral";
