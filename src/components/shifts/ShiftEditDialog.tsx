@@ -304,9 +304,14 @@ export function ShiftEditDialog({
       form.jobSiteLocationId, form.jobSiteAddress, form.transportRequired,
       form.meetingPoint, form.meetingPointLocationId, form.claimable, form.title,
       signals.slotsNum, signals.assignedCount, signals.readiness.blockers.length,
-      publicationStatus, daysUntil, shift.id, signals.clientName,
+      publicationStatus, daysUntil, shift?.id, signals.clientName,
     ],
   );
+
+  // ── Early-returns: después de TODOS los hooks ──
+  if (!shift) return null;
+  if (shift.status === "locked") return null;
+
 
   const statusTone =
     publicationStatus === "published"
