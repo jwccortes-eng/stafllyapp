@@ -18,6 +18,8 @@ import { syncShiftDriverRoles, driverIdsFromAssignments } from "@/lib/shifts/dri
 import { notifyWarning } from "@/lib/feedback/notify";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { createClientCanonical } from "@/lib/clients/create-client";
+import { QuickCreateClientDialog } from "@/components/clients/QuickCreateClientDialog";
 import type { Shift, SelectOption, Employee, Assignment } from "./types";
 
 interface ShiftEditDialogProps {
