@@ -111,11 +111,13 @@ function ServiceEventCardImpl({
     density === "month" ? (
       <button type="button" onClick={onOpen} style={identityStyle} className={cn(base, "px-1.5 py-[3px]")} {...dnd}>
         <span className="flex items-center gap-1 min-w-0">
+          <PreparationDot preparation={model.preparation} />
           {model.isDraft && <FileEdit className="h-2.5 w-2.5 shrink-0 text-primary" />}
           <span className="truncate text-[10px] font-semibold uppercase leading-tight text-foreground/90">
             {model.primaryLabel}
           </span>
         </span>
+
         <span className="mt-[1px] flex items-center gap-1 min-w-0">
           {model.isDraft && (
             <span className="shrink-0 rounded-sm bg-primary/15 px-1 text-[8px] font-bold tracking-wide text-primary">
