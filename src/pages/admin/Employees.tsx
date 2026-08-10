@@ -1129,28 +1129,16 @@ export default function Employees() {
         />
       )}
       {!isMobile && (<>
-      {/* ─── Premium Header + KPI strip ─── */}
-      <PremiumPageHeader
+      {/* ─── P0 Operational First Layout — cabecera compacta + tabs sticky ─── */}
+      <OperationalWorkspace
         title="Equipo"
-        icon={Users}
-        subtitle={
-          <span className="inline-flex flex-col gap-1">
-            <span className="inline-flex items-center gap-2 flex-wrap">
-              <span>Identidad, disponibilidad y quién está listo para operar.</span>
-              {selectedCompany && (
-                <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
-                  <Building2 className="h-3 w-3" />
-                  <span className="font-semibold text-foreground">{selectedCompany.name}</span>
-                </span>
-              )}
-            </span>
-            <span className="text-[10px] text-muted-foreground/80">
-              El ID de Stafly conecta perfil, turnos y pago.
-            </span>
-          </span>
-        }
-        kpis={kpis}
-        rightSlot={
+        metrics={workspaceMetrics}
+        tabs={statusTabsNode}
+        filters={filtersNode}
+        admin={adminPanelNode}
+        adminHint="Calidad de datos, duplicados y riesgos"
+        action={
+
           <>
             {/* Mobile keeps only Quick add to avoid header overflow */}
             <div className="hidden md:contents">
