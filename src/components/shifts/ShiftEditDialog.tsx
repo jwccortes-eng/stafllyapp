@@ -209,12 +209,14 @@ export function ShiftEditDialog({
 
   const hasAcceptedAssignments = shiftAssignedIds.length > 0;
 
-  if (!shift) return null;
-  if (shift.status === "locked") return null;
+  // NOTE: los early-returns viven DESPUÉS de todos los hooks (reglas de React).
+
 
   const handleSave = async () => {
+    if (!shift) return;
     if (saving) return; // double-tap guard — never allows a second UPDATE
     if (!form.date) return;
+
     // Time sanity: block only the impossible case (identical start/end).
     // Overnight shifts (end < start) stay allowed — they are legitimate.
     if (form.startTime && form.endTime && form.startTime === form.endTime) {
@@ -281,8 +283,9 @@ export function ShiftEditDialog({
         assignedCount: signals.assignedCount,
         claimable: form.claimable,
         publicationStatus,
-        shiftId: shift.id,
-        serviceRef: (shift as any).shift_ref ?? null,
+        shiftId: shift?.id ?? "",
+        serviceRef: (shift as any)?.shift_ref ?? null,
+
         clientName: signals.clientName,
         infoComplete: Boolean(form.title.trim()) && signals.readiness.blockers.length === 0,
         daysUntil,
@@ -301,9 +304,14 @@ export function ShiftEditDialog({
       form.jobSiteLocationId, form.jobSiteAddress, form.transportRequired,
       form.meetingPoint, form.meetingPointLocationId, form.claimable, form.title,
       signals.slotsNum, signals.assignedCount, signals.readiness.blockers.length,
-      publicationStatus, daysUntil, shift.id, signals.clientName,
+      publicationStatus, daysUntil, shift?.id, signals.clientName,
     ],
   );
+
+  // ── Early-returns: después de TODOS los hooks ──
+  if (!shift) return null;
+  if (shift.status === "locked") return null;
+
 
   const statusTone =
     publicationStatus === "published"

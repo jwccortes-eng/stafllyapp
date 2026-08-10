@@ -37,6 +37,10 @@ interface ShiftSnapshot {
   company_id: string;
   job_site_location_id: string | null;
   meeting_point_location_id: string | null;
+  location_id: string | null;
+  job_site_address: string | null;
+  transportation_required: boolean | null;
+  locations: { name: string | null; address: string | null; latitude: number | null; longitude: number | null } | null;
 }
 
 export function useShiftLiveMap({ shiftId, companyId, enabled = true }: Options) {
@@ -63,7 +67,9 @@ export function useShiftLiveMap({ shiftId, companyId, enabled = true }: Options)
     (async () => {
       const { data: shiftRow } = await supabase
         .from("scheduled_shifts")
-        .select("id, company_id, job_site_location_id, meeting_point_location_id")
+        .select(
+          "id, company_id, job_site_location_id, meeting_point_location_id, location_id, job_site_address, transportation_required, locations (name, address, latitude, longitude)",
+        )
         .eq("id", shiftId)
         .maybeSingle();
 
@@ -98,8 +104,33 @@ export function useShiftLiveMap({ shiftId, companyId, enabled = true }: Options)
         snapshot?.meeting_point_location_id ? fetchLocationById(snapshot.meeting_point_location_id) : Promise.resolve(null),
       ]);
       if (!alive) return;
-      setJobSite(js);
-      setMeetingPoint(mp);
+      // Misma fuente de verdad que el portal: si no hay locations_v2, el venue
+      // legado (o la dirección libre) sigue siendo la ubicación del Servicio.
+      const legacy = snapshot?.locations ?? null;
+      const jobSiteResolved: LocationV2 | null =
+        js ??
+        (snapshot?.location_id && legacy
+          ? ({
+              id: snapshot.location_id,
+              name: legacy.name,
+              formatted_address: legacy.address,
+              latitude: legacy.latitude,
+              longitude: legacy.longitude,
+              geofence_radius_meters: null,
+            } as unknown as LocationV2)
+          : snapshot?.job_site_address
+            ? ({
+                id: `free-text:${snapshot.id}`,
+                name: null,
+                formatted_address: snapshot.job_site_address,
+                latitude: null,
+                longitude: null,
+                geofence_radius_meters: null,
+              } as unknown as LocationV2)
+            : null);
+      setJobSite(jobSiteResolved);
+      // Sin transporte no existe punto de encuentro operativo.
+      setMeetingPoint(snapshot?.transportation_required ? mp : null);
       setLoading(false);
     })();
 

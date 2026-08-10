@@ -20,6 +20,7 @@ import { format, parseISO, isToday, isTomorrow, isBefore, startOfDay } from "dat
 import { enUS, es } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { resolveServiceLocation, formatPlaceLine } from "@/lib/shifts/service-location";
 
 type AvailabilityState =
   | "loading"
@@ -47,6 +48,8 @@ interface ShiftDetail {
   shift_code: string | null;
   shift_ref: string | null;
   location: { name: string; address?: string | null } | null;
+  /** Modelo canónico de ubicación (destino + encuentro). */
+  place: ReturnType<typeof resolveServiceLocation>;
   client: { name: string } | null;
   assignedCount: number;
 }
@@ -68,7 +71,8 @@ export default function PortalShiftDetail() {
       .from("scheduled_shifts")
       .select(`id, title, date, start_time, end_time, notes, meeting_point, meeting_time, special_instructions,
                slots, claimable, status, shift_code, shift_ref, deleted_at, publication_status,
-               locations (name, address), clients (name),
+               job_site_address, job_site_location_id, location_id, meeting_point_location_id, transportation_required,
+               locations (name, address, latitude, longitude), clients (name),
                shift_assignments (id, employee_id, status, is_draft_reservation)`)
       .eq("id", shiftId)
       .maybeSingle();
@@ -110,6 +114,15 @@ export default function PortalShiftDetail() {
       shift_code: (s as any).shift_code ?? null,
       shift_ref: (s as any).shift_ref ?? null,
       location: (s as any).locations ?? null,
+      place: resolveServiceLocation({
+        location_id: (s as any).location_id ?? null,
+        job_site_location_id: (s as any).job_site_location_id ?? null,
+        job_site_address: (s as any).job_site_address ?? null,
+        meeting_point: (s as any).meeting_point ?? null,
+        meeting_point_location_id: (s as any).meeting_point_location_id ?? null,
+        transportation_required: (s as any).transportation_required ?? false,
+        legacyVenue: (s as any).locations ?? null,
+      }),
       client: (s as any).clients ?? null,
       assignedCount: activeAssignments.length,
     };
@@ -264,15 +277,15 @@ export default function PortalShiftDetail() {
             <Row
               icon={<MapPin className="h-3.5 w-3.5" />}
               label="Dónde"
-              value={shift.location?.name ?? "Por confirmar"}
-              muted={!shift.location?.name}
+              value={formatPlaceLine(shift.place.destination) ?? "Por confirmar"}
+              muted={!shift.place.destination}
             />
-            {shift.meeting_point ? (
+            {shift.place.requiresMeetingPoint && shift.place.meetingPoint ? (
               <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-primary/[0.05] border border-primary/10">
                 <Navigation className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-primary/70">Punto de encuentro</p>
-                  <p className="text-[12px] text-foreground font-medium leading-snug">{shift.meeting_point}</p>
+                  <p className="text-[12px] text-foreground font-medium leading-snug">{formatPlaceLine(shift.place.meetingPoint)}</p>
                 </div>
                 {shift.meeting_time && (
                   <div className="shrink-0 text-right">
@@ -283,7 +296,7 @@ export default function PortalShiftDetail() {
                   </div>
                 )}
               </div>
-            ) : (
+            ) : shift.place.requiresMeetingPoint ? (
               <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-muted/20 border border-dashed border-border/40">
                 <Navigation className="h-3.5 w-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -291,7 +304,7 @@ export default function PortalShiftDetail() {
                   <p className="text-[12px] italic text-muted-foreground/70 leading-snug">Por confirmar</p>
                 </div>
               </div>
-            )}
+            ) : null}
             {shift.notes && (
               <div className="rounded-xl bg-muted/30 border border-border/30 p-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-1">Notas</p>
