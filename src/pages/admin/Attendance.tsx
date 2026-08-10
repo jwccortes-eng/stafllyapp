@@ -504,17 +504,77 @@ export default function Attendance() {
   }, [reportData]);
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto">
-      <PageHeader
-        title="Asistencia"
-        subtitle="Monitorea fichajes, llegadas tarde, ausencias y cierre diario."
-        icon={ScanEye}
-        variant="1"
-      />
-      <p className="text-[11px] text-muted-foreground -mt-3">
-        Las horas programadas son referencia operativa. Payroll se calcula con fichajes reales o validaciones aprobadas.
-      </p>
-
+    <OperationalWorkspace
+      title="Asistencia"
+      className="max-w-[1400px] mx-auto"
+      search={
+        tab === "live" ? (
+          <WorkspaceSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Buscar trabajador o servicio…"
+          />
+        ) : undefined
+      }
+      action={
+        tab === "live" ? (
+          <div className="w-[150px]">
+            <SmartDateInput
+              value={format(selectedDate, "yyyy-MM-dd")}
+              onChange={(iso) => {
+                if (!iso) return;
+                const [y, m, d] = iso.split("-").map(Number);
+                setSelectedDate(new Date(y, m - 1, d));
+              }}
+              allowClear={false}
+              inputClassName="h-8 text-xs"
+              aria-label="Filtrar por fecha"
+            />
+          </div>
+        ) : undefined
+      }
+      tabs={
+        <WorkspaceTabs
+          items={[
+            { key: "live", label: "En vivo" },
+            { key: "reports", label: "Reportes" },
+          ]}
+          value={tab}
+          onChange={(k) => setTab(k)}
+          ariaLabel="Vista de asistencia"
+        />
+      }
+      metrics={
+        tab === "live"
+          ? [
+              {
+                label: "Faltan por fichar",
+                value: Math.max(kpis.total - kpis.checkedIn - kpis.completed - kpis.noShow, 0),
+                tone: "primary" as const,
+                onClick: () => setStatusFilter("scheduled"),
+                active: statusFilter === "scheduled",
+              },
+              {
+                label: "Tarde",
+                value: kpis.late,
+                tone: "warning" as const,
+                onClick: () => setStatusFilter("late"),
+                active: statusFilter === "late",
+              },
+              {
+                label: "No-show",
+                value: kpis.noShow,
+                tone: "critical" as const,
+                onClick: () => setStatusFilter("no-show"),
+                active: statusFilter === "no-show",
+              },
+              ...(statusFilter !== "all"
+                ? [{ label: "Ver todos", value: kpis.total, onClick: () => setStatusFilter("all") }]
+                : []),
+            ]
+          : undefined
+      }
+    >
       <OpsFilterBanner
         active={opsFilterActive}
         label={opsFilterLabel}
@@ -525,7 +585,7 @@ export default function Attendance() {
         <div
           role="status"
           className={cn(
-            "rounded-xl border px-3.5 py-2.5 text-xs flex items-start gap-2",
+            "rounded-xl border px-3.5 py-2.5 text-xs flex items-start gap-2 mb-3",
             entryPresent || employeePresent || (!focusEntryId && !focusEmployeeId && !isViewingToday)
               ? "border-primary/40 bg-primary/5 text-primary"
               : (focusEntryId && !entryPresent) || (focusEmployeeId && !employeePresent)
@@ -547,10 +607,7 @@ export default function Attendance() {
             <div className="text-[11px] opacity-80 truncate">
               Día <span className="font-mono">{dateStrView}</span>
               {!isViewingToday && <> · {REVIEW_COPY.viewingHistoricalDay.toLowerCase()}</>}
-              {focusEmployeeId && <> · empleado <code className="font-mono">{focusEmployeeId.slice(0, 8)}</code></>}
-              {focusEntryId && <> · entry <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
             </div>
-            <div className="text-[10px] opacity-70 mt-0.5">{REVIEW_COPY.readOnlyNote}</div>
           </div>
           {!isViewingToday && (
             <Button variant="ghost" size="sm" className="h-7 text-[11px] px-2 shrink-0" onClick={clearDateFocus}>
@@ -560,23 +617,10 @@ export default function Attendance() {
         </div>
       )}
 
-
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="live">En vivo</TabsTrigger>
-          <TabsTrigger value="reports">Reportes</TabsTrigger>
-        </TabsList>
-
         {/* ─── Live Tab ─── */}
-        <TabsContent value="live" className="space-y-5 mt-4">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <KpiCard value={kpis.total} label="Programados hoy" icon={<Users className="h-4 w-4 text-primary" />} accent="primary" />
-            <KpiCard value={kpis.checkedIn} label="Fichados" icon={<CheckCircle2 className="h-4 w-4 text-[hsl(var(--status-confirmed))]" />} accent="earning" />
-            <KpiCard value={kpis.late} label="Tarde" icon={<AlertTriangle className="h-4 w-4 text-[hsl(var(--warning))]" />} accent="warning" />
-            <KpiCard value={kpis.completed} label="Completados" icon={<CheckCircle2 className="h-4 w-4 text-primary" />} accent="primary" />
-            <KpiCard value={kpis.noShow} label="No-show" icon={<XCircle className="h-4 w-4 text-[hsl(var(--destructive))]" />} accent="deduction" />
-          </div>
+        <TabsContent value="live" className="space-y-4 mt-0">
+
 
           {/* Alerts banner */}
           {(alerts?.length ?? 0) > 0 && (
