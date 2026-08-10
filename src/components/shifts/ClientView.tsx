@@ -5,7 +5,7 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { formatDisplayText } from "@/lib/format-helpers";
-import { getClientColor } from "./types";
+
 import { buildServiceEventModel } from "@/lib/shifts/service-event-model";
 import { ServiceEventCard } from "./calendar/ServiceEventCard";
 import { EntityRow, ClientAvatar } from "@/components/entities";
@@ -64,7 +64,6 @@ export function ClientView({ clients, shifts, assignments, locations, employees 
       )}
 
       {clientGroups.map(({ client, shifts: cShifts }) => {
-        const color = getClientColor(client.id, clientIds);
         return (
           <div key={client.id} className="rounded-2xl border border-border/20 bg-card/50 p-4">
             <div className="mb-3 w-full max-w-[280px]">
