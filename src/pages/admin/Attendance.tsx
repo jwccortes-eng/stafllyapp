@@ -853,6 +853,7 @@ export default function Attendance() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </OperationalWorkspace>
+
   );
 }
