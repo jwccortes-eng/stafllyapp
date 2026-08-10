@@ -207,8 +207,44 @@ function MonthViewImpl({
               })}
             </div>
           ))}
-        </div>
       </div>
+
+      {/* Mobile: día → cantidad de Servicios → tarjetas compactas. Sin scroll horizontal. */}
+      <div className="md:hidden space-y-3">
+        {days.filter(day => isSameMonth(day, currentMonth) && (modelsByDay.get(format(day, "yyyy-MM-dd")) ?? []).length > 0).length === 0 && (
+          <p className="text-sm text-muted-foreground/50 text-center py-10">No hay servicios este mes</p>
+        )}
+        {days
+          .filter(day => isSameMonth(day, currentMonth))
+          .map(day => {
+            const dayKey = format(day, "yyyy-MM-dd");
+            const dayServices = modelsByDay.get(dayKey) ?? [];
+            if (dayServices.length === 0) return null;
+            const dateLabel = format(day, "EEEE d 'de' MMMM", { locale: es });
+            const isToday = isSameDay(day, new Date());
+            return (
+              <div key={dayKey} className={cn("rounded-xl border border-border/25 p-3 space-y-1.5", isToday && "border-primary/30 bg-primary/[0.03]")}>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold capitalize">{dateLabel}</p>
+                  <span className="text-[10px] text-muted-foreground">
+                    {dayServices.length} servicio{dayServices.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                {dayServices.map(({ shift, model }) => (
+                  <ServiceEventCard
+                    key={`m-${shift.id}`}
+                    model={model}
+                    density="list"
+                    dateLabel={dateLabel}
+                    onOpen={() => onShiftClick(shift)}
+                  />
+                ))}
+              </div>
+            );
+          })}
+      </div>
+    </div>
+
     </div>
   );
 }
