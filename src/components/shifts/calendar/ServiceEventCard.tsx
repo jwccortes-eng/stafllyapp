@@ -216,6 +216,17 @@ function ServiceEventCardImpl({
               </>
             )}
           </p>
+          <ServicePreparationMeter preparation={model.preparation} />
+          {model.preparation.nextAction && (
+            <p className="flex items-start gap-1 text-[11px]">
+              <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+              <span>
+                <span className="font-semibold">{model.preparation.nextAction.label}</span> —{" "}
+                {model.preparation.nextAction.hint}
+              </span>
+            </p>
+          )}
+
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
