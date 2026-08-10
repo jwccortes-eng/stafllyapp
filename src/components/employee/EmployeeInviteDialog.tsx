@@ -11,6 +11,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { isInviteStatusFailure, isInviteStatusInFlight, mapEmailLogStatusToInviteStatus, type InviteDeliveryStatus } from "@/lib/invitation-status";
+import { resolvePortalStatus } from "@/lib/portal/portal-status";
 import { humanizeInvitationError, type HumanInvitationError } from "@/lib/invitation-error-messages";
 import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
