@@ -135,6 +135,24 @@ export default function UnifiedPersonProfile() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const deepTabsRef = useRef<HTMLDivElement | null>(null);
 
+  /**
+   * Single canonical entry point for every "go to tab X" CTA in this page.
+   * Opens the collapsed deep-tabs panel, normalizes legacy tab ids and scrolls
+   * to the panel. Without this, card CTAs silently did nothing.
+   */
+  const TAB_ALIASES: Record<string, string> = { log: "activity", activity_log: "activity" };
+  const openDeepTab = (tab: string, opts?: { edit?: boolean }) => {
+    const target = TAB_ALIASES[tab] ?? tab;
+    setActiveTab(target);
+    setDetailsOpen(true);
+    if (opts?.edit) setIsEditing(true);
+    requestAnimationFrame(() => {
+      deepTabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+
+
   // Snapshot data
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [recentShifts, setRecentShifts] = useState<any[]>([]);
