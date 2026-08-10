@@ -727,7 +727,7 @@ function DesktopShifts() {
   const refreshDictionaries = useCallback(async () => {
     if (!selectedCompanyId) return;
     const [clientsRes, locsRes] = await Promise.all([
-      supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
+      supabase.from("clients").select("id, name, client_code, status").eq("company_id", selectedCompanyId).is("deleted_at", null),
       supabase.from("locations").select("id, name, address, client_id, default_pay_type, default_clock_method, require_car, default_instructions").eq("company_id", selectedCompanyId).is("deleted_at", null),
     ]);
     setClients((clientsRes.data ?? []) as SelectOption[]);
