@@ -179,35 +179,49 @@ function WorkspaceSummaryImpl(p: Props) {
       {/* 3) Publicar ≠ Exportar a Connecteam */}
       {!p.copilot && <ServiceReadinessCard lifecycle={operational} />}
 
-      {/* 4) Existing ops summary (unchanged) */}
-      <ShiftSummaryPanel
-        mode={p.mode}
-        title={p.title}
-        clientName={p.clientName}
-        date={p.date}
-        startTime={p.startTime}
-        endTime={p.endTime}
-        slotsNum={p.slotsNum}
-        assignedCount={p.assignedCount}
-        ridesNeeded={p.ridesNeeded}
-        transportRequired={p.transportRequired}
-        driversInTeam={p.driversInTeam}
-        jobSiteLabel={p.jobSiteLabel}
-        meetingPointLabel={p.meetingPointLabel}
-        dateMissing={p.dateMissing}
-        adminMissing={p.adminMissing}
-        adminInvalid={p.adminInvalid}
-        noLocation={p.noLocation}
-        noTeam={p.noTeam}
-        driverMissing={p.driverMissing}
-        driversShortage={p.driversShortage}
-        capacityShortage={p.capacityShortage}
-        hasConflicts={p.hasConflicts}
-        conflictNames={p.conflictNames}
-        payOverrideActive={p.payOverrideActive}
-        payTypeLabel={p.payTypeLabel}
-        publishBlockers={blockers}
-      />
+      {/* 4) Detalle operativo — con copiloto vive plegado: cero mensajes duplicados. */}
+      {(() => {
+        const panel = (
+          <ShiftSummaryPanel
+            mode={p.mode}
+            title={p.title}
+            clientName={p.clientName}
+            date={p.date}
+            startTime={p.startTime}
+            endTime={p.endTime}
+            slotsNum={p.slotsNum}
+            assignedCount={p.assignedCount}
+            ridesNeeded={p.ridesNeeded}
+            transportRequired={p.transportRequired}
+            driversInTeam={p.driversInTeam}
+            jobSiteLabel={p.jobSiteLabel}
+            meetingPointLabel={p.meetingPointLabel}
+            dateMissing={p.dateMissing}
+            adminMissing={p.adminMissing}
+            adminInvalid={p.adminInvalid}
+            noLocation={p.noLocation}
+            noTeam={p.noTeam}
+            driverMissing={p.driverMissing}
+            driversShortage={p.driversShortage}
+            capacityShortage={p.capacityShortage}
+            hasConflicts={p.hasConflicts}
+            conflictNames={p.conflictNames}
+            payOverrideActive={p.payOverrideActive}
+            payTypeLabel={p.payTypeLabel}
+            publishBlockers={blockers}
+          />
+        );
+        if (!p.copilot) return panel;
+        return (
+          <details className="group rounded-2xl border border-border/40 bg-card">
+            <summary className="cursor-pointer list-none px-3.5 py-2 text-[11px] font-semibold text-muted-foreground hover:text-foreground">
+              Ver detalle operativo
+            </summary>
+            <div className="px-1 pb-1">{panel}</div>
+          </details>
+        );
+      })()}
+
 
 
       {/* 4) Worker preview */}
