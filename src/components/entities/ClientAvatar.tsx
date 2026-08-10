@@ -12,6 +12,8 @@ import { memo } from "react";
 import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { entityInitials } from "@/lib/entities/entity-identity";
+import { clientAccentColor, clientAccentSoft } from "@/lib/clients/client-accent";
+
 
 export type ClientAvatarSize = "xs" | "sm" | "md" | "lg";
 
