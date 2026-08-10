@@ -1,13 +1,14 @@
 /**
- * P0 — WORKER IDENTITY QUALITY / PASSPORT PHASE 1
- * Read model de calidad de identidad. SOLO LECTURA.
+ * P0 — WORKER IDENTITY QUALITY / PASSPORT PHASE 1-2
+ * Read model de calidad de identidad.
  *
- * Lee empleados, conteos de asignaciones, existencia de horas y documentos, y
- * proyecta grupos de identidad + auditoría de asignaciones. No escribe nada,
- * no fusiona, no reasigna, no toca payroll, horas, documentos ni auth.
+ * Lee empleados, asignaciones, horas, documentos, nómina, disponibilidad y
+ * evaluaciones, y proyecta grupos de identidad, evidencia y auditoría de
+ * asignaciones. La única escritura posible es el registro de la DECISIÓN de
+ * revisión: no fusiona, no reasigna, no toca payroll, horas, documentos ni auth.
  */
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { classifyWorkerAssignability } from "@/lib/shifts/assignable-workers";
@@ -17,10 +18,26 @@ import {
   type IdentityGroup,
   type IdentityRecord,
 } from "@/lib/identity/person-truth";
+import type { RecordEvidence } from "@/lib/identity/merge-plan";
 import {
   auditAssignmentIdentity,
   type AssignmentAuditRow,
 } from "@/lib/identity/assignment-risk";
+
+/** Decisiones humanas posibles. Ninguna ejecuta una fusión. */
+export type IdentityReviewDecision =
+  | "not_duplicate"
+  | "consolidation_prepared"
+  | "assignment_reviewed"
+  | "deferred";
+
+export const IDENTITY_DECISION_LABELS: Record<IdentityReviewDecision, string> = {
+  not_duplicate: "Personas distintas",
+  consolidation_prepared: "Consolidación preparada",
+  assignment_reviewed: "Asignación revisada",
+  deferred: "Pospuesto",
+};
+
 
 const EMPLOYEE_COLUMNS =
   "id, company_id, first_name, last_name, preferred_name, phone_number, email, connecteam_employee_id, employer_identification, user_id, is_active, employee_role, added_via, worker_type, identity_status, requires_identity_resolution, payroll_approval_blocked, onboarding_status, created_at, updated_at";
