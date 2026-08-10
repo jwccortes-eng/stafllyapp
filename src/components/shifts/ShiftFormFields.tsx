@@ -158,6 +158,8 @@ export interface ShiftFormFieldsProps {
   copilotStages?: {
     tiempo?: React.ReactNode;
     historial?: React.ReactNode;
+    /** Staffing inteligente: resuelve "Asignar N personas" sin salir del Servicio. */
+    staffing?: React.ReactNode;
   };
 }
 
@@ -506,6 +508,7 @@ export function ShiftFormFields({
 
   const teamNode = (
     <TeamSection
+      hideAssignHint={Boolean(copilotStages?.staffing)}
       mode={mode}
       showEmployeePicker={showEmployeePicker}
       allowClaims={allowClaims}
@@ -652,6 +655,7 @@ export function ShiftFormFields({
             ),
             equipo: (
               <div id={SERVICE_TEAM_ANCHOR} className="space-y-3 scroll-mt-24">
+                {copilotStages.staffing}
                 {teamNode}
                 {transportationNode}
               </div>
