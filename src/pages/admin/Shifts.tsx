@@ -277,7 +277,7 @@ function CreateShiftDialogInline(props: {
       onDiscard={props.onDiscard}
       onKeepForLater={props.onKeepForLater}
       saveDisabled={!v.date}
-      saveLabel="Publicar turno"
+      saveLabel={ADMIN_LEX.publish}
       draftLabel="Guardar borrador"
       onSave={props.onRequestSave}
       onSaveDraft={props.onSaveDraft}
@@ -792,7 +792,7 @@ function DesktopShifts() {
       }, { replace: true });
     };
     if (!found) {
-      toast.warning("Turno no encontrado en el rango cargado", {
+      toast.warning(`${ADMIN_LEX.Entity} no encontrado en el rango cargado`, {
         description: "Ajusta la fecha o el rango de la vista.",
       });
       clearParams();
@@ -1464,7 +1464,7 @@ function DesktopShifts() {
   ) => {
     const persisted = summary.created + summary.reused;
     if (summary.total === 1) {
-      toast.success(publishedBase ? "Turno publicado" : "Borrador guardado");
+      toast.success(publishedBase ? `${ADMIN_LEX.Entity} publicado` : "Borrador guardado");
     } else {
       toast.success(seriesResultMessage(summary), {
         description: publishedBase
@@ -1539,7 +1539,7 @@ function DesktopShifts() {
   // Quick create: minimal shift from popover
   const handleQuickCreate = async (data: { title: string; date: string; start_time: string; end_time: string; client_id: string; location_id: string; slots: number }) => {
     if (!selectedCompanyId) {
-      toast.error("Selecciona una empresa antes de crear un turno");
+      toast.error(`Selecciona una empresa antes de crear un ${ADMIN_LEX.entity}`);
       return;
     }
     const quickSnapshot: SeriesServiceSnapshot = {
@@ -1557,7 +1557,7 @@ function DesktopShifts() {
 
     if (error) {
       console.error("[QuickCreate] insert failed:", error);
-      toast.error(error.message || "No se pudo crear el turno");
+      toast.error(error.message || `No se pudo crear ${ADMIN_LEX.theEntity}`);
       return;
     }
     // Title stays clean — `shift_code` is the single source of truth.
@@ -1565,7 +1565,7 @@ function DesktopShifts() {
     await logShiftActivity("crear_turno", shift.id, null, { title: data.title, date: data.date, quick: true });
     await reconcileServiceAfterSave(queryClient, selectedCompanyId, shift.id, shift as ServiceRow);
     await loadData();
-    toast.success("Turno borrador creado");
+    toast.success(`${ADMIN_LEX.Entity} borrador creado`);
   };
 
   const handleOpenFullWithPrefill = (data: { title: string; date: string; start_time: string; end_time: string; client_id: string; location_id: string; slots: number }) => {
@@ -1586,7 +1586,7 @@ function DesktopShifts() {
     oldShift: Shift,
     overrideVersion?: number | null,
   ) => {
-    if (oldShift.status === "locked") { toast.error("Este turno está bloqueado y no se puede editar"); return; }
+    if (oldShift.status === "locked") { toast.error(`Este ${ADMIN_LEX.entity} está bloqueado y no se puede editar`); return; }
     const changes = getChangedFields(oldShift, updates);
     if (changes.length === 0) { toast.info("Sin cambios"); return; }
 
@@ -1626,9 +1626,9 @@ function DesktopShifts() {
     if (saveResult.status !== "applied") {
       notifyError({
         key: "shift-update-desktop",
-        title: "No pudimos guardar el turno",
+        title: `No pudimos guardar ${ADMIN_LEX.theEntity}`,
         fact: saveResult.status === "noop" ? "No había cambios que aplicar." : saveResult.message,
-        consequence: "El turno sigue como estaba. Revisa e inténtalo de nuevo.",
+        consequence: `Nada cambió: ${ADMIN_LEX.theEntity} sigue como estaba. Revisa e inténtalo de nuevo.`,
       });
       return;
     }
@@ -1709,7 +1709,7 @@ function DesktopShifts() {
       shiftId,
       savedShift,
     );
-    toast.success("Turno actualizado");
+    toast.success(`${ADMIN_LEX.Entity} actualizado`);
     setSelectedShift(prev => prev?.id === shiftId ? { ...prev, ...(canonical ?? savedShift) } as Shift : prev);
     await loadData();
 

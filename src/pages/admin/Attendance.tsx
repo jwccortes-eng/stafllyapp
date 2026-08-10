@@ -28,6 +28,7 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useDeepLinkFocus } from "@/hooks/useDeepLinkFocus";
 import { REVIEW_COPY } from "@/utils/reviewNavigationCopy";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 /* ─── Types ─── */
 
@@ -684,7 +685,7 @@ export default function Attendance() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[200px]">Trabajador</TableHead>
-                    <TableHead>Turno</TableHead>
+                    <TableHead>{ADMIN_LEX.Entity}</TableHead>
                     <TableHead className="text-center">Horario</TableHead>
                     <TableHead className="text-center">Fichaje entrada</TableHead>
                     <TableHead className="text-center">Fichaje salida</TableHead>
@@ -811,8 +812,8 @@ export default function Attendance() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[200px]">Empleado</TableHead>
-                    <TableHead className="text-center">Turnos</TableHead>
+                    <TableHead className="w-[200px]">Trabajador</TableHead>
+                    <TableHead className="text-center">{ADMIN_LEX.EntityPlural}</TableHead>
                     <TableHead className="text-center">A tiempo</TableHead>
                     <TableHead className="text-center">Tardes</TableHead>
                     <TableHead className="text-center">Min. tarde</TableHead>
