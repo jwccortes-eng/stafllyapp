@@ -72,7 +72,7 @@ function dayLabel(date: string) {
 
 /** Campo de entidad con resolución existente: exacta → diccionario → fuzzy → humano. */
 function EntityField({
-  value, raw, catalog, placeholder, onChange,
+  value, raw, catalog, placeholder, onQuickCreate, onChange,
 }: {
   value: string | null;
   raw: string;
