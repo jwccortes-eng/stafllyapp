@@ -38,7 +38,9 @@ interface ClientAvatarProps {
 }
 
 function ClientAvatarImpl({ name, logoUrl, size = "sm", className }: ClientAvatarProps) {
-  const initials = entityInitials(name ?? "");
+  const raw = entityInitials(name ?? "");
+  const initials = raw === "?" ? "" : raw;
+
 
   return (
     <span
