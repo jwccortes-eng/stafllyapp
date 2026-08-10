@@ -991,25 +991,20 @@ export default function UnifiedPersonProfile() {
               setInviteOpen(true);
               return;
             case "edit_contact":
-              setActiveTab(a.targetTab ?? "info");
-              if (!isEditing) setIsEditing(true);
-              break;
+              openDeepTab(a.targetTab ?? "info", { edit: true });
+              return;
             case "open_access":
-              setActiveTab("access");
-              break;
+              openDeepTab("access");
+              return;
             case "open_documents":
-              setActiveTab("docs");
-              break;
+              openDeepTab("docs");
+              return;
             case "none":
             default:
               return;
           }
-          requestAnimationFrame(() => {
-            document
-              .querySelector('[data-state="active"][role="tabpanel"]')
-              ?.scrollIntoView({ behavior: "smooth", block: "start" });
-          });
         };
+
 
         return <NextActionCard action={nextAction} onAction={handleAction} />;
       })()}
