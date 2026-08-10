@@ -1339,7 +1339,7 @@ export default function Employees() {
 
 
   return (
-    <div className="space-y-3 overflow-x-hidden max-w-full">
+    <div className="space-y-3 overflow-x-clip max-w-full">
       {isMobile && (
         <MobileWorkersCommandView
           employees={employees}
