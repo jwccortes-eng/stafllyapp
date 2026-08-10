@@ -7,16 +7,19 @@ import { useState, memo, useMemo, useCallback } from "react";
 import { getClientColor, formatShiftCode } from "./types";
 import { buildServiceEventModel } from "@/lib/shifts/service-event-model";
 import { ServiceEventCard } from "./calendar/ServiceEventCard";
+import { EntityRow, ClientAvatar } from "@/components/entities";
+import { formatEntityRef } from "@/lib/entities/entity-identity";
+import { clientStatusLabel, clientStatusTone } from "@/lib/clients/client-entity-status";
 
 
-import type { Shift, Assignment, SelectOption, Employee } from "./types";
+import type { Shift, Assignment, SelectOption, ClientOption, Employee } from "./types";
 
 interface WeekByJobViewProps {
   weekDays: Date[];
   shifts: Shift[];
   assignments: Assignment[];
   locations: SelectOption[];
-  clients: SelectOption[];
+  clients: ClientOption[];
   employees: Employee[];
   onShiftClick: (shift: Shift) => void;
   onDropOnShift: (shiftId: string, data: string) => void;
@@ -108,7 +111,7 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
   return (
     <div className="border border-border/20 rounded-xl overflow-hidden bg-card/50">
       {/* Sticky day headers */}
-      <div className="grid grid-cols-[180px_repeat(7,1fr)] border-b border-border/20 bg-muted/30 sticky top-0 z-10">
+      <div className="grid grid-cols-[260px_repeat(7,1fr)] border-b border-border/20 bg-muted/30 sticky top-0 z-10">
         <div className="p-2 border-r border-border/10" />
         {weekDays.map((day, i) => {
           const isToday = isSameDay(day, new Date());
@@ -151,21 +154,29 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
           <div key={client.id} className="border-b border-border/15 last:border-b-0">
             {/* Client header */}
             <div
-              className="grid grid-cols-[180px_repeat(7,1fr)] cursor-pointer hover:bg-accent/20 transition-colors"
+              className="grid grid-cols-[260px_repeat(7,1fr)] cursor-pointer hover:bg-accent/20 transition-colors"
               onClick={() => toggleClient(client.id)}
             >
-              <div className="flex items-center gap-2.5 p-3 border-r border-border/10">
-                <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", color.dot)} />
+              <div className="flex items-center border-r border-border/10">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold truncate">{formatDisplayText(client.name, "name")}</p>
-                  <div className="flex items-center gap-2.5 text-[9px] text-muted-foreground/55 mt-0.5">
-                    <span className="flex items-center gap-0.5"><Timer className="h-2.5 w-2.5" /> {stats.hours}</span>
-                    <span className="flex items-center gap-0.5"><CalendarDays className="h-2.5 w-2.5" /> {stats.shifts}</span>
-                    <span className="flex items-center gap-0.5"><Users className="h-2.5 w-2.5" /> {stats.users}</span>
-                  </div>
+                  <EntityRow
+                    avatar={<ClientAvatar name={client.name} size="sm" />}
+                    name={formatDisplayText(client.name, "name")}
+                    role={clientStatusLabel(client.status)}
+                    reference={formatEntityRef("client", { code: client.client_code, id: client.id })}
+                    metric={`${stats.shifts} serv.`}
+                    tone={clientStatusTone(client.status)}
+                    hover={
+                      <span className="text-[11px] leading-snug">
+                        {stats.shifts} servicio{stats.shifts !== 1 ? "s" : ""} · {stats.users} worker
+                        {stats.users !== 1 ? "s" : ""} · {stats.hours} h
+                      </span>
+                    }
+                  />
                 </div>
-                {isExpanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/40" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/40" />}
+                {isExpanded ? <ChevronUp className="mr-2 h-3.5 w-3.5 shrink-0 text-muted-foreground/40" /> : <ChevronDown className="mr-2 h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />}
               </div>
+
               {!isExpanded && weekDays.map((day, i) => {
                 const dayShifts = getShiftsForDayAndClient(day, client.id);
                 return (
@@ -181,7 +192,7 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
 
             {/* Expanded: shift cards in aligned columns */}
             {isExpanded && (
-              <div className="grid grid-cols-[180px_repeat(7,1fr)]">
+              <div className="grid grid-cols-[260px_repeat(7,1fr)]">
                 <div className="border-r border-border/10" />
                 {weekDays.map((day, i) => {
                   const dayShifts = getShiftsForDayAndClient(day, client.id)
@@ -214,7 +225,7 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
       {/* No-client group */}
       {hasNoClientShifts && (
         <div className="border-b border-border/15">
-          <div className="grid grid-cols-[180px_repeat(7,1fr)]">
+          <div className="grid grid-cols-[260px_repeat(7,1fr)]">
             <div className="flex items-center gap-2.5 p-3 border-r border-border/10">
               <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20 shrink-0" />
               <p className="text-xs font-medium text-muted-foreground/50">Sin cliente</p>

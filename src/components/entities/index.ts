@@ -13,6 +13,10 @@ export type { EntityCardProps, EntityCardDensity } from "./EntityCard";
 export { EntityRow } from "./EntityRow";
 export type { EntityRowProps } from "./EntityRow";
 
+/** Avatar canónico de Cliente (logo → iniciales → icono empresa). */
+export { ClientAvatar } from "./ClientAvatar";
+
+
 export {
   ENTITY_PREFIX,
   ENTITY_LABEL,

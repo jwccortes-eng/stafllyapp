@@ -56,6 +56,12 @@ export interface Assignment {
 }
 
 export interface SelectOption { id: string; name: string; }
+/** Cliente para superficies de planificación: identidad + estado, sin datos administrativos. */
+export interface ClientOption extends SelectOption {
+  client_code?: string | null;
+  status?: string | null;
+}
+
 export interface Employee {
   id: string;
   first_name: string;

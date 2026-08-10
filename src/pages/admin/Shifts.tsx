@@ -107,7 +107,7 @@ import {
 import { getShiftLocationStatus } from "@/lib/shifts/location-status";
 import { PrePublishDialog } from "@/components/shifts/workspace/PrePublishDialog";
 import { ExportConnecteamBulkDialog } from "@/components/shifts/integrations/ExportConnecteamBulkDialog";
-import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
+import type { Shift, Assignment, SelectOption, ClientOption, Employee, ViewMode } from "@/components/shifts/types";
 import { formatShiftCode } from "@/components/shifts/types";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
@@ -444,7 +444,7 @@ function DesktopShifts() {
   const [loading, setLoading] = useState(true);
   const [isRefetching, setIsRefetching] = useState(false);
   const hasLoadedOnce = useRef(false);
-  const [clients, setClients] = useState<SelectOption[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [locations, setLocations] = useState<(SelectOption & { address?: string; client_id?: string | null })[]>([]);
   // Employees roster — single source of truth, paginated, never truncated at 1k.
   // Hidden-by-status workers (incomplete profile, pending onboarding, no portal) are NOT excluded here.
@@ -727,10 +727,10 @@ function DesktopShifts() {
   const refreshDictionaries = useCallback(async () => {
     if (!selectedCompanyId) return;
     const [clientsRes, locsRes] = await Promise.all([
-      supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
+      supabase.from("clients").select("id, name, client_code, status").eq("company_id", selectedCompanyId).is("deleted_at", null),
       supabase.from("locations").select("id, name, address, client_id, default_pay_type, default_clock_method, require_car, default_instructions").eq("company_id", selectedCompanyId).is("deleted_at", null),
     ]);
-    setClients((clientsRes.data ?? []) as SelectOption[]);
+    setClients((clientsRes.data ?? []) as ClientOption[]);
     setLocations((locsRes.data ?? []) as any[]);
   }, [selectedCompanyId]);
 
