@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/table";
 import { OperationalWorkspace, WorkspaceSearch, WorkspaceTabs } from "@/components/stafly-ui/OperationalWorkspace";
 import { EmptyState } from "@/components/ui/empty-state";
+import { EntityCard } from "@/components/entities/EntityCard";
+
 import { MobileQueueRow, MobileQueueDrawer } from "@/components/admin/mobile";
 import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil, Eye, ClipboardCheck, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
