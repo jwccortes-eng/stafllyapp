@@ -309,26 +309,36 @@ export default function DocumentsCenter() {
   };
 
   const FILTERS: { key: FilterKey; label: string }[] = [
-    { key: "all", label: "Todos" },
     { key: "needs_review", label: "Necesitan revisión" },
     { key: "missing", label: "Faltantes" },
-    { key: "pending", label: "Pendientes" },
     { key: "expired", label: "Vencidos" },
     { key: "expiring_soon", label: "Por vencer" },
-    { key: "missing_expiration", label: "Sin fecha de vencimiento" },
-    { key: "rejected", label: "Rechazados" },
-    { key: "approved", label: "Aprobados" },
+    { key: "all", label: "Todos" },
   ];
+
+  /**
+   * ZERO NOISE — la pantalla se lee por PERSONA, no por fila de tabla.
+   * Agrupación pura de presentación: no cambia datos ni filtros.
+   */
+  const byPerson = useMemo(() => {
+    const map = new Map<string, { name: string; employeeId: string; docs: UnifiedDocumentRow[] }>();
+    for (const r of filtered) {
+      const key = r.employee_id ?? r.worker_name;
+      const g = map.get(key) ?? { name: r.worker_name, employeeId: r.employee_id, docs: [] };
+      g.docs.push(r);
+      map.set(key, g);
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [filtered]);
 
   return (
     <OperationalWorkspace
-      title="Documentos y cumplimiento"
-      context="Vista de solo lectura de cada documento subido y de los requisitos que faltan en la empresa."
+      title="Documentos"
       search={
         <WorkspaceSearch
           value={search}
           onChange={setSearch}
-          placeholder="Buscar persona o tipo de documento…"
+          placeholder="Buscar persona o documento…"
         />
       }
       action={
@@ -337,12 +347,6 @@ export default function DocumentsCenter() {
           Exportar CSV
         </Button>
       }
-      metrics={[
-        { label: "Total", value: counts.all, tone: "neutral" as const },
-        { label: "Necesitan revisión", value: counts.needs_review, tone: "warning" as const },
-        { label: "Requisitos faltantes", value: counts.missing, tone: "warning" as const },
-        { label: "Vencidos", value: counts.expired, tone: "critical" as const },
-      ]}
       tabs={
         <WorkspaceTabs
           items={FILTERS.map((f) => ({ key: f.key, label: f.label, count: counts[f.key] }))}
@@ -352,6 +356,7 @@ export default function DocumentsCenter() {
         />
       }
     >
+
       <div className="space-y-3 pt-3">
           {/* Scoped-employee chip — shown when we arrived via ?employee=<id>
               (e.g. from Worker Profile "Revisar documentos pendientes"). */}
