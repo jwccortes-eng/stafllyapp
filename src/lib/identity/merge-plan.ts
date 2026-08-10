@@ -377,7 +377,7 @@ export function buildMergePlan(
         : "Consolidación de bajo impacto: solo identidad, alias y auditoría.";
 
   return {
-    groupKey: group.groupKey ?? group.key,
+    groupKey: group.key,
     targetId,
     legacyIds,
     overall,
