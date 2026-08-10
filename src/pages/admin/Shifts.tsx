@@ -444,7 +444,7 @@ function DesktopShifts() {
   const [loading, setLoading] = useState(true);
   const [isRefetching, setIsRefetching] = useState(false);
   const hasLoadedOnce = useRef(false);
-  const [clients, setClients] = useState<SelectOption[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [locations, setLocations] = useState<(SelectOption & { address?: string; client_id?: string | null })[]>([]);
   // Employees roster — single source of truth, paginated, never truncated at 1k.
   // Hidden-by-status workers (incomplete profile, pending onboarding, no portal) are NOT excluded here.
@@ -730,7 +730,7 @@ function DesktopShifts() {
       supabase.from("clients").select("id, name, client_code, status").eq("company_id", selectedCompanyId).is("deleted_at", null),
       supabase.from("locations").select("id, name, address, client_id, default_pay_type, default_clock_method, require_car, default_instructions").eq("company_id", selectedCompanyId).is("deleted_at", null),
     ]);
-    setClients((clientsRes.data ?? []) as SelectOption[]);
+    setClients((clientsRes.data ?? []) as ClientOption[]);
     setLocations((locsRes.data ?? []) as any[]);
   }, [selectedCompanyId]);
 
