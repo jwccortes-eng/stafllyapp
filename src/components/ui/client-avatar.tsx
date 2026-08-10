@@ -1,7 +1,13 @@
 import { cn } from "@/lib/utils";
+import { clientAccentColor, clientAccentSoft } from "@/lib/clients/client-accent";
 
 interface ClientAvatarProps {
   name: string;
+  /**
+   * Identidad cromática canónica del Cliente (hash(client_id) → accent token).
+   * Cuando se provee, el avatar usa el MISMO color que el resto del ecosistema.
+   */
+  clientId?: string | null;
   size?: "sm" | "md" | "lg";
   className?: string;
 }
@@ -18,19 +24,8 @@ const textSizes: Record<string, string> = {
   lg: "text-base",
 };
 
-// Professional color palette – muted, corporate tones
-const PALETTES = [
-  { bg: "#1e3a5f", fg: "#e8f0fe" }, // navy
-  { bg: "#2d4a3e", fg: "#e0f2e9" }, // forest
-  { bg: "#4a3728", fg: "#f5ebe0" }, // walnut
-  { bg: "#3b3154", fg: "#ede7f6" }, // plum
-  { bg: "#1a3c4d", fg: "#e0f4f4" }, // teal
-  { bg: "#4e3629", fg: "#fdf0e6" }, // mahogany
-  { bg: "#2c3e50", fg: "#ecf0f1" }, // charcoal
-  { bg: "#3e2723", fg: "#efebe9" }, // espresso
-  { bg: "#1b5e20", fg: "#e8f5e9" }, // emerald
-  { bg: "#4a148c", fg: "#f3e5f5" }, // deep purple
-];
+// Fallback corporativo cuando todavía no se conoce el id del Cliente.
+const FALLBACK = { bg: "#2c3e50", fg: "#ecf0f1" };
 
 function hashStr(s: string) {
   let h = 0;
@@ -38,15 +33,19 @@ function hashStr(s: string) {
   return Math.abs(h);
 }
 
-export function ClientAvatar({ name, size = "md", className }: ClientAvatarProps) {
-  const hash = hashStr(name);
-  const palette = PALETTES[hash % PALETTES.length];
+export function ClientAvatar({ name, clientId, size = "md", className }: ClientAvatarProps) {
+  const accent = clientAccentColor(clientId);
+  const accentSoft = clientAccentSoft(clientId, 0.16);
 
   // Extract up to 2 initials from the company name (first letters of first two words)
   const words = name.trim().split(/\s+/);
   const initials = words.length >= 2
     ? `${words[0][0]}${words[1][0]}`.toUpperCase()
     : name.slice(0, 2).toUpperCase();
+
+  const style = accent
+    ? { backgroundColor: accentSoft, color: accent }
+    : { backgroundColor: FALLBACK.bg, color: FALLBACK.fg, opacity: hashStr(name) ? 1 : 1 };
 
   return (
     <div
@@ -56,7 +55,7 @@ export function ClientAvatar({ name, size = "md", className }: ClientAvatarProps
         textSizes[size],
         className
       )}
-      style={{ backgroundColor: palette.bg, color: palette.fg }}
+      style={style}
       title={name}
     >
       {initials}

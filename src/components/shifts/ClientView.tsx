@@ -11,6 +11,8 @@ import { ServiceEventCard } from "./calendar/ServiceEventCard";
 import { EntityRow, ClientAvatar } from "@/components/entities";
 import { formatEntityRef } from "@/lib/entities/entity-identity";
 import { clientStatusLabel, clientStatusTone } from "@/lib/clients/client-entity-status";
+import { clientAccentColor } from "@/lib/clients/client-accent";
+
 import type { Shift, Assignment, SelectOption, ClientOption, Employee } from "./types";
 
 interface ClientViewProps {
@@ -68,7 +70,9 @@ export function ClientView({ clients, shifts, assignments, locations, employees 
           <div key={client.id} className="rounded-2xl border border-border/20 bg-card/50 p-4">
             <div className="mb-3 w-full max-w-[280px]">
               <EntityRow
-                avatar={<ClientAvatar name={client.name} size="sm" />}
+                avatar={<ClientAvatar name={client.name} clientId={client.id} size="sm" />}
+                accentColor={clientAccentColor(client.id)}
+
                 name={formatDisplayText(client.name, "name")}
                 role={clientStatusLabel(client.status)}
                 reference={formatEntityRef("client", { code: client.client_code, id: client.id })}

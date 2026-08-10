@@ -11,11 +11,13 @@
  *   de identidad/estado) y añade únicamente lo que la tarjeta necesita pintar
  *   (equipo asignado como METADATA del Servicio, nunca como evento propio).
  */
+import { clientAccentColor, venueAccentIntensity } from "@/lib/clients/client-accent";
 import {
   getCalendarServiceIdentity,
   type CalendarServiceIdentity,
   type CalendarShiftLike,
 } from "./calendar-service-identity";
+
 
 export type ServiceAccent = "positive" | "warning" | "draft" | "critical" | "neutral";
 
@@ -41,7 +43,10 @@ export interface ServiceEventModel {
   infoPending: boolean;
 
   accent: ServiceAccent;
+  /** Color de identidad del Cliente (CSS). Nunca representa estado. */
+  accentColor: string | null;
   team: ServiceTeamMember[];
+
 }
 
 interface MinimalEmployee {
@@ -103,9 +108,10 @@ function resolvePrimaryLabel(title: string, input: ServiceEventInput): string {
 }
 
 export function buildServiceEventModel(
-  shift: CalendarShiftLike & { id?: string | null },
+  shift: CalendarShiftLike & { id?: string | null; client_id?: string | null; location_id?: string | null },
   input: ServiceEventInput,
 ): ServiceEventModel {
+
   const shiftId = shift.id ?? "";
   const shiftAssignments = input.assignments.filter((a) => a.shift_id === shiftId);
   const employees = input.employees ?? [];
@@ -145,6 +151,10 @@ export function buildServiceEventModel(
     infoPending: PLACEHOLDER_TITLE.test(dedupeSegments((identity.title ?? "").trim())),
 
     accent: resolveAccent(identity),
+    /** Identidad heredada del Cliente (Venue sólo modula la intensidad). */
+    accentColor:
+      clientAccentColor(shift.client_id, venueAccentIntensity(shift.location_id)) ?? null,
     team,
+
   };
 }

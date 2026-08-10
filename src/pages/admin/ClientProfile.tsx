@@ -106,7 +106,7 @@ export default function ClientProfile() {
       {/* Hero */}
       <Card className="p-5 sm:p-6 bg-gradient-to-br from-card to-muted/20 border-border/60">
         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-          <ClientAvatar name={client.name} size="lg" />
+          <ClientAvatar name={client.name} clientId={client.id} size="lg" />
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{client.name}</h1>

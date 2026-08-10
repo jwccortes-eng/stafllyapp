@@ -12,6 +12,8 @@ import { memo } from "react";
 import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { entityInitials } from "@/lib/entities/entity-identity";
+import { clientAccentColor, clientAccentSoft } from "@/lib/clients/client-accent";
+
 
 export type ClientAvatarSize = "xs" | "sm" | "md" | "lg";
 
@@ -31,16 +33,19 @@ const ICON_SIZES: Record<ClientAvatarSize, string> = {
 
 interface ClientAvatarProps {
   name?: string | null;
+  /** Identidad cromática canónica: hash(client_id) → accent token. */
+  clientId?: string | null;
   /** Logo del cliente si el dominio ya lo tiene resuelto. */
   logoUrl?: string | null;
   size?: ClientAvatarSize;
   className?: string;
 }
 
-function ClientAvatarImpl({ name, logoUrl, size = "sm", className }: ClientAvatarProps) {
+function ClientAvatarImpl({ name, clientId, logoUrl, size = "sm", className }: ClientAvatarProps) {
   const raw = entityInitials(name ?? "");
   const initials = raw === "?" ? "" : raw;
-
+  const accent = clientAccentColor(clientId);
+  const accentSoft = clientAccentSoft(clientId);
 
   return (
     <span
@@ -49,6 +54,7 @@ function ClientAvatarImpl({ name, logoUrl, size = "sm", className }: ClientAvata
         SIZES[size],
         className,
       )}
+      style={accent ? { backgroundColor: accentSoft, color: accent } : undefined}
     >
       {logoUrl ? (
         <img src={logoUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
@@ -60,5 +66,6 @@ function ClientAvatarImpl({ name, logoUrl, size = "sm", className }: ClientAvata
     </span>
   );
 }
+
 
 export const ClientAvatar = memo(ClientAvatarImpl);

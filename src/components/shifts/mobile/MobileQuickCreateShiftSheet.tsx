@@ -185,7 +185,7 @@ function ClientPickerSheet({
                 c.id === value && "bg-primary/5",
               )}
             >
-              <ClientAvatar name={c.name} size="sm" />
+              <ClientAvatar name={c.name} clientId={c.id} size="sm" />
               <span className="text-[15px] font-medium truncate flex-1">{c.name}</span>
               {c.id === value && <Check className="h-4 w-4 text-primary" />}
             </button>
@@ -882,7 +882,7 @@ export function MobileQuickCreateShiftSheet({
                   onClick={() => setClientPickerOpen(true)}
                   className="w-full min-h-[64px] rounded-2xl border border-border/60 bg-card px-4 flex items-center gap-3 text-left active:bg-muted/50 transition-colors"
                 >
-                  {client ? <ClientAvatar name={client.name} size="sm" /> : (
+                  {client ? <ClientAvatar name={client.name} clientId={client.id} size="sm" /> : (
                     <span className="h-9 w-9 rounded-full bg-muted inline-flex items-center justify-center">
                       <Building2 className="h-4 w-4 text-muted-foreground" />
                     </span>

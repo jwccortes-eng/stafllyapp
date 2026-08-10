@@ -96,9 +96,15 @@ function ServiceEventCardImpl({
     className,
   );
 
+  /** El borde izquierdo es IDENTIDAD del Cliente; el estado vive en el fondo. */
+  const identityStyle = model.accentColor
+    ? { borderLeftColor: model.accentColor, borderLeftWidth: 3 }
+    : undefined;
+
+
   const body =
     density === "month" ? (
-      <button type="button" onClick={onOpen} className={cn(base, "px-1.5 py-[3px]")} {...dnd}>
+      <button type="button" onClick={onOpen} style={identityStyle} className={cn(base, "px-1.5 py-[3px]")} {...dnd}>
         <span className="flex items-center gap-1 min-w-0">
           {model.isDraft && <FileEdit className="h-2.5 w-2.5 shrink-0 text-primary" />}
           <span className="truncate text-[10px] font-semibold uppercase leading-tight text-foreground/90">
@@ -116,7 +122,7 @@ function ServiceEventCardImpl({
         </span>
       </button>
     ) : (
-      <button type="button" onClick={onOpen} className={cn(base, "px-2 py-2 space-y-1")} {...dnd}>
+      <button type="button" onClick={onOpen} style={identityStyle} className={cn(base, "px-2 py-2 space-y-1")} {...dnd}>
         <span className="flex items-center gap-1.5 min-w-0">
           {identity.ref && (
             <span className="shrink-0 font-mono text-[9px] text-muted-foreground">

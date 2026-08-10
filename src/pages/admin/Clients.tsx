@@ -612,7 +612,7 @@ export default function Clients() {
             >
               <span className="font-mono text-[10px] text-muted-foreground">{t.humanReference}</span>
               <div className="flex items-center gap-2.5 min-w-0">
-                <ClientAvatar name={t.canonicalName} size="sm" />
+                <ClientAvatar name={t.canonicalName} clientId={t.clientId} size="sm" />
                 <span className="font-semibold text-foreground truncate">{formatDisplayText(t.canonicalName, "name")}</span>
                 {!t.isActive && (
                   <Badge variant="secondary" className="text-[9px] shrink-0">
