@@ -2838,9 +2838,11 @@ function DesktopShifts() {
             shifts={filteredShifts}
             assignments={assignments}
             locations={locations}
+            employees={employees}
             onShiftClick={handleShiftClick}
             onDropOnShift={handleDropOnShift}
           />
+
         )}
       </div>
 
