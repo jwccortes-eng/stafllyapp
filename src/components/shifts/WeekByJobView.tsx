@@ -5,8 +5,9 @@ import { formatDisplayText } from "@/lib/format-helpers";
 import { Clock, Users, ChevronDown, ChevronUp, Timer, CalendarDays, Lock } from "lucide-react";
 import { useState, memo, useMemo, useCallback } from "react";
 import { getClientColor, formatShiftCode } from "./types";
-import { displayShiftRef } from "@/lib/shifts/shift-ref";
-import { getShiftStaffingMetrics } from "@/lib/shifts/staffing-metrics";
+import { buildServiceEventModel } from "@/lib/shifts/service-event-model";
+import { ServiceEventCard } from "./calendar/ServiceEventCard";
+
 
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 
