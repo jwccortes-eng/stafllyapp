@@ -35,7 +35,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SmartDateInput } from "@/components/ui/smart-date-input";
 import {
@@ -43,7 +42,7 @@ import {
 } from "@/components/ui/table";
 import { OperationalWorkspace, WorkspaceSearch, WorkspaceTabs } from "@/components/stafly-ui/OperationalWorkspace";
 import { EmptyState } from "@/components/ui/empty-state";
-import { MobileQueueRow, MobileQueueDrawer, MobileFilterPills } from "@/components/admin/mobile";
+import { MobileQueueRow, MobileQueueDrawer } from "@/components/admin/mobile";
 import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil, Eye, ClipboardCheck, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateUS } from "@/lib/date-format";
