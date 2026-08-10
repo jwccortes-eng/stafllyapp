@@ -247,6 +247,8 @@ function StatusIcon({ state }: { state: PortalAccessState }) {
     active: { bg: "bg-earning/10", icon: CheckCircle2, iconClass: "text-earning" },
     invited: { bg: "bg-primary/10", icon: MailCheck, iconClass: "text-primary" },
     failed: { bg: "bg-destructive/10", icon: AlertCircle, iconClass: "text-destructive" },
+    unlinked: { bg: "bg-warning/10", icon: AlertCircle, iconClass: "text-warning" },
+
     ready: { bg: "bg-warning/10", icon: Send, iconClass: "text-warning" },
     incomplete: { bg: "bg-destructive/10", icon: Clock, iconClass: "text-destructive" },
     inactive: { bg: "bg-muted", icon: Smartphone, iconClass: "text-muted-foreground" },
