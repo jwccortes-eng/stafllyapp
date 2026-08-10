@@ -213,8 +213,10 @@ export function ShiftEditDialog({
 
 
   const handleSave = async () => {
+    if (!shift) return;
     if (saving) return; // double-tap guard — never allows a second UPDATE
     if (!form.date) return;
+
     // Time sanity: block only the impossible case (identical start/end).
     // Overnight shifts (end < start) stay allowed — they are legitimate.
     if (form.startTime && form.endTime && form.startTime === form.endTime) {
