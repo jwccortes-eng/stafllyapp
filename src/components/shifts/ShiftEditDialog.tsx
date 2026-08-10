@@ -355,6 +355,13 @@ export function ShiftEditDialog({
         adminError={adminError}
         renderInlineSummary={false}
       />
+      <QuickCreateClientDialog
+        open={quickClientOpen}
+        onOpenChange={setQuickClientOpen}
+        companyId={(shift as any)?.company_id ?? null}
+        initialName={quickClientName}
+        onResolved={(client, origin) => selectClient(client, origin)}
+      />
     </ShiftFormShell>
   );
 }
