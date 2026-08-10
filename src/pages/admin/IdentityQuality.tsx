@@ -32,6 +32,8 @@ import {
   ASSIGNMENT_RISK_LABELS,
   ASSIGNMENT_RISK_TONE,
 } from "@/lib/identity/assignment-risk";
+import { EntityCard } from "@/components/entities/EntityCard";
+import { buildWorkerEntityView, type WorkerEntityInput } from "@/lib/entities/entity-presenters";
 
 const RISK_VARIANT: Record<IdentityGroup["risk"], "destructive" | "secondary" | "outline"> = {
   high: "destructive",
@@ -97,25 +99,33 @@ function GroupCard({
         )}
 
         <div className="grid gap-2 sm:grid-cols-2">
-          {group.records.map((r) => (
-            <div key={r.id} className="rounded-lg border p-3 text-sm">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">
-                  {[r.first_name, r.last_name].filter(Boolean).join(" ") || "Sin nombre"}
-                </span>
-                {group.primary?.candidateId === r.id && (
-                  <Badge variant="secondary">Candidato principal</Badge>
-                )}
-              </div>
-              <div className="mt-1 text-muted-foreground">
-                {maskPhone(r.phone_number)} · {maskEmail(r.email)} ·{" "}
-                {maskExternalId(r.connecteam_employee_id)}
-              </div>
-              <div className="text-muted-foreground">
-                Servicios: {r.assignments_count ?? 0} · Documentos: {r.documents_count ?? 0}
-              </div>
-            </div>
-          ))}
+          {group.records.map((r) => {
+            const isPrimary = group.primary?.candidateId === r.id;
+            const view = buildWorkerEntityView(
+              r as unknown as WorkerEntityInput,
+              { identityRisk: !isPrimary, assignedToday: isPrimary },
+              [r.first_name, r.last_name].filter(Boolean).join(" ") || "Sin nombre",
+            );
+            return (
+              <EntityCard
+                key={r.id}
+                kind="worker"
+                name={view.name}
+                reference={view.reference}
+                status={isPrimary ? "assigned" : view.status}
+                statusLabel={isPrimary ? "Candidato principal" : view.statusLabel}
+                primaryDetail={`${maskPhone(r.phone_number)} · ${maskEmail(r.email)}`}
+                badges={[
+                  ...(isPrimary
+                    ? [{ key: "primary", label: "Candidato principal", tone: "info" as const }]
+                    : []),
+                  { key: "asg", label: `Servicios: ${r.assignments_count ?? 0}`, tone: "info" as const },
+                  { key: "doc", label: `Documentos: ${r.documents_count ?? 0}`, tone: "info" as const },
+                ]}
+                note={maskExternalId(r.connecteam_employee_id)}
+              />
+            );
+          })}
         </div>
       </CardContent>
     </Card>

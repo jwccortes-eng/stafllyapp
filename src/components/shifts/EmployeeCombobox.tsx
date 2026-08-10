@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { EntityCard } from "@/components/entities/EntityCard";
+import { buildWorkerEntityView, type WorkerEntityInput } from "@/lib/entities/entity-presenters";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Search, AlertTriangle, X, CalendarOff, Car, Zap, UserCheck, ShieldAlert, PauseCircle, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -757,87 +759,57 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
               const profileIncomplete = isProfileIncomplete(emp);
               const dupReason = dupHints.reasonById.get(emp.id);
 
+              const view = buildWorkerEntityView(
+                emp as unknown as WorkerEntityInput,
+                {
+                  blocked: isHardBlocked,
+                  blockedReason: unavailableReason,
+                  attention: profileIncomplete || hasConflict,
+                  assignedToday: isSelected,
+                  isDriver: empIsDriver,
+                  duplicate: !!dupReason,
+                },
+                `${formatPersonName(emp.first_name)} ${formatPersonName(emp.last_name)}`,
+              );
+
               return (
                 <label
                   key={item.key}
                   style={{ height: ROW_HEIGHT }}
                   className={cn(
-                    "flex items-center gap-2 px-2 text-xs transition-colors border-b border-border/10",
+                    "block border-b border-border/10",
                     isHardBlocked ? "cursor-not-allowed opacity-40" : "cursor-pointer",
-                    isSelected ? "bg-primary/[0.07]" : "hover:bg-accent/50",
-                    hasConflict && !isSelected && "bg-warning/[0.04]",
-                    isUnavailable && !hasConflict && !isSelected && !isInactive && "bg-destructive/[0.03]",
-                    isInactive && !isSelected && "bg-muted/30",
                   )}
                 >
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => handleToggle(emp.id)}
-                    disabled={isHardBlocked}
-                    className="shrink-0 h-3.5 w-3.5"
+                  <EntityCard
+                    bare
+                    density="compact"
+                    kind="worker"
+                    name={view.name}
+                    reference={view.reference}
+                    avatarUrl={emp.avatar_url}
+                    primaryDetail={emp.phone_number ?? emp.email ?? undefined}
+                    status={view.status}
+                    statusLabel={view.statusLabel}
+                    badges={view.badges}
+                    maxBadges={2}
+                    selected={isSelected}
+                    note={
+                      isUnavailable && !isInactive
+                        ? unavailableReason
+                        : hasConflict && !isInactive
+                          ? `${conflicts![0].shiftTitle} (${conflicts![0].time})`
+                          : undefined
+                    }
+                    leading={
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => handleToggle(emp.id)}
+                        disabled={isHardBlocked}
+                        className="shrink-0 h-3.5 w-3.5"
+                      />
+                    }
                   />
-                  <EmployeeAvatar
-                    firstName={emp.first_name} lastName={emp.last_name}
-                    avatarUrl={emp.avatar_url} gender={emp.gender} size="xs"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1 flex-wrap">
-                      <span className={cn("font-semibold text-[11px] truncate", (isUnavailable || isInactive) && !isSelected && "text-muted-foreground")}>
-                        {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)}
-                      </span>
-                      {emp.employer_identification && (
-                        <span className="h-3.5 px-1 rounded bg-muted/70 text-muted-foreground text-[7px] font-mono shrink-0">
-                          #{emp.employer_identification}
-                        </span>
-                      )}
-                      {empIsDriver && (
-                        <span className={cn(
-                          "h-3.5 px-1 rounded text-[7px] font-bold flex items-center gap-0.5 shrink-0",
-                          requiresDriver ? "bg-earning/15 text-earning ring-1 ring-earning/30" : "bg-primary/10 text-primary"
-                        )}>
-                          <Car className="h-2 w-2" />
-                        </span>
-                      )}
-                      {emp.employee_role && (
-                        <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-medium truncate max-w-[60px] shrink-0">
-                          {formatDisplayText(emp.employee_role, "label")}
-                        </span>
-                      )}
-                      {emp.user_id ? (
-                        <span className="h-3.5 px-1 rounded bg-earning/10 text-earning text-[7px] font-bold shrink-0">Portal</span>
-                      ) : (
-                        <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-bold shrink-0">No portal</span>
-                      )}
-                      {profileIncomplete && (
-                        <span className="h-3.5 px-1 rounded bg-warning/15 text-warning text-[7px] font-bold flex items-center gap-0.5 shrink-0">
-                          <ShieldAlert className="h-2 w-2" /> Incomplete
-                        </span>
-                      )}
-                      {dupReason && (
-                        <span className="h-3.5 px-1 rounded bg-deduction/10 text-deduction text-[7px] font-bold flex items-center gap-0.5 shrink-0">
-                          <Copy className="h-2 w-2" /> Dup
-                        </span>
-                      )}
-                      {isInactive && (
-                        <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-bold shrink-0">Inactivo</span>
-                      )}
-                    </div>
-                    {(emp.phone_number || emp.email) && !isInactive && (
-                      <p className="text-[8px] text-muted-foreground mt-0.5 truncate">
-                        {emp.phone_number ?? ""}{emp.phone_number && emp.email ? " · " : ""}{emp.email ?? ""}
-                      </p>
-                    )}
-                    {isUnavailable && !isInactive && (
-                      <p className="text-[8px] text-destructive flex items-center gap-0.5 mt-0.5 truncate">
-                        <CalendarOff className="h-2 w-2 shrink-0" /> {unavailableReason}
-                      </p>
-                    )}
-                    {hasConflict && !isUnavailable && !isInactive && (
-                      <p className="text-[8px] text-warning flex items-center gap-0.5 mt-0.5 truncate">
-                        <AlertTriangle className="h-2 w-2 shrink-0" /> {conflicts![0].shiftTitle} ({conflicts![0].time})
-                      </p>
-                    )}
-                  </div>
                 </label>
               );
             })}
