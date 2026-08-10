@@ -1122,7 +1122,7 @@ export default function Employees() {
   const workspaceMetrics: WorkspaceMetric[] = kpis.map((k) => ({
     label: k.label,
     value: k.value,
-    hint: k.hint,
+    hint: typeof k.hint === "string" ? k.hint : undefined,
     onClick: k.onClick,
     active: k.active,
     tone:
