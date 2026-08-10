@@ -17,8 +17,13 @@ import { memo } from "react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmployeeAvatarGroup } from "@/components/ui/employee-avatar-group";
-import { Clock, Users, FileEdit, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Clock, Users, FileEdit, CheckCircle2, AlertTriangle, Sparkles } from "lucide-react";
+import {
+  PreparationDot,
+  ServicePreparationMeter,
+} from "@/components/shifts/planner/ServicePreparationMeter";
 import type { ServiceEventModel, ServiceAccent } from "@/lib/shifts/service-event-model";
+
 
 export type ServiceEventDensity = "month" | "week" | "list";
 
