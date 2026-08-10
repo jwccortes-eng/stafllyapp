@@ -9,6 +9,10 @@
 export { EntityCard, EntityBadgePill } from "./EntityCard";
 export type { EntityCardProps, EntityCardDensity } from "./EntityCard";
 
+/** Variante de planificación (índice izquierdo del scheduler). */
+export { EntityRow } from "./EntityRow";
+export type { EntityRowProps } from "./EntityRow";
+
 export {
   ENTITY_PREFIX,
   ENTITY_LABEL,
