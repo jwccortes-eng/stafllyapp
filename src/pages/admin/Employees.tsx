@@ -7,6 +7,9 @@ import { fetchAllPaginated } from "@/lib/supabase-pagination";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { Button } from "@/components/ui/button";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { EntityCard } from "@/components/entities/EntityCard";
+import { buildWorkerEntityView, type WorkerEntityInput } from "@/lib/entities/entity-presenters";
+import { getRiskMeta } from "@/lib/data-quality-risks";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import {
