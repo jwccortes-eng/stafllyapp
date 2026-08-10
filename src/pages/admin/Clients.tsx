@@ -140,7 +140,9 @@ export default function Clients() {
     if (error) toast.error(error.message);
     setClients((data ?? []) as Client[]);
     setLoading(false);
+    directory.refetch();
   };
+
 
   const resetForm = () => {
     setName("");
