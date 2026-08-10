@@ -58,7 +58,10 @@ export function ClientDirectoryCard({
       kind="client"
       name={view.name}
       reference={view.reference}
-      primaryDetail={view.primaryDetail ?? "Sin contacto principal"}
+      primaryDetail={
+        view.primaryDetail ??
+        (truth.venues.length > 0 ? `${truth.venues.length} lugar(es)` : undefined)
+      }
       status={view.status}
       statusLabel={view.statusLabel}
       badges={view.badges}
