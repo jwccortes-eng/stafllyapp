@@ -26,6 +26,11 @@ import {
   verifySeriesIntegrity,
   describeSeriesVerification,
 } from "@/lib/shifts/series-engine";
+import {
+  classifyWorkerAssignability,
+  notAssignableMessage,
+  type AssignableCandidate,
+} from "@/lib/shifts/assignable-workers";
 
 /**
  * DuplicateShiftDialog — Phase 1 Quick Win #2.
@@ -134,15 +139,60 @@ export function DuplicateShiftDialog({
     }
   }, [open, defaultCopyWorkers]);
 
+  // Población base = SOLO los employee_id del Servicio origen. Nunca se consulta
+  // el roster completo. De esos ids se verifica la elegibilidad canónica actual.
+  const [assignabilityById, setAssignabilityById] = useState<Map<string, AssignableCandidate>>(new Map());
+
+  const copiedIds = useMemo(() => {
+    const seen = new Set<string>();
+    for (const a of assignments) {
+      if (!a.employee_id || a.status === "rejected" || a.status === "removed") continue;
+      seen.add(a.employee_id);
+    }
+    return [...seen];
+  }, [assignments]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!open || copiedIds.length === 0) { setAssignabilityById(new Map()); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("employees")
+        .select("id, is_active, employee_role, added_via, worker_type, identity_status, requires_identity_resolution, payroll_approval_blocked")
+        .eq("company_id", companyId)
+        .in("id", copiedIds);
+      if (cancelled) return;
+      setAssignabilityById(new Map((data ?? []).map((r: any) => [r.id as string, r as AssignableCandidate])));
+    })();
+    return () => { cancelled = true; };
+  }, [open, companyId, copiedIds.join(",")]);
+
+  const nameOf = (employeeId: string) => {
+    const a = assignments.find((x) => x.employee_id === employeeId);
+    const n = `${a?.employee?.first_name ?? ""} ${a?.employee?.last_name ?? ""}`.trim();
+    return n || employeeId;
+  };
+
+  const blockedWorkers = useMemo(() => {
+    if (assignabilityById.size === 0) return [] as { employee_id: string; name: string; reason: string }[];
+    return copiedIds
+      .map((id) => ({ id, verdict: classifyWorkerAssignability(assignabilityById.get(id)) }))
+      .filter((x) => !x.verdict.assignable)
+      .map((x) => ({ employee_id: x.id, name: nameOf(x.id), reason: x.verdict.reason ?? "No asignable" }));
+  }, [copiedIds, assignabilityById, assignments]);
+
+  const blockedIds = useMemo(() => new Set(blockedWorkers.map((b) => b.employee_id)), [blockedWorkers]);
+
   const eligibleWorkers = useMemo(() => {
     const seen = new Set<string>();
     return assignments.filter((a) => {
       if (!a.employee_id || a.status === "rejected" || a.status === "removed") return false;
+      if (blockedIds.has(a.employee_id)) return false;
       if (seen.has(a.employee_id)) return false;
       seen.add(a.employee_id);
       return true;
     });
-  }, [assignments]);
+  }, [assignments, blockedIds]);
 
   const overlappingEmployeeIds = useMemo(
     () => new Set(overlaps.map((o) => o.employee_id)),
