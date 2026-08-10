@@ -38,6 +38,7 @@ import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Use
 import { formatDisplayText } from "@/lib/format-helpers";
 import { PageHeader } from "@/components/ui/page-header";
 import { OpsKpiStrip, type OpsKpiItem } from "@/components/operations/OpsKpiStrip";
+import { OperationalWorkspace, type WorkspaceMetric } from "@/components/stafly-ui/OperationalWorkspace";
 import { OpsToolbar } from "@/components/operations/OpsToolbar";
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
 import { es } from "date-fns/locale";
@@ -2309,6 +2310,22 @@ function DesktopShifts() {
     },
   ];
 
+  // P0 — Operational First Layout: los KPIs pasan a chips compactos.
+  const workspaceMetrics: WorkspaceMetric[] = opsKpis.map((k) => ({
+    label: k.label,
+    value: k.value,
+    tone:
+      k.tone === "critical"
+        ? "critical"
+        : k.tone === "warning"
+          ? "warning"
+          : k.tone === "success"
+            ? "success"
+            : k.tone === "primary"
+              ? "primary"
+              : "neutral",
+  }));
+
   // ── Attention chips (deep-link to existing filters; no new logic) ──
   const attentionChips = [
     {
@@ -2341,57 +2358,54 @@ function DesktopShifts() {
   ].filter(c => c.count > 0);
 
   return (
-    <div className="space-y-4">
-      {/* ── PAGE HEADER (unified with rest of app) ── */}
-      <PageHeader
-        title={ADMIN_LEX.EntityPlural}
-        subtitle="Planifica, publica y controla la cobertura de tu operación diaria."
-        icon={CalendarRange}
-        rightSlot={
-          <>
-            {canEdit && (
-              <Button
-                size="sm"
-                className="h-11 min-w-[44px] text-sm gap-1.5"
-                onClick={() => { resetForm(); setCreateOpen(true); }}
-              >
-                <Plus className="h-4 w-4" />
-                {ADMIN_LEX.create}
+    <OperationalWorkspace
+      title={ADMIN_LEX.EntityPlural}
+      metrics={workspaceMetrics}
+      className="space-y-0"
+      action={
+        <>
+          {canEdit && (
+            <Button
+              size="sm"
+              className="h-8 text-xs gap-1.5"
+              onClick={() => { resetForm(); setCreateOpen(true); }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {ADMIN_LEX.create}
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground" aria-label="Más opciones de turnos">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="ghost" className="h-11 w-11 p-0 text-muted-foreground" aria-label="Más opciones de turnos">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => navigate("/app/daily-ops")}>
-                  <ScanEye className="h-4 w-4 mr-2" /> Operaciones del día
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/app/today")}>
-                  <ScanEye className="h-4 w-4 mr-2" /> Vista de hoy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/app/shift-requests")}>
-                  <MessageSquare className="h-4 w-4 mr-2" /> Solicitudes
-                </DropdownMenuItem>
-                {canEdit && (
-                  <>
-                    <DropdownMenuItem onClick={() => navigate("/app/import-schedule")}>
-                      <Upload className="h-4 w-4 mr-2" /> Importar horarios
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
-                      <Settings2 className="h-4 w-4 mr-2" /> Configuración de turnos
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        }
-
-      />
-
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => navigate("/app/daily-ops")}>
+                <ScanEye className="h-4 w-4 mr-2" /> Operaciones del día
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/app/today")}>
+                <ScanEye className="h-4 w-4 mr-2" /> Vista de hoy
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/app/shift-requests")}>
+                <MessageSquare className="h-4 w-4 mr-2" /> Solicitudes
+              </DropdownMenuItem>
+              {canEdit && (
+                <>
+                  <DropdownMenuItem onClick={() => navigate("/app/import-schedule")}>
+                    <Upload className="h-4 w-4 mr-2" /> Importar horarios
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                    <Settings2 className="h-4 w-4 mr-2" /> Configuración de turnos
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
+      }
+    >
+      <div className="space-y-4">
       {/* Sprint 3: active Ops-cockpit filter chip (only visible when arrived via deep-link) */}
       {activeOpsChip && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
@@ -2417,8 +2431,6 @@ function DesktopShifts() {
         </div>
       )}
 
-      {/* ── OPS KPI STRIP ── */}
-      <OpsKpiStrip items={opsKpis} />
 
 
       {/* ── Qué necesita atención ── compact action center (UI-only, deep-links to existing filters) */}
@@ -3331,6 +3343,7 @@ function DesktopShifts() {
           }
         }}
       />
-    </div>
+      </div>
+    </OperationalWorkspace>
   );
 }
