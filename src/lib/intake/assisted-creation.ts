@@ -15,6 +15,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeEntityName, similarity } from "./entity-resolution";
+import { createClientCanonical } from "@/lib/clients/create-client";
 
 export interface AssistedEntity {
   id: string;
@@ -116,7 +117,11 @@ export interface LinkOrCreateClientInput extends BaseInput {
   notes?: string | null;
 }
 
-/** Vincula si ya existe; crea sólo tras confirmación humana explícita. */
+/**
+ * Vincula si ya existe; crea sólo tras confirmación humana explícita.
+ * CLIENT TRUTH LAYER V1: la escritura delega en `createClientCanonical`
+ * para que Intake use exactamente las mismas reglas anti-duplicado.
+ */
 export async function linkOrCreateClient(
   input: LinkOrCreateClientInput,
 ): Promise<AssistedOutcome<AssistedEntity>> {
@@ -132,28 +137,29 @@ export async function linkOrCreateClient(
     if (matches.length > 0) return { status: "possible_duplicate", matches };
   }
 
-  const { data, error } = await supabase
-    .from("clients")
-    .insert({
-      company_id: input.companyId,
-      name: input.name.trim(),
-      contact_name: input.contactName?.trim() || null,
-      contact_email: input.contactEmail?.trim() || null,
-      contact_phone: input.contactPhone?.trim() || null,
-      notes: input.notes?.trim() || null,
-      status: "active",
-    } as any)
-    .select("id, name")
-    .single();
+  const outcome = await createClientCanonical({
+    companyId: input.companyId,
+    name: input.name,
+    contactName: input.contactName,
+    contactEmail: input.contactEmail,
+    contactPhone: input.contactPhone,
+    notes: input.notes,
+    allowDuplicate: input.allowDuplicate,
+  });
 
-  if (error || !data) {
-    // Carrera A/B: otro admin pudo crearlo entre la lectura y la escritura.
-    const retry = exactMatch(await loadRows("clients", input.companyId), input.name);
-    if (retry) return { status: "linked", entity: { id: retry.id, name: retry.name } };
-    return { status: "error", reason: error?.message ?? "insert_failed" };
+  if (outcome.status === "created") {
+    return { status: "created", entity: { id: outcome.client.id, name: outcome.client.name } };
   }
-  return { status: "created", entity: { id: data.id as string, name: data.name as string } };
+  if (outcome.status === "exact_match") {
+    return { status: "linked", entity: { id: outcome.client.id, name: outcome.client.name } };
+  }
+  if (outcome.status === "possible_duplicate") {
+    const retryRows = await loadRows("clients", input.companyId);
+    return { status: "possible_duplicate", matches: nearDuplicates(retryRows, input.name) };
+  }
+  return { status: "error", reason: outcome.reason };
 }
+
 
 export interface LinkOrCreateVenueInput extends BaseInput {
   name: string;

@@ -1443,6 +1443,71 @@ export type Database = {
           },
         ]
       }
+      client_duplicate_reviews: {
+        Row: {
+          client_a_id: string
+          client_b_id: string
+          company_id: string
+          created_at: string
+          decided_by: string | null
+          decision: string
+          id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_a_id: string
+          client_b_id: string
+          company_id: string
+          created_at?: string
+          decided_by?: string | null
+          decision: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_a_id?: string
+          client_b_id?: string
+          company_id?: string
+          created_at?: string
+          decided_by?: string | null
+          decision?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_duplicate_reviews_client_a_id_fkey"
+            columns: ["client_a_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_duplicate_reviews_client_b_id_fkey"
+            columns: ["client_b_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_duplicate_reviews_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_duplicate_reviews_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_messages: {
         Row: {
           attachments: Json | null
@@ -1502,6 +1567,8 @@ export type Database = {
       }
       clients: {
         Row: {
+          aliases: string[]
+          client_code: string | null
           company_id: string
           contact_email: string | null
           contact_name: string | null
@@ -1516,6 +1583,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aliases?: string[]
+          client_code?: string | null
           company_id: string
           contact_email?: string | null
           contact_name?: string | null
@@ -1530,6 +1599,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aliases?: string[]
+          client_code?: string | null
           company_id?: string
           contact_email?: string | null
           contact_name?: string | null

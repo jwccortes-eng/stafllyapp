@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { notifyError, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
 import { rankCatalogMatches } from "@/lib/intake/entity-linking";
 import { SeriesPreviewDialog } from "@/components/shifts/series/SeriesPreviewDialog";
+import { QuickCreateClientDialog } from "@/components/clients/QuickCreateClientDialog";
 import {
   buildBulkPlan, buildBulkPreview, bulkResultMessage, bulkRowStatusLabel, duplicateBulkRow,
   newBulkBatchId, newBulkRow, parsePastedDates, summarizeBulkOutcomes, validateBulkRow,
@@ -72,12 +73,14 @@ function dayLabel(date: string) {
 
 /** Campo de entidad con resolución existente: exacta → diccionario → fuzzy → humano. */
 function EntityField({
-  value, raw, catalog, placeholder, onChange,
+  value, raw, catalog, placeholder, onQuickCreate, onChange,
 }: {
   value: string | null;
   raw: string;
   catalog: CatalogItem[];
   placeholder: string;
+  /** Alta rápida canónica (sólo clientes). */
+  onQuickCreate?: (name: string) => void;
   onChange: (next: { id: string | null; raw: string }) => void;
 }) {
   const [focused, setFocused] = useState(false);
@@ -115,7 +118,7 @@ function EntityField({
         onBlur={() => window.setTimeout(() => setFocused(false), 150)}
         onChange={(e) => onChange({ id: null, raw: e.target.value })}
       />
-      {focused && suggestions.length > 0 && (
+      {focused && (suggestions.length > 0 || (onQuickCreate && raw.trim().length >= 2)) && (
         <div className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-popover shadow-md">
           {suggestions.slice(0, 4).map((s) => (
             <button
@@ -129,11 +132,22 @@ function EntityField({
               <span className="ml-1 text-[10px] text-muted-foreground">{s.reason}</span>
             </button>
           ))}
+          {onQuickCreate && raw.trim().length >= 2 && (
+            <button
+              type="button"
+              className="w-full border-t border-border/50 px-2 py-1.5 text-left text-xs font-semibold text-primary hover:bg-accent"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onQuickCreate(raw.trim())}
+            >
+              Crear cliente “{raw.trim()}”
+            </button>
+          )}
         </div>
       )}
     </div>
   );
 }
+
 
 export function BulkServiceCreationDialog({
   open, onOpenChange, companyId, userId, clients, locations, referenceDate, onCreated,
@@ -155,6 +169,14 @@ export function BulkServiceCreationDialog({
   const [applyEnd, setApplyEnd] = useState("");
   const [applyHeadcount, setApplyHeadcount] = useState("");
   const [applyNotes, setApplyNotes] = useState("");
+
+  // CLIENT TRUTH LAYER V1 — alta rápida de cliente sin salir del workspace.
+  const [extraClients, setExtraClients] = useState<CatalogItem[]>([]);
+  const [quickClient, setQuickClient] = useState<{ target: string; name: string } | null>(null);
+  const clientCatalog = useMemo<CatalogItem[]>(() => {
+    const seen = new Set(clients.map((c) => c.id));
+    return [...clients, ...extraClients.filter((c) => !seen.has(c.id))];
+  }, [clients, extraClients]);
 
   // Recuperación tras refresh antes de guardar: la sesión vive por empresa.
   useEffect(() => {
@@ -419,7 +441,7 @@ export function BulkServiceCreationDialog({
                   <EntityField
                     value={applyClient.id}
                     raw={applyClient.raw}
-                    catalog={clients}
+                    catalog={clientCatalog}
                     placeholder="Imperial…"
                     onChange={setApplyClient}
                   />
@@ -560,7 +582,7 @@ export function BulkServiceCreationDialog({
                           {dateError && <p className="mt-1 text-[10px] text-destructive">{dateError}</p>}
                         </td>
                         <td className="px-2 py-2">
-                          <EntityField value={row.clientId} raw={row.clientRaw} catalog={clients} placeholder="Cliente"
+                          <EntityField value={row.clientId} raw={row.clientRaw} catalog={clientCatalog} onQuickCreate={(name) => setQuickClient({ target: row.id, name })} placeholder="Cliente"
                             onChange={(v2) => patchRow(row.id, { clientId: v2.id, clientRaw: v2.raw })} />
                           {identityError && <p className="mt-1 text-[10px] text-destructive">{identityError}</p>}
                         </td>
@@ -627,7 +649,7 @@ export function BulkServiceCreationDialog({
                       onChange={(e) => patchRow(row.id, { date: e.target.value })}
                     />
                     {dateError && <p className="text-[11px] text-destructive">{dateError}</p>}
-                    <EntityField value={row.clientId} raw={row.clientRaw} catalog={clients} placeholder="Cliente"
+                    <EntityField value={row.clientId} raw={row.clientRaw} catalog={clientCatalog} onQuickCreate={(name) => setQuickClient({ target: row.id, name })} placeholder="Cliente"
                       onChange={(v2) => patchRow(row.id, { clientId: v2.id, clientRaw: v2.raw })} />
                     {identityError && <p className="text-[11px] text-destructive">{identityError}</p>}
                     <EntityField value={row.locationId} raw={row.locationRaw} catalog={locations} placeholder="Lugar"
@@ -737,6 +759,22 @@ export function BulkServiceCreationDialog({
         submitting={submitting}
         onConfirm={handleConfirm}
       />
+
+      {/* ── Alta rápida canónica de cliente (sin duplicados silenciosos) ── */}
+      <QuickCreateClientDialog
+        open={quickClient !== null}
+        onOpenChange={(v) => { if (!v) setQuickClient(null); }}
+        companyId={companyId}
+        initialName={quickClient?.name ?? ""}
+        onResolved={(client) => {
+          setExtraClients((prev) =>
+            prev.some((c) => c.id === client.id) ? prev : [...prev, { id: client.id, name: client.name }]);
+          const target = quickClient?.target;
+          if (target) patchRow(target, { clientId: client.id, clientRaw: client.name });
+          setQuickClient(null);
+        }}
+      />
+
 
       {submitting && (
         <div className={cn("fixed bottom-4 right-4 z-[60] flex items-center gap-2 rounded-xl",
