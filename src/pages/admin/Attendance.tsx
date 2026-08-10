@@ -6,6 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { PageHeader } from "@/components/ui/page-header";
 import { KpiCard } from "@/components/ui/kpi-card";
+import { OperationalWorkspace, WorkspaceSearch, WorkspaceTabs } from "@/components/stafly-ui/OperationalWorkspace";
+import { EntityCard } from "@/components/entities/EntityCard";
+import type { EntityBadgeSpec, EntityStatusTone } from "@/lib/entities/entity-identity";
+
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Input } from "@/components/ui/input";
