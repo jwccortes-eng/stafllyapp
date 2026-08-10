@@ -19,7 +19,7 @@ export interface EntityView {
   reference: string;
   primaryDetail?: string;
   status: EntityStatusTone;
-  statusLabel: string;
+  statusLabel?: string;
   badges: EntityBadgeSpec[];
 }
 
@@ -57,10 +57,8 @@ export function buildWorkerEntityView(
   signals: WorkerEntitySignals = {},
   displayName?: string,
 ): EntityView {
-  const name =
-    displayName ??
-    `${worker.first_name ?? ""} ${worker.last_name ?? ""}`.trim() ||
-    "Sin nombre";
+  const fullName = `${worker.first_name ?? ""} ${worker.last_name ?? ""}`.trim();
+  const name = displayName ?? (fullName || "Sin nombre");
 
   const inactive = worker.is_active === false;
 
@@ -92,7 +90,7 @@ export function buildWorkerEntityView(
     }),
     primaryDetail: worker.phone_number ?? undefined,
     status,
-    statusLabel: inactive ? "Histórico" : undefined as unknown as string,
+    statusLabel: inactive ? "Histórico" : "Operativo",
     badges,
   };
 }
@@ -147,7 +145,7 @@ export function buildClientEntityView(client: ClientEntityInput): EntityView {
     }),
     primaryDetail: client.primaryContactName ?? undefined,
     status,
-    statusLabel: status === "historical" ? "Histórico" : undefined as unknown as string,
+    statusLabel: status === "historical" ? "Histórico" : "Operativo",
     badges,
   };
 }
