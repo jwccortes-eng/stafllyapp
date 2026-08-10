@@ -46,6 +46,7 @@ function EntityRowImpl({
   reference,
   metric,
   tone,
+  accentColor,
   hover,
   selected,
   onClick,
@@ -66,15 +67,24 @@ function EntityRowImpl({
         }
       }}
       className={cn(
-        "flex h-full w-full items-center gap-3 px-3 py-2.5 text-left transition-colors",
+        "relative flex h-full w-full items-center gap-3 px-3 py-2.5 text-left transition-colors",
         onClick && "cursor-pointer",
         selected ? "bg-primary/[0.07]" : "hover:bg-accent/40",
         className,
       )}
     >
+      {accentColor ? (
+        <span
+          aria-hidden
+          className="absolute inset-y-1 left-0 w-[3px] rounded-full"
+          style={{ backgroundColor: accentColor }}
+        />
+      ) : null}
+
       <span className={cn("shrink-0 rounded-full ring-2 ring-offset-1 ring-offset-background", status.ring)}>
         {avatar}
       </span>
+
 
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold leading-tight text-foreground">
