@@ -96,6 +96,12 @@ function ServiceEventCardImpl({
     className,
   );
 
+  /** El borde izquierdo es IDENTIDAD del Cliente; el estado vive en el fondo. */
+  const identityStyle = model.accentColor
+    ? { borderLeftColor: model.accentColor, borderLeftWidth: 3 }
+    : undefined;
+
+
   const body =
     density === "month" ? (
       <button type="button" onClick={onOpen} className={cn(base, "px-1.5 py-[3px]")} {...dnd}>
