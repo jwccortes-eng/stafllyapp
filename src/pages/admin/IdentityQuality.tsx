@@ -6,7 +6,7 @@
  * botón de fusionar en esta fase: la única acción es [Revisar].
  */
 import { useMemo, useState } from "react";
-import { OperationalScreenHeader } from "@/components/stafly-ui/OperationalScreenHeader";
+import { OperationalWorkspace, type WorkspaceMetric } from "@/components/stafly-ui/OperationalWorkspace";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -126,6 +126,7 @@ function GroupCard({
 export default function IdentityQuality() {
   const { model, loading, hasCompany, recordDecision } = useIdentityQuality();
   const [activeGroup, setActiveGroup] = useState<IdentityGroup | null>(null);
+  const [tab, setTab] = useState("duplicates");
 
   const duplicateGroups = useMemo(
     () =>
@@ -151,53 +152,41 @@ export default function IdentityQuality() {
     />
   );
 
-  return (
-    <div className="space-y-6 p-4 sm:p-6">
-      <OperationalScreenHeader
-        title="Calidad de identidad"
-        context="Revisión asistida de personas repetidas. Las decisiones se registran; nada se fusiona automáticamente."
-      />
+  /* P0 — Operational First Layout: métricas como chips, aviso administrativo
+     colapsable y pestañas siempre visibles. Sin cambios de lógica. */
+  const metricChips: WorkspaceMetric[] = model
+    ? [
+        { label: "registros", value: model.totals.total },
+        { label: "asignables", value: model.totals.assignable, tone: "primary" as const },
+        { label: "con portal", value: model.totals.withPortal },
+        { label: "históricos", value: model.totals.historical },
+        { label: "dup. probables", value: model.totals.probableGroups, tone: model.totals.probableGroups > 0 ? ("warning" as const) : undefined },
+        { label: "dup. posibles", value: model.totals.possibleGroups },
+        { label: "revisados", value: model.totals.reviewedGroups, tone: "success" as const },
+        { label: "asignaciones sospechosas", value: model.totals.suspiciousAssignments, tone: model.totals.suspiciousAssignments > 0 ? ("critical" as const) : undefined },
+      ]
+    : [];
 
-      {!hasCompany && (
+  return (
+    <OperationalWorkspace
+      title="Calidad de identidad"
+      metrics={metricChips}
+      adminTitle="Resumen administrativo"
+      adminHint="Alcance y garantías de esta pantalla"
+      admin={
         <Alert>
+          <ShieldAlert className="h-4 w-4" />
           <AlertDescription>
-            Selecciona una empresa para revisar la calidad de identidad de su equipo.
+            Esta pantalla no fusiona registros ni mueve documentos, horas, pagos o
+            accesos. La consolidación se planifica en seco, con evidencia y bloqueos
+            explícitos.
           </AlertDescription>
         </Alert>
-      )}
-
-      {loading && (
-        <div className="grid gap-3 sm:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-20" />
-          ))}
-        </div>
-      )}
-
-      {model && (
-        <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Metric label="Registros totales" value={model.totals.total} />
-            <Metric label="Asignables hoy" value={model.totals.assignable} />
-            <Metric label="Con portal" value={model.totals.withPortal} />
-            <Metric label="Históricos" value={model.totals.historical} />
-            <Metric label="Duplicados probables" value={model.totals.probableGroups} />
-            <Metric label="Duplicados posibles" value={model.totals.possibleGroups} />
-            <Metric label="Grupos revisados" value={model.totals.reviewedGroups} />
-            <Metric label="Asignaciones sospechosas" value={model.totals.suspiciousAssignments} />
-          </div>
-
-          <Alert>
-            <ShieldAlert className="h-4 w-4" />
-            <AlertDescription>
-              Esta pantalla no fusiona registros ni mueve documentos, horas, pagos o
-              accesos. La consolidación se planifica en seco, con evidencia y bloqueos
-              explícitos.
-            </AlertDescription>
-          </Alert>
-
-          <Tabs defaultValue="duplicates">
-            <TabsList className="flex w-full flex-wrap justify-start">
+      }
+      tabs={
+        model ? (
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList className="flex w-full flex-wrap justify-start h-auto">
               <TabsTrigger value="duplicates">
                 <Users className="mr-1.5 h-4 w-4" />
                 Posibles duplicados ({duplicateGroups.length})
@@ -219,6 +208,30 @@ export default function IdentityQuality() {
                 Asignaciones ({model.totals.suspiciousAssignments + model.totals.highRiskAssignments})
               </TabsTrigger>
             </TabsList>
+          </Tabs>
+        ) : undefined
+      }
+    >
+      {!hasCompany && (
+        <Alert>
+          <AlertDescription>
+            Selecciona una empresa para revisar la calidad de identidad de su equipo.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {loading && (
+        <div className="grid gap-3 sm:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-20" />
+          ))}
+        </div>
+      )}
+
+      {model && (
+        <>
+          <Tabs value={tab} onValueChange={setTab}>
+
 
             <TabsContent value="duplicates" className="mt-4 space-y-3">
               {duplicateGroups.length === 0 && (
@@ -296,6 +309,7 @@ export default function IdentityQuality() {
           />
         </>
       )}
-    </div>
+    </OperationalWorkspace>
+
   );
 }
