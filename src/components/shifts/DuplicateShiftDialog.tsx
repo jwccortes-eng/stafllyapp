@@ -507,6 +507,23 @@ export function DuplicateShiftDialog({
             <ToggleRow label="Enviar notificaciones" checked={false} disabled />
           </div>
 
+          {/* Trabajadores del Servicio origen que ya no son asignables */}
+          {copyWorkers && blockedWorkers.length > 0 && (
+            <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs font-semibold text-warning">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                No se copian {blockedWorkers.length} trabajador(es)
+              </div>
+              <ul className="space-y-0.5 text-[11px] text-muted-foreground">
+                {blockedWorkers.map((b) => (
+                  <li key={b.employee_id}>
+                    {notAssignableMessage(b.name)} <span className="opacity-70">({b.reason})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Overlap preview */}
           {copyWorkers && targetDate && (
             <div className="rounded-lg border border-border/60 p-3 space-y-2">
