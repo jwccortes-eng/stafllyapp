@@ -785,9 +785,9 @@ export default function UnifiedPersonProfile() {
                     size="sm"
                     variant="outline"
                     className="hidden sm:inline-flex h-8 text-xs"
-                    onClick={() => setIsEditing(true)}
+                    onClick={() => openDeepTab("info", { edit: true })}
                   >
-                    <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+                    <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
                   </Button>
                 )}
 
