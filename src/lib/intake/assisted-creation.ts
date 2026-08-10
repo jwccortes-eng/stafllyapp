@@ -15,6 +15,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeEntityName, similarity } from "./entity-resolution";
+import { createClientCanonical } from "@/lib/clients/create-client";
 
 export interface AssistedEntity {
   id: string;
