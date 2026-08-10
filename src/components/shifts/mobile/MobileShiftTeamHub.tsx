@@ -51,6 +51,7 @@ import { MT } from "@/lib/mobile/mobile-scale";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizePhone, buildWhatsAppTargets } from "@/lib/phone";
 import { notifySuccess, notifyError, notifyWarning } from "@/lib/feedback/notify";
+import { useRecommendationSignals } from "@/hooks/useRecommendationSignals";
 import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision } from "@/lib/shifts/team-actions";
 import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
 import { RemoveWorkerFromShiftDialog } from "@/components/shifts/RemoveWorkerFromShiftDialog";
@@ -1344,8 +1345,6 @@ function RecommendedTab({
       return next;
     });
   };
-  const [signals, setSignals] = useState<RecommendationSignals>(EMPTY_SIGNALS);
-  const [signalsLoading, setSignalsLoading] = useState(false);
   const [prefRefreshKey, setPrefRefreshKey] = useState(0);
 
   const handleSetPreference = async (
@@ -1439,180 +1438,13 @@ function RecommendedTab({
       .filter(x => x.r.state !== "inactive" && x.r.state !== "needs_review");
   }, [employees, takenIds, statusMap]);
 
-  // Batch-fetch signals once per (shift, eligible) change.
-  useEffect(() => {
-    let cancelled = false;
-    const empIds = eligible.map(x => x.e.id);
-    if (!companyId || empIds.length === 0 || !shift?.id) {
-      setSignals(EMPTY_SIGNALS);
-      return;
-    }
-    setSignalsLoading(true);
-
-    (async () => {
-      // Window: last 12 months of history.
-      const since = new Date();
-      since.setFullYear(since.getFullYear() - 1);
-      const sinceStr = since.toISOString().slice(0, 10);
-
-      const overrideByEmp = new Map<string, boolean>();
-      const configByEmp = new Map<string, { default_available: boolean; blocked_weekdays: number[] | null }>();
-      const clientHistoryByEmp = new Map<string, number>();
-      const locationHistoryByEmp = new Map<string, number>();
-      const reviewByEmp = new Map<string, ReviewSignal>();
-      const conflictEmpIds = new Set<string>();
-      const preferencesByEmp = new Map<string, WorkerPreferenceRow[]>();
-
-      // Fire all queries in parallel; ignore individual failures gracefully.
-      const queries = [
-        // 1) Availability override for shift date.
-        supabase
-          .from("employee_availability_overrides")
-          .select("employee_id, is_available")
-          .eq("company_id", companyId)
-          .eq("date", shift.date)
-          .in("employee_id", empIds),
-        // 2) Availability config (default + blocked weekdays).
-        supabase
-          .from("employee_availability_config")
-          .select("employee_id, default_available, blocked_weekdays")
-          .eq("company_id", companyId)
-          .in("employee_id", empIds),
-        // 3) Review stats (company-scoped reliability).
-        supabase
-          .from("employee_review_stats")
-          .select("employee_id, avg_overall_score, no_show_flags_90d, low_score_count_30d, total_reviews")
-          .eq("company_id", companyId)
-          .in("employee_id", empIds),
-        // 4) Client/location history — recent assignments via shift join.
-        supabase
-          .from("shift_assignments")
-          .select("employee_id, scheduled_shifts!inner(client_id, location_id, date)")
-          .eq("company_id", companyId)
-          .in("employee_id", empIds)
-          .neq("status", "rejected")
-          .neq("status", "removed")
-          .gte("scheduled_shifts.date", sinceStr)
-          .lte("scheduled_shifts.date", shift.date)
-          .limit(2000),
-        // 5) Same-date assignments (for overlap conflict detection).
-        supabase
-          .from("shift_assignments")
-          .select("employee_id, shift_id, scheduled_shifts!inner(date, start_time, end_time)")
-          .eq("company_id", companyId)
-          .in("employee_id", empIds)
-          .neq("status", "rejected")
-          .neq("status", "removed")
-          .eq("scheduled_shifts.date", shift.date)
-          .neq("shift_id", shift.id)
-          .limit(1000),
-        // 6) Active worker preferences for this client/location.
-        (() => {
-          let q = supabase
-            .from("worker_client_preferences")
-            .select("id, employee_id, preference_type, client_id, location_id")
-            .eq("company_id", companyId)
-            .in("employee_id", empIds)
-            .is("archived_at", null);
-          const orParts: string[] = [];
-          if (shift.client_id) orParts.push(`client_id.eq.${shift.client_id}`);
-          if (shift.location_id) orParts.push(`location_id.eq.${shift.location_id}`);
-          if (orParts.length === 0) {
-            // No client/location → no rows can match; short-circuit with impossible filter.
-            return q.eq("id", "00000000-0000-0000-0000-000000000000");
-          }
-          return q.or(orParts.join(","));
-        })(),
-      ];
-
-      const [ovRes, cfgRes, revRes, histRes, sameDayRes, prefRes] = await Promise.allSettled(queries);
-
-      if (cancelled) return;
-
-      if (ovRes.status === "fulfilled" && !ovRes.value.error) {
-        for (const row of (ovRes.value.data ?? []) as any[]) {
-          overrideByEmp.set(`${shift.date}:${row.employee_id}`, row.is_available !== false);
-        }
-      }
-      if (cfgRes.status === "fulfilled" && !cfgRes.value.error) {
-        for (const row of (cfgRes.value.data ?? []) as any[]) {
-          configByEmp.set(row.employee_id, {
-            default_available: row.default_available !== false,
-            blocked_weekdays: Array.isArray(row.blocked_weekdays) ? row.blocked_weekdays : null,
-          });
-        }
-      }
-      if (revRes.status === "fulfilled" && !revRes.value.error) {
-        for (const row of (revRes.value.data ?? []) as any[]) {
-          reviewByEmp.set(row.employee_id, {
-            avg_overall_score: row.avg_overall_score,
-            no_show_flags_90d: row.no_show_flags_90d,
-            low_score_count_30d: row.low_score_count_30d,
-            total_reviews: row.total_reviews,
-          });
-        }
-      }
-      if (histRes.status === "fulfilled" && !histRes.value.error) {
-        for (const row of (histRes.value.data ?? []) as any[]) {
-          const ss = row.scheduled_shifts;
-          if (!ss) continue;
-          if (shift.client_id && ss.client_id === shift.client_id) {
-            clientHistoryByEmp.set(row.employee_id, (clientHistoryByEmp.get(row.employee_id) ?? 0) + 1);
-          }
-          if (shift.location_id && ss.location_id === shift.location_id) {
-            locationHistoryByEmp.set(row.employee_id, (locationHistoryByEmp.get(row.employee_id) ?? 0) + 1);
-          }
-        }
-      }
-      if (sameDayRes.status === "fulfilled" && !sameDayRes.value.error) {
-        const toMin = (t: string | null | undefined) => {
-          if (!t) return null;
-          const [h, m] = t.split(":").map(Number);
-          return h * 60 + (m || 0);
-        };
-        const sStart = toMin(shift.start_time);
-        const sEndRaw = toMin(shift.end_time);
-        const sEnd = sStart != null && sEndRaw != null && sEndRaw <= sStart ? sEndRaw + 24 * 60 : sEndRaw;
-        for (const row of (sameDayRes.value.data ?? []) as any[]) {
-          const ss = row.scheduled_shifts;
-          if (!ss) continue;
-          const oStart = toMin(ss.start_time);
-          const oEndRaw = toMin(ss.end_time);
-          if (oStart == null || oEndRaw == null || sStart == null || sEnd == null) {
-            // Unknown times → treat as conflict (same date assignment).
-            conflictEmpIds.add(row.employee_id);
-            continue;
-          }
-          const oEnd = oEndRaw <= oStart ? oEndRaw + 24 * 60 : oEndRaw;
-          const overlaps = oStart < sEnd && sStart < oEnd;
-          if (overlaps) conflictEmpIds.add(row.employee_id);
-        }
-      }
-      if (prefRes.status === "fulfilled" && !prefRes.value.error) {
-        for (const row of (prefRes.value.data ?? []) as any[]) {
-          const list = preferencesByEmp.get(row.employee_id) ?? [];
-          list.push({
-            id: row.id,
-            preference_type: row.preference_type as WorkerPreferenceType,
-            client_id: row.client_id,
-            location_id: row.location_id,
-          });
-          preferencesByEmp.set(row.employee_id, list);
-        }
-      }
-
-      setSignals({
-        overrideByEmp, configByEmp, clientHistoryByEmp, locationHistoryByEmp,
-        reviewByEmp, conflictEmpIds, preferencesByEmp,
-      });
-      setSignalsLoading(false);
-    })().catch(() => {
-      if (!cancelled) setSignalsLoading(false);
-    });
-
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyId, shift?.id, shift?.date, eligible.length, prefRefreshKey]);
+  // Señales de recomendación — helper único compartido con el Command Center.
+  const { signals, loading: signalsLoading } = useRecommendationSignals({
+    companyId,
+    shift,
+    employeeIds: eligible.map((x) => x.e.id),
+    refreshKey: prefRefreshKey,
+  });
 
   const roleNeeds = useMemo(() => inferShiftRoleNeeds(shift), [shift?.id]);
 

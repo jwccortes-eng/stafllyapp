@@ -8,6 +8,7 @@
  * UI-only: consume `getServiceCopilot` y no muta nada.
  */
 import { memo } from "react";
+import { Link } from "react-router-dom";
 import { ArrowRight, Check, CircleDashed, AlertTriangle, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { requestServiceFocus } from "@/lib/shifts/service-focus";
@@ -30,7 +31,7 @@ const STATE_TEXT: Record<ChecklistState, string> = {
 
 function ServiceCopilotPanelImpl({ copilot }: { copilot: ServiceCopilotResult }) {
   const { nextStep, checklist } = copilot;
-  const actionable = Boolean(nextStep.anchorId);
+  const action = nextStep.action;
 
   return (
     <div className="rounded-2xl border border-border/40 bg-card overflow-hidden">
@@ -47,27 +48,52 @@ function ServiceCopilotPanelImpl({ copilot }: { copilot: ServiceCopilotResult })
         <ReadinessBar value={copilot.readiness} band={copilot.band} variant="block" />
       </div>
 
-      {/* Siguiente paso — UNA sola recomendación */}
+      {/* Siguiente paso — UNA sola recomendación, siempre resoluble */}
       <div className="px-3.5 py-3 border-b border-border/30 bg-primary/[0.04]">
         <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
           Siguiente paso
         </p>
         <div className="flex items-start justify-between gap-2 mt-1">
           <p className="text-[14px] font-bold font-heading leading-tight">{nextStep.label}</p>
-          {actionable && (
+          {action?.kind === "focus" && (
             <button
               type="button"
-              onClick={() => requestServiceFocus(nextStep.anchorId!)}
+              onClick={() => requestServiceFocus(action.anchorId)}
               className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-primary px-2 py-1 text-[10px] font-semibold text-primary-foreground hover:opacity-90"
             >
-              Ir <ArrowRight className="h-3 w-3" />
+              {action.label} <ArrowRight className="h-3 w-3" />
             </button>
+          )}
+          {action?.kind === "link" && (
+            <Link
+              to={action.to}
+              className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-primary px-2 py-1 text-[10px] font-semibold text-primary-foreground hover:opacity-90"
+            >
+              {action.label} <ArrowRight className="h-3 w-3" />
+            </Link>
           )}
         </div>
         <p className="text-[11px] text-muted-foreground leading-snug mt-1.5">
           <span className="font-semibold text-foreground/70">Por qué: </span>
           {nextStep.why}
         </p>
+
+        {/* Contexto — el usuario nunca debe recordar qué Servicio está mirando */}
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-2 pt-2 border-t border-border/30">
+          {nextStep.context.map((c) => (
+            <div key={c.label} className="flex items-baseline gap-1.5 min-w-0 text-[10px]">
+              <dt className="text-muted-foreground shrink-0">{c.label}</dt>
+              <dd
+                className={cn(
+                  "truncate font-semibold",
+                  c.tone === "attention" ? "text-warning" : "text-foreground",
+                )}
+              >
+                {c.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </div>
 
       {/* Checklist — solo lectura */}

@@ -41,9 +41,15 @@ interface Props {
   onAddNewEmployee?: () => void;
   onAddEmergencyWorker?: () => void;
   onChange: (patch: { claimable?: boolean; shiftAdminId?: string }) => void;
+  /**
+   * El Command Center ya ofrece asignación real (personas sugeridas), así que
+   * la pista "cierra el modal y usa otro botón" deja de tener sentido.
+   */
+  hideAssignHint?: boolean;
 }
 
 function TeamSectionImpl({
+  hideAssignHint,
   mode,
   showEmployeePicker,
   allowClaims,
@@ -111,7 +117,7 @@ function TeamSectionImpl({
         </div>
       )}
 
-      {!showEmployeePicker && mode === "edit" && (
+      {!showEmployeePicker && mode === "edit" && !hideAssignHint && (
         <div className="flex items-start gap-2 p-2.5 rounded-xl bg-primary/[0.04] border border-primary/15">
           <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
           <p className="text-[11px] text-muted-foreground leading-snug">

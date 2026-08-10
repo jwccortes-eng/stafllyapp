@@ -122,3 +122,59 @@ describe("getServiceCopilot", () => {
     }
   });
 });
+
+/**
+ * P0 — SERVICE COMMAND CENTER: cada recomendación resuelve y ninguna alerta
+ * aparece cuando no aplica.
+ */
+describe("copiloto como centro de decisión", () => {
+  const past = { ...base, shiftId: "shift-1", daysUntil: -1 };
+
+  it("transporte OFF nunca exige Meeting Point", () => {
+    const r = getServiceCopilot({ ...base, meetingRequired: false, hasMeetingPoint: false, publicationStatus: "draft", assignedCount: 0 });
+    expect(r.nextStep.label).not.toMatch(/Meeting Point/);
+    expect(r.checklist.find((c) => c.key === "meeting_point")?.state).toBe("na");
+  });
+
+  it("un borrador no pide fichaje aunque la fecha ya pasó", () => {
+    const r = getServiceCopilot({ ...base, publicationStatus: "draft", daysUntil: -1 });
+    const byKey = Object.fromEntries(r.checklist.map((c) => [c.key, c.state]));
+    expect(byKey.clock_in).toBe("na");
+    expect(byKey.clock_out).toBe("na");
+  });
+
+  it("sin clock in no se exige clock out", () => {
+    const r = getServiceCopilot({ ...past, attendance: { clockedIn: 0, clockedOut: 0 } });
+    expect(r.nextStep.label).toBe("Revisar asistencia");
+    expect(r.checklist.find((c) => c.key === "clock_out")?.state).toBe("na");
+  });
+
+  it("toda recomendación accionable trae una acción que resuelve", () => {
+    const cases: ServiceCopilotInput[] = [
+      { ...base, clientId: null, anchors: { client: "a" } },
+      { ...base, hasVenue: false, anchors: { venue: "a" } },
+      { ...base, assignedCount: 1, anchors: { staffing: "a" } },
+      { ...past, attendance: { clockedIn: 4, clockedOut: 2 } },
+      { ...past, attendance: { clockedIn: 4, clockedOut: 4, hoursReviewed: true } },
+    ];
+    for (const c of cases) {
+      const r = getServiceCopilot(c);
+      expect(r.nextStep.action, r.nextStep.label).toBeTruthy();
+    }
+  });
+
+  it("cada recomendación lleva el contexto del servicio", () => {
+    const r = getServiceCopilot({ ...base, assignedCount: 2, clientName: "Millennium", serviceRef: "QK001592" });
+    const ctx = Object.fromEntries(r.nextStep.context.map((c) => [c.label, c.value]));
+    expect(ctx.Cliente).toBe("Millennium");
+    expect(ctx.Servicio).toBe("QK001592");
+    expect(ctx.Cobertura).toBe("2/4 · 50%");
+    expect(ctx.Horario).toBe("16:00–21:00");
+  });
+
+  it("un servicio cancelado no pide cobertura", () => {
+    const r = getServiceCopilot({ ...base, assignedCount: 0, publicationStatus: "cancelled" });
+    expect(r.nextStep.label).toBe("Sin acciones pendientes");
+    expect(r.nextStep.action).toBeUndefined();
+  });
+});

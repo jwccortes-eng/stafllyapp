@@ -29,6 +29,7 @@ import {
 } from "@/lib/shifts/service-publish-readiness";
 import { ServiceCopilotHeader } from "./copilot/ServiceCopilotHeader";
 import { ServiceTimePanel } from "./copilot/ServiceTimePanel";
+import { SmartStaffingPanel } from "./copilot/SmartStaffingPanel";
 import { ShiftLifecycleTimeline } from "./ShiftLifecycleTimeline";
 import type { Shift, SelectOption, Employee, Assignment } from "./types";
 
@@ -280,6 +281,9 @@ export function ShiftEditDialog({
         assignedCount: signals.assignedCount,
         claimable: form.claimable,
         publicationStatus,
+        shiftId: shift.id,
+        serviceRef: (shift as any).shift_ref ?? null,
+        clientName: signals.clientName,
         infoComplete: Boolean(form.title.trim()) && signals.readiness.blockers.length === 0,
         daysUntil,
         anchors: {
@@ -297,7 +301,7 @@ export function ShiftEditDialog({
       form.jobSiteLocationId, form.jobSiteAddress, form.transportRequired,
       form.meetingPoint, form.meetingPointLocationId, form.claimable, form.title,
       signals.slotsNum, signals.assignedCount, signals.readiness.blockers.length,
-      publicationStatus, daysUntil,
+      publicationStatus, daysUntil, shift.id, signals.clientName,
     ],
   );
 
@@ -445,6 +449,16 @@ export function ShiftEditDialog({
         adminError={adminError}
         renderInlineSummary={false}
         copilotStages={{
+          staffing: (
+            <SmartStaffingPanel
+              shift={shift}
+              employees={employees}
+              assignments={assignments}
+              companyId={(shift as any).company_id ?? null}
+              slots={signals.slotsNum}
+              assignedCount={signals.assignedCount}
+            />
+          ),
           tiempo: (
             <ServiceTimePanel
               shiftId={shift.id}

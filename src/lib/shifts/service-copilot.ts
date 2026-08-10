@@ -53,6 +53,23 @@ export interface CopilotChecklistItem {
   weight: number;
 }
 
+/** Contexto operativo del siguiente paso: el usuario nunca debe recordar nada. */
+export interface CopilotContextChip {
+  label: string;
+  value: string;
+  tone?: "neutral" | "attention";
+}
+
+/**
+ * Acción que RESUELVE la recomendación.
+ *  - `focus`: la sección vive en este mismo editor.
+ *  - `link` : la resolución vive en otra superficie canónica (deep-link).
+ * Si no hay acción posible, el copiloto no la ofrece.
+ */
+export type CopilotAction =
+  | { kind: "focus"; anchorId: string; label: string }
+  | { kind: "link"; to: string; label: string };
+
 export interface CopilotNextStep {
   /** Acción única y accionable: "Asignar 2 personas", "Publicar Servicio". */
   label: string;
@@ -60,6 +77,10 @@ export interface CopilotNextStep {
   why: string;
   /** Sección del editor a enfocar (`focusServiceSection`), si aplica. */
   anchorId?: string;
+  /** Acción única que resuelve la recomendación. Sin acción → no se ofrece botón. */
+  action?: CopilotAction;
+  /** Servicio · Cliente · Fecha · Horario · Cobertura. */
+  context: CopilotContextChip[];
   /** Etapa a la que pertenece la recomendación. */
   stage: CopilotStage;
 }
@@ -107,6 +128,10 @@ export interface ServiceCopilotInput {
   /** Días hasta el servicio; negativo = ya ocurrió. */
   daysUntil?: number | null;
   attendance?: CopilotAttendanceSignals;
+  /** Identificadores para construir deep-links resolutivos. */
+  shiftId?: string | null;
+  serviceRef?: string | null;
+  clientName?: string | null;
   /** Anclas opcionales para enfocar la sección correcta del editor. */
   anchors?: Partial<Record<ChecklistKey, string>>;
 }
@@ -182,10 +207,18 @@ export function getServiceCopilot(input: ServiceCopilotInput): ServiceCopilotRes
   const att = input.attendance ?? {};
   const teamSize = input.assignedCount;
   // Los ítems de tiempo solo aplican cuando el servicio ya ocurrió y hay equipo.
-  const timeApplies = isPast && teamSize > 0;
-  const clockInDone = timeApplies ? (att.clockedIn ?? 0) >= teamSize : false;
-  const clockOutDone = timeApplies ? (att.clockedOut ?? 0) >= teamSize : false;
-  const hoursDone = timeApplies ? Boolean(att.hoursReviewed) : false;
+  // Solo aplica cuando el Servicio ya ocurrió, hubo equipo y fue publicado:
+  // un borrador nunca pide fichaje.
+  const timeApplies = isPast && teamSize > 0 && published;
+  /** Señales desconocidas ≠ señales en cero: sin datos no se inventan alertas. */
+  const attendanceKnown = timeApplies && att.clockedIn != null;
+  const clockInDone = attendanceKnown ? (att.clockedIn ?? 0) >= teamSize : false;
+  // Sin clock in no existe clock out que exigir.
+  const clockOutApplies = attendanceKnown && (att.clockedIn ?? 0) > 0;
+  const clockOutDone = clockOutApplies ? (att.clockedOut ?? 0) >= teamSize : false;
+  // Las horas solo se revisan cuando el clock out cerró.
+  const hoursApplies = clockOutDone;
+  const hoursDone = hoursApplies ? Boolean(att.hoursReviewed) : false;
 
   const checklist: CopilotChecklistItem[] = [
     item("client", hasClient ? "done" : "pending"),
@@ -199,9 +232,9 @@ export function getServiceCopilot(input: ServiceCopilotInput): ServiceCopilotRes
     item("meeting_point", !input.meetingRequired ? "na" : meetingDone ? "done" : "pending"),
     item("info", input.infoComplete ? "done" : "pending"),
     item("published", published ? "done" : cancelled ? "na" : "pending"),
-    item("clock_in", !timeApplies ? "na" : clockInDone ? "done" : "attention"),
-    item("clock_out", !timeApplies ? "na" : clockOutDone ? "done" : "attention"),
-    item("hours", !timeApplies ? "na" : hoursDone ? "done" : "attention"),
+    item("clock_in", !attendanceKnown ? "na" : clockInDone ? "done" : "attention"),
+    item("clock_out", !clockOutApplies ? "na" : clockOutDone ? "done" : "attention"),
+    item("hours", !hoursApplies ? "na" : hoursDone ? "done" : "attention"),
   ];
 
   const counted = checklist.filter((c) => c.state !== "na");
@@ -210,9 +243,37 @@ export function getServiceCopilot(input: ServiceCopilotInput): ServiceCopilotRes
   const readiness = Math.round((earned / total) * 100);
 
   const anchor = (k: ChecklistKey) => input.anchors?.[k];
+  const focus = (k: ChecklistKey, label: string): CopilotAction | undefined => {
+    const id = anchor(k);
+    return id ? { kind: "focus", anchorId: id, label } : undefined;
+  };
+  const link = (to: string, label: string): CopilotAction | undefined =>
+    input.shiftId ? { kind: "link", to, label } : undefined;
+
+  // ── CONTEXTO — el usuario nunca debe recordar qué Servicio está mirando.
+  const coverage = input.slots > 0
+    ? Math.min(100, Math.round((input.assignedCount / input.slots) * 100))
+    : 0;
+  const context: CopilotContextChip[] = [
+    { label: "Servicio", value: input.serviceRef || "Sin referencia" },
+    { label: "Cliente", value: input.clientName || "Sin cliente", tone: hasClient ? "neutral" : "attention" },
+    { label: "Fecha", value: input.date || "Sin fecha", tone: hasDate ? "neutral" : "attention" },
+    {
+      label: "Horario",
+      value: input.startTime && input.endTime ? `${input.startTime}–${input.endTime}` : "Sin definir",
+      tone: scheduleDone ? "neutral" : "attention",
+    },
+    {
+      label: "Cobertura",
+      value: headcountDefined
+        ? `${input.assignedCount}/${input.slots} · ${coverage}%`
+        : "Sin definir",
+      tone: staffingDone ? "neutral" : "attention",
+    },
+  ];
 
   // ── UNA sola recomendación. Orden de prioridad operativa, sin empates.
-  let nextStep: CopilotNextStep;
+  let nextStep: Omit<CopilotNextStep, "context">;
 
   if (cancelled || archived) {
     nextStep = {
@@ -227,6 +288,7 @@ export function getServiceCopilot(input: ServiceCopilotInput): ServiceCopilotRes
       label: "Confirmar fecha",
       why: "Sin fecha el Servicio no puede planificarse ni asignarse.",
       anchorId: anchor("date"),
+      action: focus("date", "Ir a la fecha"),
       stage: "definicion",
     };
   } else if (!hasClient) {
@@ -234,6 +296,7 @@ export function getServiceCopilot(input: ServiceCopilotInput): ServiceCopilotRes
       label: "Confirmar cliente",
       why: "El cliente define facturación, venue habitual y equipo recomendado.",
       anchorId: anchor("client"),
+      action: focus("client", "Elegir cliente"),
       stage: "definicion",
     };
   } else if (!input.hasVenue) {
@@ -241,6 +304,7 @@ export function getServiceCopilot(input: ServiceCopilotInput): ServiceCopilotRes
       label: "Confirmar Venue",
       why: "El equipo necesita saber dónde se trabaja antes de aceptar.",
       anchorId: anchor("venue"),
+      action: focus("venue", "Elegir Venue"),
       stage: "definicion",
     };
   } else if (!scheduleDone) {
@@ -252,6 +316,7 @@ export function getServiceCopilot(input: ServiceCopilotInput): ServiceCopilotRes
           ? "Falta la hora de fin del Servicio."
           : "La hora de inicio y la de fin no pueden ser la misma.",
       anchorId: anchor("schedule"),
+      action: focus("schedule", "Ajustar horario"),
       stage: "definicion",
     };
   } else if (!headcountDefined) {
@@ -259,6 +324,7 @@ export function getServiceCopilot(input: ServiceCopilotInput): ServiceCopilotRes
       label: "Definir cuántas personas",
       why: "Todavía no sabemos cuánta gente pide el cliente para este Servicio.",
       anchorId: anchor("staffing"),
+      action: focus("staffing", "Definir plazas"),
       stage: "definicion",
     };
   } else if (!meetingDone) {
@@ -266,6 +332,7 @@ export function getServiceCopilot(input: ServiceCopilotInput): ServiceCopilotRes
       label: "Completar Meeting Point",
       why: "Este Servicio requiere transporte y el equipo no sabe dónde encontrarse.",
       anchorId: anchor("meeting_point"),
+      action: focus("meeting_point", "Ir al Meeting Point"),
       stage: "operacion",
     };
   } else if (!input.infoComplete) {
@@ -273,6 +340,7 @@ export function getServiceCopilot(input: ServiceCopilotInput): ServiceCopilotRes
       label: "Completar información",
       why: "Faltan datos del turno para que el Servicio salga completo a la operación.",
       anchorId: anchor("info"),
+      action: focus("info", "Completar información"),
       stage: "definicion",
     };
   } else if (!published) {
@@ -280,13 +348,15 @@ export function getServiceCopilot(input: ServiceCopilotInput): ServiceCopilotRes
       label: "Publicar Servicio",
       why: "La información está completa. Al publicarlo el equipo puede verlo y aceptarlo.",
       anchorId: anchor("published"),
+      action: focus("published", "Ir a publicación"),
       stage: "publicacion",
     };
   } else if (!staffingDone) {
     nextStep = {
       label: missingPeople === 1 ? "Asignar 1 persona" : `Asignar ${missingPeople} personas`,
-      why: `Faltan ${missingPeople} ${missingPeople === 1 ? "persona" : "personas"} para completar el staffing.`,
+      why: `Faltan ${missingPeople} ${missingPeople === 1 ? "persona" : "personas"} para completar el staffing (${input.assignedCount}/${input.slots} confirmadas).`,
       anchorId: anchor("staffing"),
+      action: focus("staffing", "Asignar equipo"),
       stage: "staffing",
     };
   } else if (!isPast) {
@@ -295,22 +365,40 @@ export function getServiceCopilot(input: ServiceCopilotInput): ServiceCopilotRes
       why: "Todo el equipo está cubierto. El Servicio está listo para operar.",
       stage: "operacion",
     };
+  } else if (!attendanceKnown) {
+    // Servicio pasado sin señales de fichaje: se revisa en la superficie canónica.
+    nextStep = {
+      label: "Revisar horas",
+      why: "El Servicio ya ocurrió. La revisión de horas se hace en el Centro de Validación.",
+      action: link(`/app/payroll-review-queue?shiftId=${input.shiftId}`, "Revisar horas"),
+      stage: "tiempo",
+    };
+  } else if (!clockOutApplies) {
+    nextStep = {
+      label: "Revisar asistencia",
+      why: "El Servicio terminó y nadie registró entrada. Confirma qué pasó antes de tocar horas.",
+      action: link(`/app/timeclock?shiftId=${input.shiftId}&date=${input.date}`, "Abrir fichaje"),
+      stage: "tiempo",
+    };
   } else if (!clockOutDone) {
     nextStep = {
       label: "Cerrar clock-out",
-      why: "El Servicio terminó y hay personas sin clock out registrado.",
+      why: `El Servicio terminó y ${teamSize - (att.clockedOut ?? 0)} persona(s) siguen sin clock out.`,
+      action: link(`/app/timeclock?shiftId=${input.shiftId}&date=${input.date}`, "Abrir fichaje"),
       stage: "tiempo",
     };
   } else if (!hoursDone) {
     nextStep = {
       label: "Revisar horas",
       why: "El clock out está completo. Las horas necesitan revisión antes de pago.",
+      action: link(`/app/payroll-review-queue?shiftId=${input.shiftId}`, "Revisar horas"),
       stage: "tiempo",
     };
   } else if (!att.payrollPrepared) {
     nextStep = {
       label: "Preparar Payroll",
-      why: "Las horas ya fueron revisadas. Este Servicio está listo para Payroll.",
+      why: "Las horas ya fueron revisadas. La decisión final se toma en el Centro de Validación.",
+      action: link(`/app/validation-center?shiftId=${input.shiftId}`, "Abrir Centro de Validación"),
       stage: "pago",
     };
   } else {
@@ -337,7 +425,7 @@ export function getServiceCopilot(input: ServiceCopilotInput): ServiceCopilotRes
     bandLabel: BAND_LABEL[band],
     stage: nextStep.stage,
     stageLabel: STAGE_LABEL[nextStep.stage],
-    nextStep,
+    nextStep: { ...nextStep, context },
     checklist,
   };
 }
