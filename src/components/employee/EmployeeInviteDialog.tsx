@@ -690,8 +690,8 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
             </div>
           )}
 
+          {!isAccepted && !isAcceptedUnlinked && !companyMismatch && (
 
-          {!isAccepted && !companyMismatch && (
             <>
               {/* Readiness checklist */}
               <div className="rounded-lg border border-border/40 p-3 space-y-1.5">
