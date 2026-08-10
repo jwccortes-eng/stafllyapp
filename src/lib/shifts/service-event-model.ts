@@ -105,9 +105,10 @@ export function buildServiceEventModel(
 
   return {
     identity,
-    primaryLabel: identity.title,
+    primaryLabel: resolvePrimaryLabel(identity.title, input),
     timeLabel: identity.time.label,
     coverageLabel,
+
     coverageComplete: complete,
     isDraft: identity.service.isDraft,
     accent: resolveAccent(identity),
