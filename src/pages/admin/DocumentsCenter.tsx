@@ -472,7 +472,7 @@ export default function DocumentsCenter() {
                             <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[11px]">
                               <Link to={`/app/employees/${r.employee_id}`}>
                                 <UserSearch className="h-3 w-3 mr-1" />
-                                Worker
+                                Perfil
                               </Link>
                             </Button>
                           </div>
@@ -593,7 +593,7 @@ export default function DocumentsCenter() {
               <Button asChild variant="outline" className={cn("w-full gap-1.5", !drawerRow.file_path && "col-span-2")}>
                 <Link to={`/app/employees/${drawerRow.employee_id}`} onClick={() => setDrawerRow(null)}>
                   <UserSearch className="h-3.5 w-3.5" />
-                  Worker
+                  Perfil
                 </Link>
               </Button>
             </div>
