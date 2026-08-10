@@ -55,8 +55,11 @@ export default function ShiftLiveMapPanel({
     target,
   });
 
-  const targetSite = jobSite ?? meetingPoint;
-  const targetLabel = jobSite ? "Job site" : meetingPoint ? "Meeting point" : "Target";
+  // El mapa necesita coordenadas: una dirección de texto libre no basta.
+  const hasCoords = (l: typeof jobSite) => !!l && l.latitude != null && l.longitude != null;
+  const targetSite = hasCoords(jobSite) ? jobSite : hasCoords(meetingPoint) ? meetingPoint : null;
+  const targetLabel = hasCoords(jobSite) ? "Job site" : hasCoords(meetingPoint) ? "Meeting point" : "Target";
+
 
   return (
     <div className="space-y-3">
