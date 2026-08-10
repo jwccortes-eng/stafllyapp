@@ -156,6 +156,14 @@ export function BulkServiceCreationDialog({
   const [applyHeadcount, setApplyHeadcount] = useState("");
   const [applyNotes, setApplyNotes] = useState("");
 
+  // CLIENT TRUTH LAYER V1 — alta rápida de cliente sin salir del workspace.
+  const [extraClients, setExtraClients] = useState<CatalogItem[]>([]);
+  const [quickClient, setQuickClient] = useState<{ target: string; name: string } | null>(null);
+  const clientCatalog = useMemo<CatalogItem[]>(() => {
+    const seen = new Set(clients.map((c) => c.id));
+    return [...clients, ...extraClients.filter((c) => !seen.has(c.id))];
+  }, [clients, extraClients]);
+
   // Recuperación tras refresh antes de guardar: la sesión vive por empresa.
   useEffect(() => {
     if (!open || !companyId || hydrated.current) return;
