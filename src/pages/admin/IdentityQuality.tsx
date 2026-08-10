@@ -42,8 +42,15 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
-function GroupCard({ group }: { group: IdentityGroup }) {
-  const [open, setOpen] = useState(false);
+function GroupCard({
+  group,
+  review,
+  onReview,
+}: {
+  group: IdentityGroup;
+  review?: IdentityReviewRow;
+  onReview: (g: IdentityGroup) => void;
+}) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
@@ -55,8 +62,14 @@ function GroupCard({ group }: { group: IdentityGroup }) {
           <Badge variant={RISK_VARIANT[group.risk]}>
             {IDENTITY_VERDICT_LABELS[group.verdict]}
           </Badge>
-          <Button size="sm" variant="outline" onClick={() => setOpen((v) => !v)}>
-            {open ? "Ocultar" : "Revisar"}
+          {review && (
+            <Badge variant="outline">
+              {IDENTITY_DECISION_LABELS[review.decision as IdentityReviewDecision] ??
+                review.decision}
+            </Badge>
+          )}
+          <Button size="sm" variant="outline" onClick={() => onReview(group)}>
+            {review ? "Ver revisión" : "Revisar"}
           </Button>
         </div>
       </CardHeader>
@@ -77,52 +90,32 @@ function GroupCard({ group }: { group: IdentityGroup }) {
           </ul>
         )}
 
-        {open && (
-          <div className="space-y-2">
-            {group.records.map((r) => {
-              const isPrimary = group.primary?.candidateId === r.id;
-              return (
-                <div
-                  key={r.id}
-                  className="rounded-lg border p-3 text-sm"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">
-                      {[r.first_name, r.last_name].filter(Boolean).join(" ") || "Sin nombre"}
-                    </span>
-                    {isPrimary && <Badge variant="secondary">Candidato principal</Badge>}
-                    {r.user_id ? (
-                      <Badge variant="outline">Portal activo</Badge>
-                    ) : (
-                      <Badge variant="outline">Sin portal</Badge>
-                    )}
-                    {r.is_active === false && <Badge variant="outline">Inactivo</Badge>}
-                  </div>
-                  <div className="mt-2 grid gap-x-6 gap-y-1 text-muted-foreground sm:grid-cols-2">
-                    <span>Teléfono: {maskPhone(r.phone_number)}</span>
-                    <span>Email: {maskEmail(r.email)}</span>
-                    <span>ID externo: {maskExternalId(r.connecteam_employee_id)}</span>
-                    <span>
-                      Servicios: {r.assignments_count ?? 0} · Documentos:{" "}
-                      {r.documents_count ?? 0}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-            {group.primary && (
-              <p className="text-xs text-muted-foreground">
-                Candidato principal por: {group.primary.reason} (confianza{" "}
-                {Math.round(group.primary.confidence * 100)}%). Es una hipótesis
-                explicable, no una decisión: no se consolida nada en esta fase.
-              </p>
-            )}
-          </div>
-        )}
+        <div className="grid gap-2 sm:grid-cols-2">
+          {group.records.map((r) => (
+            <div key={r.id} className="rounded-lg border p-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">
+                  {[r.first_name, r.last_name].filter(Boolean).join(" ") || "Sin nombre"}
+                </span>
+                {group.primary?.candidateId === r.id && (
+                  <Badge variant="secondary">Candidato principal</Badge>
+                )}
+              </div>
+              <div className="mt-1 text-muted-foreground">
+                {maskPhone(r.phone_number)} · {maskEmail(r.email)} ·{" "}
+                {maskExternalId(r.connecteam_employee_id)}
+              </div>
+              <div className="text-muted-foreground">
+                Servicios: {r.assignments_count ?? 0} · Documentos: {r.documents_count ?? 0}
+              </div>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
 }
+
 
 export default function IdentityQuality() {
   const { model, loading, hasCompany } = useIdentityQuality();
