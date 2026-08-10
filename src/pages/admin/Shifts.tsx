@@ -107,7 +107,7 @@ import {
 import { getShiftLocationStatus } from "@/lib/shifts/location-status";
 import { PrePublishDialog } from "@/components/shifts/workspace/PrePublishDialog";
 import { ExportConnecteamBulkDialog } from "@/components/shifts/integrations/ExportConnecteamBulkDialog";
-import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
+import type { Shift, Assignment, SelectOption, ClientOption, Employee, ViewMode } from "@/components/shifts/types";
 import { formatShiftCode } from "@/components/shifts/types";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
