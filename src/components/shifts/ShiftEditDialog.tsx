@@ -283,8 +283,9 @@ export function ShiftEditDialog({
         assignedCount: signals.assignedCount,
         claimable: form.claimable,
         publicationStatus,
-        shiftId: shift.id,
-        serviceRef: (shift as any).shift_ref ?? null,
+        shiftId: shift?.id ?? "",
+        serviceRef: (shift as any)?.shift_ref ?? null,
+
         clientName: signals.clientName,
         infoComplete: Boolean(form.title.trim()) && signals.readiness.blockers.length === 0,
         daysUntil,
