@@ -13,8 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ShieldAlert, Users, IdCard, History } from "lucide-react";
-import { useIdentityQuality } from "@/hooks/useIdentityQuality";
+import { ShieldAlert, Users, IdCard, History, CheckCircle2 } from "lucide-react";
+import {
+  useIdentityQuality,
+  IDENTITY_DECISION_LABELS,
+  type IdentityReviewDecision,
+  type IdentityReviewRow,
+} from "@/hooks/useIdentityQuality";
+import { IdentityGroupReviewDialog } from "@/components/identity/IdentityGroupReviewDialog";
 import {
   IDENTITY_VERDICT_LABELS,
   maskEmail,
