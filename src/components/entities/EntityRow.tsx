@@ -29,6 +29,9 @@ export interface EntityRowProps {
   metric?: string | null;
   /** Tono del anillo de estado. */
   tone?: EntityStatusTone | null;
+  /** Acento de identidad (color del Cliente). NUNCA representa estado. */
+  accentColor?: string | null;
+
   /** Contenido del tooltip de hover (resumen operativo). */
   hover?: ReactNode;
   selected?: boolean;
