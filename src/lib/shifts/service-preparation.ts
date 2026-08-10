@@ -191,3 +191,62 @@ export const PREPARATION_PRIORITY: Record<PreparationBand, number> = {
   ready: 2,
   closed: 3,
 };
+
+// ────────────────────────────────────────────────────────────────────────────
+// Puente con el ciclo de vida (editor de Servicio)
+// ────────────────────────────────────────────────────────────────────────────
+
+import type { ServiceLifecycleReadiness } from "./service-lifecycle-readiness";
+
+const GATE_ITEM: { gate: "staff" | "publish" | "export_connecteam"; key: PreparationItem["key"]; label: string; weight: number }[] = [
+  { gate: "staff", key: "headcount", label: "Listo para staffing", weight: 40 },
+  { gate: "export_connecteam", key: "connecteam", label: "Datos completos del turno", weight: 30 },
+  { gate: "publish", key: "published", label: "Listo para publicar", weight: 30 },
+];
+
+/**
+ * Misma preparación, leída desde las compuertas del ciclo de vida — para el
+ * editor de Servicio, donde ya existe `getServiceLifecycleReadiness`.
+ */
+export function getLifecyclePreparation(
+  lifecycle: ServiceLifecycleReadiness,
+): ServicePreparation {
+  const items: PreparationItem[] = GATE_ITEM.map(({ gate, key, label, weight }) => {
+    const g = lifecycle.gates[gate];
+    return {
+      key,
+      label,
+      hint: g.ready ? g.statusText : (g.blockers[0]?.reason ?? g.statusText),
+      done: g.ready,
+      weight,
+      anchorId: g.blockers[0]?.action.anchorId ?? g.cta?.anchorId,
+    };
+  });
+
+  const earned = items.reduce((s, i) => s + (i.done ? i.weight : 0), 0);
+  const score = Math.round((earned / 100) * 100);
+  const pending = items.filter((i) => !i.done);
+  const first = pending[0] ?? null;
+  const band: PreparationBand = pending.length === 0 ? "ready" : score >= 40 ? "attention" : "later";
+
+  return {
+    score,
+    band,
+    bandLabel: BAND_LABEL[band],
+    headline:
+      pending.length === 0
+        ? "Todo listo para operar."
+        : score >= 40
+          ? `Casi listo — ${pending.length} punto${pending.length === 1 ? "" : "s"} por cerrar.`
+          : "En construcción — vamos paso a paso.",
+    items,
+    pending,
+    nextAction: first
+      ? {
+          label: lifecycle.gates[GATE_ITEM[items.indexOf(first)].gate].cta?.label ?? NEXT_LABEL[first.key],
+          hint: first.hint,
+          anchorId: first.anchorId,
+        }
+      : null,
+  };
+}
