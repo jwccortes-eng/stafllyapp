@@ -6,6 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { PageHeader } from "@/components/ui/page-header";
 import { KpiCard } from "@/components/ui/kpi-card";
+import { OperationalWorkspace, WorkspaceSearch, WorkspaceTabs } from "@/components/stafly-ui/OperationalWorkspace";
+import { EntityCard } from "@/components/entities/EntityCard";
+import type { EntityBadgeSpec, EntityStatusTone } from "@/lib/entities/entity-identity";
+
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Input } from "@/components/ui/input";
@@ -504,17 +508,77 @@ export default function Attendance() {
   }, [reportData]);
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto">
-      <PageHeader
-        title="Asistencia"
-        subtitle="Monitorea fichajes, llegadas tarde, ausencias y cierre diario."
-        icon={ScanEye}
-        variant="1"
-      />
-      <p className="text-[11px] text-muted-foreground -mt-3">
-        Las horas programadas son referencia operativa. Payroll se calcula con fichajes reales o validaciones aprobadas.
-      </p>
-
+    <OperationalWorkspace
+      title="Asistencia"
+      className="max-w-[1400px] mx-auto"
+      search={
+        tab === "live" ? (
+          <WorkspaceSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Buscar trabajador o servicio…"
+          />
+        ) : undefined
+      }
+      action={
+        tab === "live" ? (
+          <div className="w-[150px]">
+            <SmartDateInput
+              value={format(selectedDate, "yyyy-MM-dd")}
+              onChange={(iso) => {
+                if (!iso) return;
+                const [y, m, d] = iso.split("-").map(Number);
+                setSelectedDate(new Date(y, m - 1, d));
+              }}
+              allowClear={false}
+              inputClassName="h-8 text-xs"
+              aria-label="Filtrar por fecha"
+            />
+          </div>
+        ) : undefined
+      }
+      tabs={
+        <WorkspaceTabs
+          items={[
+            { key: "live", label: "En vivo" },
+            { key: "reports", label: "Reportes" },
+          ]}
+          value={tab}
+          onChange={(k) => setTab(k)}
+          ariaLabel="Vista de asistencia"
+        />
+      }
+      metrics={
+        tab === "live"
+          ? [
+              {
+                label: "Faltan por fichar",
+                value: Math.max(kpis.total - kpis.checkedIn - kpis.completed - kpis.noShow, 0),
+                tone: "primary" as const,
+                onClick: () => setStatusFilter("scheduled"),
+                active: statusFilter === "scheduled",
+              },
+              {
+                label: "Tarde",
+                value: kpis.late,
+                tone: "warning" as const,
+                onClick: () => setStatusFilter("late"),
+                active: statusFilter === "late",
+              },
+              {
+                label: "No-show",
+                value: kpis.noShow,
+                tone: "critical" as const,
+                onClick: () => setStatusFilter("no-show"),
+                active: statusFilter === "no-show",
+              },
+              ...(statusFilter !== "all"
+                ? [{ label: "Ver todos", value: kpis.total, onClick: () => setStatusFilter("all") }]
+                : []),
+            ]
+          : undefined
+      }
+    >
       <OpsFilterBanner
         active={opsFilterActive}
         label={opsFilterLabel}
@@ -525,7 +589,7 @@ export default function Attendance() {
         <div
           role="status"
           className={cn(
-            "rounded-xl border px-3.5 py-2.5 text-xs flex items-start gap-2",
+            "rounded-xl border px-3.5 py-2.5 text-xs flex items-start gap-2 mb-3",
             entryPresent || employeePresent || (!focusEntryId && !focusEmployeeId && !isViewingToday)
               ? "border-primary/40 bg-primary/5 text-primary"
               : (focusEntryId && !entryPresent) || (focusEmployeeId && !employeePresent)
@@ -547,10 +611,7 @@ export default function Attendance() {
             <div className="text-[11px] opacity-80 truncate">
               Día <span className="font-mono">{dateStrView}</span>
               {!isViewingToday && <> · {REVIEW_COPY.viewingHistoricalDay.toLowerCase()}</>}
-              {focusEmployeeId && <> · empleado <code className="font-mono">{focusEmployeeId.slice(0, 8)}</code></>}
-              {focusEntryId && <> · entry <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
             </div>
-            <div className="text-[10px] opacity-70 mt-0.5">{REVIEW_COPY.readOnlyNote}</div>
           </div>
           {!isViewingToday && (
             <Button variant="ghost" size="sm" className="h-7 text-[11px] px-2 shrink-0" onClick={clearDateFocus}>
@@ -560,23 +621,10 @@ export default function Attendance() {
         </div>
       )}
 
-
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="live">En vivo</TabsTrigger>
-          <TabsTrigger value="reports">Reportes</TabsTrigger>
-        </TabsList>
-
         {/* ─── Live Tab ─── */}
-        <TabsContent value="live" className="space-y-5 mt-4">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <KpiCard value={kpis.total} label="Programados hoy" icon={<Users className="h-4 w-4 text-primary" />} accent="primary" />
-            <KpiCard value={kpis.checkedIn} label="Fichados" icon={<CheckCircle2 className="h-4 w-4 text-[hsl(var(--status-confirmed))]" />} accent="earning" />
-            <KpiCard value={kpis.late} label="Tarde" icon={<AlertTriangle className="h-4 w-4 text-[hsl(var(--warning))]" />} accent="warning" />
-            <KpiCard value={kpis.completed} label="Completados" icon={<CheckCircle2 className="h-4 w-4 text-primary" />} accent="primary" />
-            <KpiCard value={kpis.noShow} label="No-show" icon={<XCircle className="h-4 w-4 text-[hsl(var(--destructive))]" />} accent="deduction" />
-          </div>
+        <TabsContent value="live" className="space-y-4 mt-0">
+
 
           {/* Alerts banner */}
           {(alerts?.length ?? 0) > 0 && (
@@ -601,158 +649,105 @@ export default function Attendance() {
             </Card>
           )}
 
-          {/* Filters */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="w-[170px]">
-              <SmartDateInput
-                value={format(selectedDate, "yyyy-MM-dd")}
-                onChange={(iso) => {
-                  if (!iso) return;
-                  const [y, m, d] = iso.split("-").map(Number);
-                  setSelectedDate(new Date(y, m - 1, d));
-                }}
-                allowClear={false}
-                inputClassName="h-8 text-xs"
-                aria-label="Filtrar por fecha"
-              />
-            </div>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[160px] h-8 text-xs">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="scheduled">Programado</SelectItem>
-                <SelectItem value="checked-in">Fichado</SelectItem>
-                <SelectItem value="late">Tarde</SelectItem>
-                <SelectItem value="completed">Completado</SelectItem>
-                <SelectItem value="no-show">No-show</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <div className="relative flex-1 min-w-[180px] max-w-xs">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Buscar trabajador o turno…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 h-8 text-xs"
-              />
-            </div>
-
-            {/* Sprint 21 — Optional local employee-focus filter (read-only). */}
-            {canFilterByFocusedEmployee && (
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 pl-2.5 pr-1 py-0.5 text-[11px] text-primary max-w-full">
-                <span className="font-semibold shrink-0">Empleado enfocado</span>
-                {focusedEmployeeName && (
-                  <span className="text-muted-foreground truncate max-w-[140px]">· {focusedEmployeeName}</span>
-                )}
-                {focusEmployeeFilter ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-[11px] px-2 shrink-0"
-                    onClick={() => setFocusEmployeeFilter(false)}
-                  >
-                    Mostrar todos
-                  </Button>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-[11px] px-2 shrink-0"
-                    onClick={() => setFocusEmployeeFilter(true)}
-                  >
-                    Filtrar por empleado
-                  </Button>
-                )}
-              </div>
-            )}
-            {/* Sprint 23 — Context note when the local filter is active. */}
-            {focusEmployeeFilter && (
-              <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <Info className="h-3 w-3 shrink-0" />
-                <span>{REVIEW_COPY.localFilterNoteAttendance}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Attendance Table */}
-          <Card>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[200px]">Trabajador</TableHead>
-                    <TableHead>{ADMIN_LEX.Entity}</TableHead>
-                    <TableHead className="text-center">Horario</TableHead>
-                    <TableHead className="text-center">Fichaje entrada</TableHead>
-                    <TableHead className="text-center">Fichaje salida</TableHead>
-                    <TableHead className="text-center">Estado</TableHead>
-                    <TableHead className="text-center">Tarde (min)</TableHead>
-                    <TableHead className="text-center">Método</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRows.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
-                        {rows.length === 0
-                          ? "No hay turnos programados para este día."
-                          : "Aún no hay fichajes registrados que coincidan con los filtros."}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredRows.map((row) => {
-                      const isFocused =
-                        (!!focusEntryId && row.timeEntryId === focusEntryId) ||
-                        (!focusEntryId && !!focusEmployeeId && row.employeeId === focusEmployeeId);
-                      return (
-                      <TableRow
-                        key={`${row.employeeId}-${row.shiftId}`}
-                        data-entry-id={row.timeEntryId ?? undefined}
-                        data-employee-id={row.employeeId}
-                        className={cn(
-                          isFocused && "bg-primary/5 border-l-2 border-primary scroll-mt-24",
-                        )}
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <EmployeeAvatar firstName={row.firstName} lastName={row.lastName} avatarUrl={row.avatarUrl} gender={row.gender} size="sm" />
-                            <span className="text-sm font-medium truncate">{row.firstName} {row.lastName}</span>
-                            {isFocused && (
-                              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border-primary/40">foco</Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">{row.shiftTitle}</TableCell>
-                        <TableCell className="text-center text-xs text-muted-foreground">
-                          {row.startTime.slice(0, 5)} – {row.endTime.slice(0, 5)}
-                        </TableCell>
-                        <TableCell className="text-center text-sm">{fmtTime(row.clockIn)}</TableCell>
-                        <TableCell className="text-center text-sm">{fmtTime(row.clockOut)}</TableCell>
-                        <TableCell className="text-center"><StatusPill status={row.status} /></TableCell>
-                        <TableCell className="text-center">
-                          {row.lateMinutes > 0 ? (
-                            <span className="text-sm font-semibold text-[hsl(var(--warning))]">{row.lateMinutes}</span>
-                          ) : "—"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {row.clockMethod ? (
-                            <Badge variant="outline" className="text-[10px]">
-                              {row.clockMethod === "kiosk" ? "🖥 Kiosk" : "📱 Móvil"}
-                            </Badge>
-                          ) : "—"}
-                        </TableCell>
-                      </TableRow>
-                      );
-                    })
+          {/* Foco de empleado (deep-link). Sin filtros administrativos extra. */}
+          {(canFilterByFocusedEmployee || focusEmployeeFilter) && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {canFilterByFocusedEmployee && (
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 pl-2.5 pr-1 py-0.5 text-[11px] text-primary max-w-full">
+                  <span className="font-semibold shrink-0">Empleado enfocado</span>
+                  {focusedEmployeeName && (
+                    <span className="text-muted-foreground truncate max-w-[140px]">· {focusedEmployeeName}</span>
                   )}
-                </TableBody>
-              </Table>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 shrink-0"
+                    onClick={() => setFocusEmployeeFilter(!focusEmployeeFilter)}
+                  >
+                    {focusEmployeeFilter ? "Mostrar todos" : "Filtrar por empleado"}
+                  </Button>
+                </div>
+              )}
+              {focusEmployeeFilter && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <Info className="h-3 w-3 shrink-0" />
+                  {REVIEW_COPY.localFilterNoteAttendance}
+                </span>
+              )}
             </div>
-          </Card>
+          )}
+
+          {/* Lista por persona — quién debía llegar, quién fichó, quién falta. */}
+          {filteredRows.length === 0 ? (
+            <div className="rounded-xl border border-border/50 bg-card py-12 text-center text-sm text-muted-foreground">
+              {rows.length === 0
+                ? "No hay turnos programados para este día."
+                : "Ningún fichaje coincide con los filtros."}
+            </div>
+          ) : (
+            <div className="max-w-4xl rounded-xl border border-border/50 bg-card overflow-hidden divide-y divide-border/20">
+              {filteredRows.map((row) => {
+                const isFocused =
+                  (!!focusEntryId && row.timeEntryId === focusEntryId) ||
+                  (!focusEntryId && !!focusEmployeeId && row.employeeId === focusEmployeeId);
+
+                const tone: EntityStatusTone =
+                  row.status === "no-show"
+                    ? "blocked"
+                    : row.status === "late"
+                      ? "attention"
+                      : row.status === "completed"
+                        ? "historical"
+                        : row.status === "checked-in"
+                          ? "operational"
+                          : "assigned";
+
+                const badges: EntityBadgeSpec[] = [];
+                if (row.lateMinutes > 0) {
+                  badges.push({ key: "late", label: `${row.lateMinutes} min tarde`, tone: "warning" });
+                }
+                if (row.status === "no-show") {
+                  badges.push({ key: "ns", label: "No-show", tone: "critical" });
+                }
+
+                return (
+                  <div
+                    key={`${row.employeeId}-${row.shiftId}`}
+                    data-entry-id={row.timeEntryId ?? undefined}
+                    data-employee-id={row.employeeId}
+                    className={cn(isFocused && "bg-primary/5 border-l-2 border-primary scroll-mt-24")}
+                  >
+                    <EntityCard
+                      bare
+                      density="compact"
+                      kind="worker"
+                      entityId={row.employeeId}
+                      name={`${row.firstName} ${row.lastName}`}
+                      avatarUrl={row.avatarUrl}
+                      status={tone}
+                      badges={badges}
+                      maxBadges={2}
+                      primaryDetail={
+                        <>
+                          {row.shiftTitle} · {row.startTime.slice(0, 5)}–{row.endTime.slice(0, 5)}
+                        </>
+                      }
+                      actions={
+                        <div className="flex items-center gap-3">
+                          <span className="hidden sm:block text-[11px] tabular-nums text-muted-foreground text-right leading-tight">
+                            <span className="block">In {fmtTime(row.clockIn)}</span>
+                            <span className="block">Out {fmtTime(row.clockOut)}</span>
+                          </span>
+                          <StatusPill status={row.status} />
+                        </div>
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
         </TabsContent>
 
         {/* ─── Reports Tab ─── */}
@@ -862,6 +857,7 @@ export default function Attendance() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </OperationalWorkspace>
+
   );
 }
