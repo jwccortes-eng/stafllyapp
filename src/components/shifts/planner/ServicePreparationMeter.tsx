@@ -1,19 +1,18 @@
 /**
- * ServicePreparationMeter — expresión visual ÚNICA de la preparación (0–100)
- * de un Servicio. UI-only, sin datos propios: consume `getServicePreparation`.
+ * ServicePreparationMeter — lectura del readiness (0–100) de un Servicio en
+ * calendario, lista y drawer. Comparte tonos y barra con `ReadinessBar`, la
+ * expresión canónica del ÚNICO indicador de madurez del ecosistema.
  *
  * Nunca usa rojo para un borrador: un evento en construcción no es un error.
  */
 import { memo } from "react";
 import { cn } from "@/lib/utils";
+import { READINESS_TONE } from "@/components/shifts/copilot/ReadinessBar";
 import type { PreparationBand, ServicePreparation } from "@/lib/shifts/service-preparation";
 
-const BAND_TONE: Record<PreparationBand, { bar: string; text: string; dot: string }> = {
-  ready: { bar: "bg-earning", text: "text-earning", dot: "bg-earning" },
-  attention: { bar: "bg-warning", text: "text-warning", dot: "bg-warning" },
-  later: { bar: "bg-primary/70", text: "text-primary", dot: "bg-primary/70" },
-  closed: { bar: "bg-muted-foreground/40", text: "text-muted-foreground", dot: "bg-muted-foreground/40" },
-};
+const BAND_TONE: Record<PreparationBand, { bar: string; text: string; dot: string }> =
+  READINESS_TONE;
+
 
 export function PreparationDot({
   preparation,
