@@ -889,18 +889,28 @@ export default function UnifiedPersonProfile() {
                   </>
                 )}
 
-                {employee.phone_number && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 text-xs"
-                    asChild
-                  >
-                    <a href={`https://wa.me/${String(employee.phone_number).replace(/[^\d]/g, "")}`} target="_blank" rel="noopener noreferrer">
-                      <Phone className="h-3.5 w-3.5 mr-1.5" /> WhatsApp
-                    </a>
-                  </Button>
-                )}
+                {(() => {
+                  // Canonical WhatsApp target (same helper as PortalAccessCard):
+                  // hides the button when the phone cannot produce a valid wa.me
+                  // link, instead of opening a broken chat.
+                  const wa = buildWhatsAppTargets(
+                    employee.phone_number,
+                    `Hola ${formatPersonName(employee.first_name, employee.last_name) || ""}`.trim(),
+                  );
+                  if (!wa.phoneWithCountry) return null;
+                  return (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs"
+                      asChild
+                    >
+                      <a href={wa.waMeUrl} target="_blank" rel="noopener noreferrer">
+                        <Phone className="h-3.5 w-3.5 mr-1.5" /> WhatsApp
+                      </a>
+                    </Button>
+                  );
+                })()}
                 {(() => {
                   const isInactive = employee.is_active === false;
                   const decision = isInactive ? canActivateWorker(employee) : canArchiveWorker(employee);
