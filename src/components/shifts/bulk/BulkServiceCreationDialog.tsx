@@ -759,6 +759,22 @@ export function BulkServiceCreationDialog({
         onConfirm={handleConfirm}
       />
 
+      {/* ── Alta rápida canónica de cliente (sin duplicados silenciosos) ── */}
+      <QuickCreateClientDialog
+        open={quickClient !== null}
+        onOpenChange={(v) => { if (!v) setQuickClient(null); }}
+        companyId={companyId}
+        initialName={quickClient?.name ?? ""}
+        onResolved={(client) => {
+          setExtraClients((prev) =>
+            prev.some((c) => c.id === client.id) ? prev : [...prev, { id: client.id, name: client.name }]);
+          const target = quickClient?.target;
+          if (target) patchRow(target, { clientId: client.id, clientRaw: client.name });
+          setQuickClient(null);
+        }}
+      />
+
+
       {submitting && (
         <div className={cn("fixed bottom-4 right-4 z-[60] flex items-center gap-2 rounded-xl",
           "border border-border bg-card px-3 py-2 text-xs shadow-lg")}
