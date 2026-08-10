@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ClientAvatar } from "@/components/ui/client-avatar";
+import { ClientIdentityPack } from "@/components/clients/ClientIdentityPack";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -103,24 +104,20 @@ export default function ClientProfile() {
         <ArrowLeft className="h-3.5 w-3.5" /> Clients
       </Link>
 
-      {/* Hero */}
+      {/* Identidad canónica del Cliente (P1 — Client Identity Pack) */}
+      <ClientIdentityPack
+        clientId={client.id}
+        name={client.name}
+        reference={(client as { client_code?: string | null }).client_code ?? null}
+        status={client.deleted_at ? "archived" : client.status}
+        venueCount={locationsQ.data?.length ?? 0}
+        dataQualityLabel={client.contact_name ? null : "Sin contacto principal"}
+      />
+
+      {/* Contacto y acciones */}
       <Card className="p-5 sm:p-6 bg-gradient-to-br from-card to-muted/20 border-border/60">
         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-          <ClientAvatar name={client.name} clientId={client.id} size="lg" />
           <div className="min-w-0 flex-1 space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{client.name}</h1>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-[10px] capitalize",
-                  client.deleted_at && "bg-muted text-muted-foreground",
-                  !client.deleted_at && client.status === "active" && "bg-primary/10 text-primary border-primary/20",
-                )}
-              >
-                {client.deleted_at ? "Archived" : client.status}
-              </Badge>
-            </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
               {client.contact_name && (
                 <span className="inline-flex items-center gap-1.5">

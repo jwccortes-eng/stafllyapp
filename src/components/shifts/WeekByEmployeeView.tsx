@@ -122,10 +122,11 @@ function WeekByEmployeeViewImpl({
         type="button"
         key={shift.id}
         onClick={() => onShiftClick(shift)}
+        style={opts?.unassigned ? undefined : color.borderStyle}
         className={cn(
           "w-full rounded-lg border-l-[3px] px-2.5 py-2 text-left transition-all hover:shadow-md",
           "bg-card/80 backdrop-blur-[1px]",
-          opts?.unassigned ? "border-l-status-danger bg-status-danger-bg/40" : cn(color.border, color.bg),
+          opts?.unassigned && "border-l-status-danger bg-status-danger-bg/40",
         )}
       >
         <div className="truncate text-[11px] font-bold uppercase leading-tight tracking-[0.02em] text-foreground">

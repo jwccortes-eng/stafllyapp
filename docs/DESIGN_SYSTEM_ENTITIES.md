@@ -85,3 +85,29 @@ referencia estable y legible (hash determinista) — nunca expone el UUID.
 No se tocó auth, RLS, payroll, `time_entries`, `shift_assignments`,
 `scheduled_shifts`, documentos, pagos, chat, tenants, lógica de negocio ni
 datos reales. El cambio es exclusivamente de presentación.
+
+## Identidad cromática del Cliente (P1)
+
+Cada Cliente recibe un **accent token** determinista desde `client_id`
+(`src/lib/clients/client-accent.ts`, hash FNV-1a → paleta de 16 tokens definidos
+como `--client-accent-*` en `src/index.css`). Se resuelve en read-time: no hay
+columna nueva ni migración.
+
+Reglas:
+
+- El color pertenece al Cliente. Servicios y Venues lo heredan; el Venue sólo
+  modula intensidad (`venueAccentIntensity`), nunca estrena color.
+- Helper único: `clientAccentToken` / `clientAccentColor` / `clientAccentSoft`.
+  Ningún componente recalcula color por su cuenta.
+- Uso como acento (rail izquierdo, halo de avatar, dot, tinte suave), jamás
+  como fondo sólido.
+- **Identidad ≠ estado**: el anillo del avatar y los badges siguen usando los
+  tonos operativos (`operational` / `attention` / `blocked` / `historical`).
+- `EntityCard` acepta `accentClientId`; `ClientAvatar` acepta `clientId`.
+- Nunca se identifica un cliente sólo por color: siempre nombre + avatar +
+  `CL-XXXXXX`.
+- Bloque canónico de identidad: `ClientIdentityPack`
+  (`src/components/clients/ClientIdentityPack.tsx`) para detalle/Passport,
+  Client Truth, revisión y drawer de Servicio.
+
+Detalle y QA: `docs/qa/P1_CLIENT_VISUAL_IDENTITY_SYSTEM.md`.

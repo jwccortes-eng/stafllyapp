@@ -59,6 +59,7 @@ import { useServiceState } from "@/hooks/useServiceState";
 import { useDebugMode } from "@/hooks/useDebugMode";
 import { toast } from "sonner";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
+import { ClientIdentityPack } from "@/components/clients/ClientIdentityPack";
 import { formatShiftCode, getClientColor, isEmployeeDriver } from "./types";
 import { displayShiftRef } from "@/lib/shifts/shift-ref";
 
@@ -561,10 +562,13 @@ export function ShiftDetailDialog({
         <OpsSheetHeader
           onClose={() => onOpenChange(false)}
           leading={
-            <div className={cn(
-              "h-8 w-8 rounded-lg flex items-center justify-center ring-1",
-              clientColor.bg, clientColor.text, "ring-border/40"
-            )}>
+            <div
+              style={clientColor.accentSoft ? { backgroundColor: clientColor.accentSoft, color: clientColor.accent } : undefined}
+              className={cn(
+                "h-8 w-8 rounded-lg flex items-center justify-center ring-1 ring-border/40",
+                !clientColor.accentSoft && "bg-muted text-foreground",
+              )}
+            >
               <CalendarDays className="h-4 w-4" />
             </div>
           }
@@ -774,6 +778,18 @@ export function ShiftDetailDialog({
 
 
               <div className="space-y-3">
+                {/* Identidad del Cliente — mismo pack que Passport / Client Truth */}
+                {client && (
+                  <ClientIdentityPack
+                    density="compact"
+                    clientId={client.id}
+                    name={formatDisplayText(client.name, "name")}
+                    reference={(client as { client_code?: string | null }).client_code ?? null}
+                    status={(client as { status?: string | null }).status ?? null}
+                    primaryVenue={location?.name ?? null}
+                  />
+                )}
+
                 {/* Info cards */}
                 <div className="rounded-xl border border-border/30 bg-muted/20 divide-y divide-border/30">
                   <InfoRow icon={StickyNote} label="Nombre del turno" value={shift.title || undefined} empty="Sin nombre (solo código)" />

@@ -17,6 +17,7 @@
 
 import * as React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { clientAccentColor, clientAccentSoft } from "@/lib/clients/client-accent";
 import { cn } from "@/lib/utils";
 import {
   ENTITY_BADGE_CLASSES,
@@ -44,6 +45,12 @@ export interface EntityCardProps {
   primaryDetail?: React.ReactNode;
   /** Estado operativo → borde del avatar. */
   status?: EntityStatusTone;
+  /**
+   * P1 — CLIENT VISUAL IDENTITY: id del Cliente dueño de la identidad
+   * cromática (el propio cliente, o el cliente padre de un venue).
+   * IDENTIDAD, nunca estado: pinta sólo el rail izquierdo y un halo suave.
+   */
+  accentClientId?: string | null;
   statusLabel?: string;
   badges?: EntityBadgeSpec[];
   /** Máximo de badges visibles; el resto colapsa en "+N". */
@@ -97,6 +104,7 @@ export function EntityCard({
   number,
   primaryDetail,
   status = "operational",
+  accentClientId,
   statusLabel,
   badges = [],
   maxBadges = 3,
@@ -114,15 +122,18 @@ export function EntityCard({
   const ordered = sortEntityBadges(badges);
   const visible = ordered.slice(0, maxBadges);
   const hidden = ordered.length - visible.length;
+  const accent = clientAccentColor(accentClientId);
+  const accentSoft = clientAccentSoft(accentClientId);
 
   const interactive = !!onClick;
 
   return (
     <div
       className={cn(
-        "group flex items-center gap-3 text-left w-full transition-colors",
+        "group relative flex items-center gap-3 text-left w-full transition-colors",
         PADDING[density],
         !bare && "rounded-2xl border border-border/50 bg-card",
+        accent && "pl-4",
         interactive && "cursor-pointer hover:bg-accent/40",
         selected && "bg-primary/[0.06]",
         status === "historical" && "opacity-75",
@@ -143,6 +154,15 @@ export function EntityCard({
       }
       aria-label={`${name} · ${ref}`}
     >
+      {/* Identidad del Cliente (nunca estado): rail de acento */}
+      {accent ? (
+        <span
+          aria-hidden
+          className="absolute inset-y-2 left-0 w-[3px] rounded-full"
+          style={{ backgroundColor: accent }}
+        />
+      ) : null}
+
       {leading && <div className="shrink-0">{leading}</div>}
 
       <Avatar
@@ -154,7 +174,10 @@ export function EntityCard({
         title={statusLabel ?? color.label}
       >
         {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
-        <AvatarFallback className="text-xs font-semibold">
+        <AvatarFallback
+          className="text-xs font-semibold"
+          style={accentSoft ? { backgroundColor: accentSoft, color: accent } : undefined}
+        >
           {entityInitials(name)}
         </AvatarFallback>
       </Avatar>
