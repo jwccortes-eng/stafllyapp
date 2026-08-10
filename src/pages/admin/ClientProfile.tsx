@@ -114,24 +114,10 @@ export default function ClientProfile() {
         dataQualityLabel={client.contact_name ? null : "Sin contacto principal"}
       />
 
-      {/* Hero */}
+      {/* Contacto y acciones */}
       <Card className="p-5 sm:p-6 bg-gradient-to-br from-card to-muted/20 border-border/60">
         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-          <ClientAvatar name={client.name} clientId={client.id} size="lg" />
           <div className="min-w-0 flex-1 space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{client.name}</h1>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-[10px] capitalize",
-                  client.deleted_at && "bg-muted text-muted-foreground",
-                  !client.deleted_at && client.status === "active" && "bg-primary/10 text-primary border-primary/20",
-                )}
-              >
-                {client.deleted_at ? "Archived" : client.status}
-              </Badge>
-            </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
               {client.contact_name && (
                 <span className="inline-flex items-center gap-1.5">
