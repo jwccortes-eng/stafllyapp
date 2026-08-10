@@ -94,7 +94,9 @@ const isDriver = (e: Employee) => isEmployeeDriver(e);
  * kept for forward compatibility even though they don't exist in the DB
  * today — the OR-fallback is conservative and safe.
  */
+import { resolvePersonStatus } from "@/lib/people/person-status";
 import {
+
   classifyWorkerAssignability,
   isAssignableWorker,
   NON_ASSIGNABLE_GROUP_LABELS,
@@ -759,6 +761,27 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
               const profileIncomplete = isProfileIncomplete(emp);
               const dupReason = dupHints.reasonById.get(emp.id);
 
+              // 4 dimensiones canónicas — el selector NO infiere asignabilidad
+              // desde portal ni desde documentos.
+              const dims = resolvePersonStatus(
+                {
+                  ...(emp as unknown as Record<string, unknown>),
+                  duplicateReason: dupReason ?? null,
+                } as never,
+                {
+                  operationalBlockReason:
+                    isHardBlocked && !isInactive ? unavailableReason : null,
+                  operationalWarning: hasConflict ? "cruce de horario" : null,
+                },
+              );
+
+              const statusNote =
+                `Identidad: ${dims.identity.label} · Portal: ${dims.portal.label} · ` +
+                `Cumplimiento: ${dims.compliance.label} · Asignabilidad: ${dims.assignability.label}` +
+                (dims.assignability.reasons.length
+                  ? ` — ${dims.assignability.reasons.join(" · ")}`
+                  : "");
+
               const view = buildWorkerEntityView(
                 emp as unknown as WorkerEntityInput,
                 {
@@ -771,6 +794,7 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
                 },
                 `${formatPersonName(emp.first_name)} ${formatPersonName(emp.last_name)}`,
               );
+
 
               return (
                 <label
@@ -796,11 +820,12 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
                     selected={isSelected}
                     note={
                       isUnavailable && !isInactive
-                        ? unavailableReason
+                        ? `${unavailableReason} · ${statusNote}`
                         : hasConflict && !isInactive
-                          ? `${conflicts![0].shiftTitle} (${conflicts![0].time})`
-                          : undefined
+                          ? `${conflicts![0].shiftTitle} (${conflicts![0].time}) · ${statusNote}`
+                          : statusNote
                     }
+
                     leading={
                       <Checkbox
                         checked={isSelected}

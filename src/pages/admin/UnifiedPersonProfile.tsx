@@ -79,6 +79,10 @@ import {
   Code2,
 } from "lucide-react";
 import { isInviteStatusFailure } from "@/lib/invitation-status";
+import { hasPortalAccess } from "@/lib/portal/portal-status";
+import { resolvePersonStatus } from "@/lib/people/person-status";
+import { PersonStatusMatrix } from "@/components/employee/PersonStatusMatrix";
+
 import { cn } from "@/lib/utils";
 import { isDocDialogOpen, subscribeDocDialog } from "@/lib/document-dialog-suspend";
 
@@ -373,8 +377,10 @@ export default function UnifiedPersonProfile() {
   }, [id, employee]);
 
   // ── Derived: readiness band ─────────────────────────────────────────────
-  const portalActive = !!employee?.portal_active || !!employee?.has_portal_access || employee?.profile_status === "active";
+  // Portal access: ÚNICA verdad = employees.user_id (resolver canónico).
+  const portalActive = hasPortalAccess(employee as never);
   const hasPhoto = !!employee?.avatar_url;
+
   const band: ReadinessBand = readiness.loading
     ? "unknown"
     : deriveReadinessBand({
@@ -384,6 +390,30 @@ export default function UnifiedPersonProfile() {
         portalActive,
         hasPhoto,
       });
+
+  /**
+   * 4 dimensiones canónicas (identidad · portal · cumplimiento · asignabilidad).
+   * El perfil consume EXACTAMENTE los mismos resolvers que el selector de
+   * staffing: no se infiere ninguna dimensión desde otra.
+   */
+  const personStatus = useMemo(() => {
+    const base = (employee ?? null) as Record<string, unknown> | null;
+    return resolvePersonStatus(
+      base
+        ? ({
+            ...base,
+            missingDocuments: readiness.missingDocuments.length,
+            profileIncomplete: readiness.missingPersonal.length > 0,
+          } as never)
+        : null,
+      {
+        invitation: employee ? invitations[employee.id] : null,
+        activeCompanyId: selectedCompanyId ?? null,
+      },
+    );
+  }, [employee, invitations, selectedCompanyId, readiness]);
+
+
 
   const avatarStatus: PremiumAvatarStatus = useMemo(() => {
     if (!employee) return null;
@@ -676,18 +706,9 @@ export default function UnifiedPersonProfile() {
                     </Badge>
                   )}
                   {employee.is_active === false && <PremiumStatusBadge status="inactive" />}
-                  {employee.is_active !== false && portalActive && (
-                    <PremiumStatusBadge status="active" />
-                  )}
-                  {employee.is_active !== false && !portalActive && invitation && (
-                    <PremiumStatusBadge status="invited" />
-                  )}
-                  {employee.is_active !== false && !portalActive && !invitation && (
-                    <PremiumStatusBadge status="pending" />
-                  )}
-                  {readiness.missingDocuments.length > 0 && (
-                    <PremiumStatusBadge status="missing-docs" />
-                  )}
+                  {/* Portal / documentos ya no se muestran como badges sueltos:
+                      viven etiquetados en la matriz de 4 dimensiones (abajo). */}
+
                   {(employee.has_car === "Yes" || employee.has_car === true) && (
                     <span className="hidden sm:inline-flex">
                       <PremiumStatusBadge status="driver" />
@@ -719,6 +740,11 @@ export default function UnifiedPersonProfile() {
                     </span>
                   )}
                 </div>
+
+                {/* 4 dimensiones canónicas, separadas y etiquetadas */}
+                <PersonStatusMatrix status={personStatus} className="mt-3" />
+
+
 
                 {/* Contact row — desktop only. On mobile these live in Datos principales. */}
                 <div className="mt-3 hidden sm:flex items-center gap-x-4 gap-y-1 flex-wrap text-xs text-muted-foreground">
