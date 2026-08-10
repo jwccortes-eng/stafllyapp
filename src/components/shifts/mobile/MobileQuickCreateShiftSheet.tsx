@@ -1,3 +1,4 @@
+import { getAssignableWorkers } from "@/lib/shifts/assignable-workers";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -433,7 +434,8 @@ export function MobileQuickCreateShiftSheet({
 
   const roster = useMemo(() => {
     const q = teamQuery.trim().toLowerCase();
-    const list = employees.filter(e => e.is_active !== false);
+    // Contrato canónico único de trabajadores asignables.
+    const list = getAssignableWorkers(employees);
     const matched = q
       ? list.filter(e => fullName(e).toLowerCase().includes(q))
       : list;

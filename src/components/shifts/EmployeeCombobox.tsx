@@ -726,7 +726,7 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
                   ready: { label: `Disponibles · ${readyCount}`, color: "text-earning", icon: <UserCheck className="h-2.5 w-2.5" /> },
                   warning: { label: "Con conflicto", color: "text-warning", icon: <AlertTriangle className="h-2.5 w-2.5" /> },
                   blocked: { label: "No disponibles", color: "text-destructive", icon: <CalendarOff className="h-2.5 w-2.5" /> },
-                  inactive: { label: "Inactivos / históricos — no disponibles para asignación normal", color: "text-muted-foreground", icon: <PauseCircle className="h-2.5 w-2.5" /> },
+                  inactive: { label: "No asignables — pendientes, históricos, placeholders e inactivos", color: "text-muted-foreground", icon: <PauseCircle className="h-2.5 w-2.5" /> },
                 };
                 const g = labels[item.group];
                 return (

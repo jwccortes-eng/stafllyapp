@@ -1,3 +1,4 @@
+import { getAssignableWorkers } from "@/lib/shifts/assignable-workers";
 import { useState, useMemo } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -80,7 +81,10 @@ export function SingleEmployeePicker({
   const [search, setSearch] = useState("");
 
   const pool = useMemo(
-    () => (driversOnly ? employees.filter(isDriver) : employees),
+    () => {
+      const base = getAssignableWorkers(employees);
+      return driversOnly ? base.filter(isDriver) : base;
+    },
     [employees, driversOnly],
   );
 
