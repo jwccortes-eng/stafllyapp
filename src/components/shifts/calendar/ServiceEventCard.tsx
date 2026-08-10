@@ -17,8 +17,13 @@ import { memo } from "react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmployeeAvatarGroup } from "@/components/ui/employee-avatar-group";
-import { Clock, Users, FileEdit, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Clock, Users, FileEdit, CheckCircle2, AlertTriangle, Sparkles } from "lucide-react";
+import {
+  PreparationDot,
+  ServicePreparationMeter,
+} from "@/components/shifts/planner/ServicePreparationMeter";
 import type { ServiceEventModel, ServiceAccent } from "@/lib/shifts/service-event-model";
+
 
 export type ServiceEventDensity = "month" | "week" | "list";
 
@@ -106,11 +111,13 @@ function ServiceEventCardImpl({
     density === "month" ? (
       <button type="button" onClick={onOpen} style={identityStyle} className={cn(base, "px-1.5 py-[3px]")} {...dnd}>
         <span className="flex items-center gap-1 min-w-0">
+          <PreparationDot preparation={model.preparation} />
           {model.isDraft && <FileEdit className="h-2.5 w-2.5 shrink-0 text-primary" />}
           <span className="truncate text-[10px] font-semibold uppercase leading-tight text-foreground/90">
             {model.primaryLabel}
           </span>
         </span>
+
         <span className="mt-[1px] flex items-center gap-1 min-w-0">
           {model.isDraft && (
             <span className="shrink-0 rounded-sm bg-primary/15 px-1 text-[8px] font-bold tracking-wide text-primary">
@@ -139,6 +146,12 @@ function ServiceEventCardImpl({
               INFO
             </span>
           )}
+          <ServicePreparationMeter
+            preparation={model.preparation}
+            variant="compact"
+            className="ml-auto"
+          />
+
         </span>
 
         <span className="block truncate text-[12px] font-semibold uppercase leading-tight text-foreground">
@@ -203,6 +216,17 @@ function ServiceEventCardImpl({
               </>
             )}
           </p>
+          <ServicePreparationMeter preparation={model.preparation} />
+          {model.preparation.nextAction && (
+            <p className="flex items-start gap-1 text-[11px]">
+              <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+              <span>
+                <span className="font-semibold">{model.preparation.nextAction.label}</span> —{" "}
+                {model.preparation.nextAction.hint}
+              </span>
+            </p>
+          )}
+
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

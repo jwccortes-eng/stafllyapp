@@ -17,6 +17,8 @@ import {
   type CalendarServiceIdentity,
   type CalendarShiftLike,
 } from "./calendar-service-identity";
+import { getServicePreparation, type ServicePreparation } from "./service-preparation";
+
 
 
 export type ServiceAccent = "positive" | "warning" | "draft" | "critical" | "neutral";
@@ -46,8 +48,11 @@ export interface ServiceEventModel {
   /** Color de identidad del Cliente (CSS). Nunca representa estado. */
   accentColor: string | null;
   team: ServiceTeamMember[];
+  /** Preparación 0–100 (madurez del evento) — nunca es el estado operativo. */
+  preparation: ServicePreparation;
 
 }
+
 
 interface MinimalEmployee {
   id: string;
@@ -95,8 +100,19 @@ function dedupeSegments(raw: string): string {
   return unique.length > 0 ? unique.join(" · ") : raw;
 }
 
+/** Días naturales hasta la fecha del servicio (negativo = ya pasó). */
+function daysUntilDate(date?: string | null): number | null {
+  const raw = (date ?? "").trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const target = new Date(`${raw}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
+
 /**
  * Jerarquía de identidad: cliente/venue → tipo/título → QK.
+
  * "Información pendiente" es un ESTADO, nunca el título principal.
  */
 function resolvePrimaryLabel(title: string, input: ServiceEventInput): string {
@@ -140,6 +156,11 @@ export function buildServiceEventModel(
       : "Personal pendiente"
     : `${assigned}/${slots ?? 0}`;
 
+  const daysUntil = daysUntilDate(shift.date);
+  const preparation = getServicePreparation(identity, { daysUntil });
+
+
+
   return {
     identity,
     primaryLabel: resolvePrimaryLabel(identity.title, input),
@@ -155,6 +176,8 @@ export function buildServiceEventModel(
     accentColor:
       clientAccentColor(shift.client_id, venueAccentIntensity(shift.location_id)) ?? null,
     team,
+    preparation,
 
   };
 }
+

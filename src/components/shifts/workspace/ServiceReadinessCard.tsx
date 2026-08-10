@@ -17,6 +17,10 @@ import type {
   GateResult,
   ServiceLifecycleReadiness,
 } from "@/lib/shifts/service-lifecycle-readiness";
+import { getLifecyclePreparation } from "@/lib/shifts/service-preparation";
+import { ServicePreparationMeter } from "@/components/shifts/planner/ServicePreparationMeter";
+import { NextStepCard } from "@/components/shifts/planner/NextStepCard";
+
 
 interface Props {
   lifecycle: ServiceLifecycleReadiness;
@@ -84,19 +88,27 @@ function GateBlock({
 
 function ServiceReadinessCardImpl({ lifecycle }: Props) {
   const { staff, publish, export_connecteam: exportGate } = lifecycle.gates;
+  const preparation = getLifecyclePreparation(lifecycle);
 
   return (
-    <div className="rounded-2xl border border-border/40 bg-card overflow-hidden">
-      <GateBlock gate={staff} icon={<Users className="h-3.5 w-3.5" />} />
-      <GateBlock gate={publish} icon={<Send className="h-3.5 w-3.5" />} />
-      <GateBlock gate={exportGate} icon={<FileDown className="h-3.5 w-3.5" />} last />
-      {exportGate.ready && (
-        <p className="px-3 pb-2.5 -mt-1 text-[10px] text-muted-foreground">
-          Connecteam recibirá fecha, horario, título, Job y plazas de este servicio.
-        </p>
-      )}
+    <div className="space-y-2">
+      <div className="rounded-2xl border border-border/40 bg-card px-3 py-2.5">
+        <ServicePreparationMeter preparation={preparation} />
+      </div>
+      <NextStepCard preparation={preparation} />
+      <div className="rounded-2xl border border-border/40 bg-card overflow-hidden">
+        <GateBlock gate={staff} icon={<Users className="h-3.5 w-3.5" />} />
+        <GateBlock gate={publish} icon={<Send className="h-3.5 w-3.5" />} />
+        <GateBlock gate={exportGate} icon={<FileDown className="h-3.5 w-3.5" />} last />
+        {exportGate.ready && (
+          <p className="px-3 pb-2.5 -mt-1 text-[10px] text-muted-foreground">
+            Connecteam recibirá fecha, horario, título, Job y plazas de este servicio.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
+
 
 export const ServiceReadinessCard = memo(ServiceReadinessCardImpl);
