@@ -1837,8 +1837,12 @@ export default function Employees() {
               const view = buildWorkerEntityView(
                 e as unknown as WorkerEntityInput,
                 {
-                  blocked: isMissingDocs(e),
-                  attention: ps === "required" || ps === "invalid" || risks.length > 0,
+                  attention:
+                    isMissingDocs(e) ||
+                    ps === "required" ||
+                    ps === "invalid" ||
+                    risks.length > 0,
+                  documentsPending: isMissingDocs(e),
                   isDriver: isDriver(e),
                   photoRequired: ps === "required" || ps === "invalid",
                 },
