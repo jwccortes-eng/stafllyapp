@@ -1059,15 +1059,8 @@ export default function UnifiedPersonProfile() {
         recentActivity={recentActivity}
         recentShifts={recentShifts}
         frontDeskVisits={frontDeskVisits}
-        onOpenTab={(tab) => {
-          setActiveTab(tab);
-          requestAnimationFrame(() => {
-            document
-              .querySelector('[data-state="active"][role="tabpanel"]')
-              ?.scrollIntoView({ behavior: "smooth", block: "start" });
-          });
-        }}
-        onEdit={() => setIsEditing(true)}
+        onOpenTab={(tab) => openDeepTab(tab)}
+        onEdit={() => openDeepTab("info", { edit: true })}
         onInvite={() => setInviteOpen(true)}
         onArchive={() => setArchiveOpen(true)}
         isPrivileged={isPrivileged}
