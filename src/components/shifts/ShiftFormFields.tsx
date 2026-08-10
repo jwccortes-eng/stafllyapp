@@ -28,6 +28,17 @@ import { PaySection } from "./form/PaySection";
 import { AdvancedDetailsSection } from "./form/AdvancedDetailsSection";
 import { ShiftSummaryPanel } from "./form/ShiftSummaryPanel";
 import { ShiftWorkspaceLayout } from "./workspace/ShiftWorkspaceLayout";
+import { ServiceStageLayout, type ServiceStageKey } from "./copilot/ServiceStageLayout";
+import {
+  SERVICE_TEAM_ANCHOR,
+  SERVICE_PAY_ANCHOR,
+  SERVICE_INFO_ANCHOR,
+} from "@/lib/shifts/service-focus";
+import { SERVICE_CLIENT_ANCHOR } from "@/lib/shifts/service-operational-readiness";
+import {
+  SERVICE_JOB_SITE_ANCHOR,
+  SERVICE_MEETING_POINT_ANCHOR,
+} from "@/lib/shifts/service-publish-readiness";
 import { QuickCreateWorkspace } from "./workspace/QuickCreateWorkspace";
 import { buildShiftDisplayName, isAutoDisplayName } from "@/lib/shifts/display-name";
 import { useLocationsV2 } from "@/hooks/useLocationsV2";
