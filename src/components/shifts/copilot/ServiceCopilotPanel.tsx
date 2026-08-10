@@ -10,7 +10,7 @@
 import { memo } from "react";
 import { ArrowRight, Check, CircleDashed, AlertTriangle, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { focusServiceSection } from "@/lib/shifts/service-publish-readiness";
+import { requestServiceFocus } from "@/lib/shifts/service-focus";
 import { ReadinessBar } from "./ReadinessBar";
 import type { ChecklistState, ServiceCopilotResult } from "@/lib/shifts/service-copilot";
 
@@ -57,7 +57,7 @@ function ServiceCopilotPanelImpl({ copilot }: { copilot: ServiceCopilotResult })
           {actionable && (
             <button
               type="button"
-              onClick={() => focusServiceSection(nextStep.anchorId!)}
+              onClick={() => requestServiceFocus(nextStep.anchorId!)}
               className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-primary px-2 py-1 text-[10px] font-semibold text-primary-foreground hover:opacity-90"
             >
               Ir <ArrowRight className="h-3 w-3" />
