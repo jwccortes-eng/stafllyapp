@@ -145,6 +145,11 @@ export function buildServiceEventModel(
       : "Personal pendiente"
     : `${assigned}/${slots ?? 0}`;
 
+  const daysUntil = daysUntilDate(shift.date);
+  const preparation = getServicePreparation(identity, { daysUntil });
+
+
+
   return {
     identity,
     primaryLabel: resolvePrimaryLabel(identity.title, input),
