@@ -7,16 +7,19 @@ import { useState, memo, useMemo, useCallback } from "react";
 import { getClientColor, formatShiftCode } from "./types";
 import { buildServiceEventModel } from "@/lib/shifts/service-event-model";
 import { ServiceEventCard } from "./calendar/ServiceEventCard";
+import { EntityRow, ClientAvatar } from "@/components/entities";
+import { formatEntityRef } from "@/lib/entities/entity-identity";
+import { clientStatusLabel, clientStatusTone } from "@/lib/clients/client-entity-status";
 
 
-import type { Shift, Assignment, SelectOption, Employee } from "./types";
+import type { Shift, Assignment, SelectOption, ClientOption, Employee } from "./types";
 
 interface WeekByJobViewProps {
   weekDays: Date[];
   shifts: Shift[];
   assignments: Assignment[];
   locations: SelectOption[];
-  clients: SelectOption[];
+  clients: ClientOption[];
   employees: Employee[];
   onShiftClick: (shift: Shift) => void;
   onDropOnShift: (shiftId: string, data: string) => void;
@@ -108,7 +111,7 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
   return (
     <div className="border border-border/20 rounded-xl overflow-hidden bg-card/50">
       {/* Sticky day headers */}
-      <div className="grid grid-cols-[180px_repeat(7,1fr)] border-b border-border/20 bg-muted/30 sticky top-0 z-10">
+      <div className="grid grid-cols-[260px_repeat(7,1fr)] border-b border-border/20 bg-muted/30 sticky top-0 z-10">
         <div className="p-2 border-r border-border/10" />
         {weekDays.map((day, i) => {
           const isToday = isSameDay(day, new Date());
@@ -189,7 +192,7 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
 
             {/* Expanded: shift cards in aligned columns */}
             {isExpanded && (
-              <div className="grid grid-cols-[180px_repeat(7,1fr)]">
+              <div className="grid grid-cols-[260px_repeat(7,1fr)]">
                 <div className="border-r border-border/10" />
                 {weekDays.map((day, i) => {
                   const dayShifts = getShiftsForDayAndClient(day, client.id)
@@ -222,7 +225,7 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
       {/* No-client group */}
       {hasNoClientShifts && (
         <div className="border-b border-border/15">
-          <div className="grid grid-cols-[180px_repeat(7,1fr)]">
+          <div className="grid grid-cols-[260px_repeat(7,1fr)]">
             <div className="flex items-center gap-2.5 p-3 border-r border-border/10">
               <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20 shrink-0" />
               <p className="text-xs font-medium text-muted-foreground/50">Sin cliente</p>
