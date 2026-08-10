@@ -103,9 +103,10 @@ function resolvePrimaryLabel(title: string, input: ServiceEventInput): string {
 }
 
 export function buildServiceEventModel(
-  shift: CalendarShiftLike & { id?: string | null },
+  shift: CalendarShiftLike & { id?: string | null; client_id?: string | null; location_id?: string | null },
   input: ServiceEventInput,
 ): ServiceEventModel {
+
   const shiftId = shift.id ?? "";
   const shiftAssignments = input.assignments.filter((a) => a.shift_id === shiftId);
   const employees = input.employees ?? [];
