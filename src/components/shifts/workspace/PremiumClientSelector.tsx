@@ -207,15 +207,19 @@ function PremiumClientSelectorImpl({ clientId, clients, onChange, onQuickAddClie
                         key={c.id}
                         value={c.id}
                         onSelect={() => handleSelect(c.id)}
-                        className="flex items-center gap-2"
+                        className="p-0"
                       >
-                        <div className="h-6 w-6 rounded bg-muted flex items-center justify-center shrink-0">
-                          <Building2 className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                        <span className="flex-1 truncate text-sm">
-                          {formatDisplayText(c.name, "name")}
-                        </span>
-                        {isSelected && <Check className="h-3.5 w-3.5 text-primary" />}
+                        <EntityCard
+                          bare
+                          density="compact"
+                          kind="client"
+                          name={formatDisplayText(c.name, "name")}
+                          code={(c as { client_code?: string | null }).client_code ?? null}
+                          entityId={c.id}
+                          status={isSelected ? "assigned" : "operational"}
+                          selected={isSelected}
+                          actions={isSelected ? <Check className="h-3.5 w-3.5 text-primary" /> : undefined}
+                        />
                       </CommandItem>
                     );
                   })}
