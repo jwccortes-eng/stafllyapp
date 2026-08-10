@@ -6,7 +6,7 @@
  * botón de fusionar en esta fase: la única acción es [Revisar].
  */
 import { useMemo, useState } from "react";
-import { OperationalScreenHeader } from "@/components/stafly-ui/OperationalScreenHeader";
+import { OperationalWorkspace, type WorkspaceMetric } from "@/components/stafly-ui/OperationalWorkspace";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -126,6 +126,7 @@ function GroupCard({
 export default function IdentityQuality() {
   const { model, loading, hasCompany, recordDecision } = useIdentityQuality();
   const [activeGroup, setActiveGroup] = useState<IdentityGroup | null>(null);
+  const [tab, setTab] = useState("duplicates");
 
   const duplicateGroups = useMemo(
     () =>
