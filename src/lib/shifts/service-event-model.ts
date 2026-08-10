@@ -43,7 +43,10 @@ export interface ServiceEventModel {
   infoPending: boolean;
 
   accent: ServiceAccent;
+  /** Color de identidad del Cliente (CSS). Nunca representa estado. */
+  accentColor: string | null;
   team: ServiceTeamMember[];
+
 }
 
 interface MinimalEmployee {
