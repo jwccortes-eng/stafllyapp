@@ -1241,7 +1241,8 @@ export default function UnifiedPersonProfile() {
           saturation. All tabs/handlers preserved; no data hidden, just
           tucked behind one click. */}
       {stableCompanyId && (
-        <Collapsible defaultOpen={false}>
+        <div ref={deepTabsRef}>
+        <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
           <CollapsibleTrigger className="group inline-flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 hover:text-foreground transition-colors">
             <span className="inline-flex items-center gap-1.5">
               <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
