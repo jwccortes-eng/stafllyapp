@@ -146,6 +146,12 @@ function ServiceEventCardImpl({
               INFO
             </span>
           )}
+          <ServicePreparationMeter
+            preparation={model.preparation}
+            variant="compact"
+            className="ml-auto"
+          />
+
         </span>
 
         <span className="block truncate text-[12px] font-semibold uppercase leading-tight text-foreground">
