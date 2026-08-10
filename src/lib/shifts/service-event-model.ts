@@ -37,6 +37,9 @@ export interface ServiceEventModel {
   coverageLabel: string;
   coverageComplete: boolean;
   isDraft: boolean;
+  /** El título original no identificaba el Servicio (estado, nunca titular). */
+  infoPending: boolean;
+
   accent: ServiceAccent;
   team: ServiceTeamMember[];
 }
