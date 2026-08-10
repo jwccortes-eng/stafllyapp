@@ -11,6 +11,8 @@ import { ServiceEventCard } from "./calendar/ServiceEventCard";
 import { EntityRow, ClientAvatar } from "@/components/entities";
 import { formatEntityRef } from "@/lib/entities/entity-identity";
 import { clientStatusLabel, clientStatusTone } from "@/lib/clients/client-entity-status";
+import { clientAccentColor } from "@/lib/clients/client-accent";
+
 import type { Shift, Assignment, SelectOption, ClientOption, Employee } from "./types";
 
 interface ClientViewProps {
