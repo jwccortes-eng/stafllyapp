@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Copy, QrCode, MessageCircle, Send, Search, CheckCircle2, Smartphone, AlertTriangle, KeyRound, Phone, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect } from "react";
-import { PageHeader } from "@/components/ui/page-header";
+import { OperationalWorkspace } from "@/components/stafly-ui/OperationalWorkspace";
 import { Users } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
@@ -143,78 +143,76 @@ export default function InviteEmployees() {
     return [...filtered].sort((a, b) => order[getStatus(a)] - order[getStatus(b)]);
   }, [filtered]);
 
-  return (
-    <div className="space-y-4">
-      <PageHeader
-        variant="1"
-        icon={Users}
-        title="Invitar empleados"
-        subtitle={`Comparte el acceso al portal de ${companyName}`}
+  const searchSlot = (
+    <div className="relative w-full">
+      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+      <Input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Buscar persona…"
+        className="pl-8 h-8 text-xs"
       />
+      {search && (
+        <button
+          onClick={() => setSearch("")}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground"
+          aria-label="Limpiar búsqueda"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
 
-      {/* Portal link + QR — compact */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Card className="rounded-xl border-border/40">
-          <CardContent className="p-4 flex items-center gap-3">
+  return (
+    <OperationalWorkspace
+      title="Invitaciones"
+      context={`Acceso al portal de ${companyName} · ${filtered.length} personas`}
+      search={searchSlot}
+      action={
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 text-xs"
+          onClick={() => {
+            navigator.clipboard.writeText(portalUrl);
+            toast({ title: "Link copiado" });
+          }}
+        >
+          <Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar link
+        </Button>
+      }
+      metrics={[
+        { label: "Listos para invitar", value: counts.ready, tone: "primary", active: filter === "ready", onClick: () => setFilter(filter === "ready" ? "all" : "ready") },
+        { label: "Datos incompletos", value: counts.incomplete, tone: "warning", active: filter === "incomplete", onClick: () => setFilter(filter === "incomplete" ? "all" : "incomplete") },
+        { label: "Ya activos", value: counts.active, tone: "success", active: filter === "active", onClick: () => setFilter(filter === "active" ? "all" : "active") },
+      ]}
+      adminTitle="Acceso al portal"
+      adminHint={portalUrl}
+      admin={
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <Smartphone className="h-4 w-4 text-primary" />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0">
               <p className="text-xs font-semibold">Link del portal</p>
               <p className="text-[10px] text-muted-foreground truncate">{portalUrl}</p>
             </div>
-            <Button variant="outline" size="sm" className="h-7 text-[10px] shrink-0" onClick={() => { navigator.clipboard.writeText(portalUrl); toast({ title: "Link copiado" }); }}>
-              <Copy className="h-3 w-3 mr-1" /> Copiar
-            </Button>
-          </CardContent>
-        </Card>
-        <Card className="rounded-xl border-border/40">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="bg-white p-1.5 rounded-lg border shrink-0">
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="bg-card p-1.5 rounded-lg border shrink-0">
               <QRCodeSVG value={portalUrl} size={48} />
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold">Código QR</p>
               <p className="text-[10px] text-muted-foreground">Muestra o imprime para acceso rápido</p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Onboarding summary */}
-      <div className="grid grid-cols-3 gap-2">
-        {([
-          { key: "ready" as FilterKey, label: "Listos para invitar", count: counts.ready, color: "text-primary", bg: "bg-primary/10" },
-          { key: "incomplete" as FilterKey, label: "Datos incompletos", count: counts.incomplete, color: "text-warning", bg: "bg-warning/10" },
-          { key: "active" as FilterKey, label: "Ya activos", count: counts.active, color: "text-[hsl(var(--earning))]", bg: "bg-[hsl(var(--earning)/0.1)]" },
-        ]).map(s => (
-          <button
-            key={s.key}
-            onClick={() => setFilter(filter === s.key ? "all" : s.key)}
-            className={cn(
-              "rounded-xl border p-3 text-left transition-all",
-              filter === s.key ? "border-primary/30 bg-primary/[0.03] shadow-sm" : "border-border/40 hover:border-border"
-            )}
-          >
-            <p className={cn("text-xl font-bold tabular-nums", s.color)}>{s.count}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">{s.label}</p>
-          </button>
-        ))}
-      </div>
-
-      {/* Search + filter bar */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar empleado..." className="pl-8 h-8 text-xs" />
-          {search && (
-            <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground">
-              <X className="h-3 w-3" />
-            </button>
-          )}
+          </div>
         </div>
-        <span className="text-[10px] text-muted-foreground tabular-nums ml-auto">{filtered.length} empleados</span>
-      </div>
+      }
+    >
+
 
       {/* Employee list */}
       {loading ? (
@@ -327,6 +325,6 @@ export default function InviteEmployees() {
           })}
         </div>
       )}
-    </div>
+    </OperationalWorkspace>
   );
 }

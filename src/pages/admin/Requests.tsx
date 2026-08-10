@@ -12,7 +12,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
-import { PageHeader } from "@/components/ui/page-header";
+import { OperationalWorkspace, WorkspaceSearch } from "@/components/stafly-ui/OperationalWorkspace";
 import {
   Inbox, Search, CheckCircle2, Clock, AlertTriangle, AlertCircle, Info,
   User, Send, XCircle, Calendar, Timer, ArrowRight, MapPin, DollarSign,
@@ -422,78 +422,54 @@ export default function Requests() {
     : "info";
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        variant="1"
-        icon={Inbox}
-        title="Worker Requests"
-        subtitle="Operational inbox for clock fixes, attendance issues and worker submissions"
-      />
-
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {([
-          { key: "all", label: "Total", color: "text-foreground" },
-          { key: "critical", label: "Critical", color: "text-destructive" },
-          { key: "new", label: "New", color: "text-amber-600" },
-          { key: "in_progress", label: "In review", color: "text-blue-600" },
-          { key: "resolved", label: "Resolved", color: "text-emerald-600" },
-        ] as const).map(k => {
-          const isActive =
-            (k.key === "critical" && urgencyFilter === "critical") ||
-            (k.key !== "critical" && statusFilter === (k.key as any));
-          return (
-            <button
-              key={k.key}
-              onClick={() => {
-                if (k.key === "critical") {
-                  setUrgencyFilter(urgencyFilter === "critical" ? "all" : "critical");
-                  setStatusFilter("all");
-                } else {
-                  setStatusFilter(k.key as any);
-                  setUrgencyFilter("all");
-                }
-              }}
-              className={cn(
-                "rounded-2xl border p-4 text-left transition-all hover:shadow-sm active:scale-[0.98]",
-                isActive ? "border-primary/30 bg-primary/5 shadow-sm" : "border-border/50 bg-card",
-              )}
-            >
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">{k.label}</p>
-              <p className={cn("text-2xl font-bold mt-1 tabular-nums", k.color)}>{counts[k.key]}</p>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-          <Input
-            placeholder="Search by subject or worker..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9 h-9 rounded-xl bg-muted/30 border-border/30"
-          />
-        </div>
-      </div>
-
-      {/* Empty */}
+    <OperationalWorkspace
+      title="Solicitudes"
+      context="Bandeja operativa de correcciones de fichaje, incidencias de asistencia y peticiones del equipo"
+      search={
+        <WorkspaceSearch
+          value={search}
+          onChange={setSearch}
+          placeholder="Buscar por asunto o persona…"
+        />
+      }
+      metrics={([
+        { key: "all", label: "Total", tone: "neutral" as const },
+        { key: "critical", label: "Críticas", tone: "critical" as const },
+        { key: "new", label: "Nuevas", tone: "warning" as const },
+        { key: "in_progress", label: "En revisión", tone: "primary" as const },
+        { key: "resolved", label: "Resueltas", tone: "success" as const },
+      ] as const).map((k) => ({
+        label: k.label,
+        value: counts[k.key],
+        tone: k.tone,
+        active:
+          (k.key === "critical" && urgencyFilter === "critical") ||
+          (k.key !== "critical" && statusFilter === (k.key as any)),
+        onClick: () => {
+          if (k.key === "critical") {
+            setUrgencyFilter(urgencyFilter === "critical" ? "all" : "critical");
+            setStatusFilter("all");
+          } else {
+            setStatusFilter(k.key as any);
+            setUrgencyFilter("all");
+          }
+        },
+      }))}
+    >
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center gap-3 rounded-2xl border border-dashed border-border/40 bg-muted/10">
           <div className="h-14 w-14 rounded-2xl bg-muted/50 flex items-center justify-center">
             <Inbox className="h-7 w-7 text-muted-foreground/40" />
           </div>
-          <p className="text-sm font-medium text-muted-foreground/70">All clear</p>
-          <p className="text-xs text-muted-foreground/50 max-w-sm">No requests match your filters. Workers will show up here when they need help.</p>
+          <p className="text-sm font-medium text-muted-foreground/70">Todo en orden</p>
+          <p className="text-xs text-muted-foreground/50 max-w-sm">Ninguna solicitud coincide con los filtros. Aquí aparecerán las peticiones del equipo.</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          <Group title="Today" tickets={grouped.today} ctxFor={ctxFor} onOpen={openTicket} accent="critical" />
-          <Group title="Past – unresolved" tickets={grouped.pastUnresolved} ctxFor={ctxFor} onOpen={openTicket} accent="critical" />
-          <Group title="Upcoming" tickets={grouped.upcoming} ctxFor={ctxFor} onOpen={openTicket} accent="info" />
-          <Group title="Other" tickets={grouped.other} ctxFor={ctxFor} onOpen={openTicket} accent="info" />
+        <div className="space-y-6 pt-3">
+          <Group title="Hoy" tickets={grouped.today} ctxFor={ctxFor} onOpen={openTicket} accent="critical" />
+          <Group title="Pasadas sin resolver" tickets={grouped.pastUnresolved} ctxFor={ctxFor} onOpen={openTicket} accent="critical" />
+          <Group title="Próximas" tickets={grouped.upcoming} ctxFor={ctxFor} onOpen={openTicket} accent="info" />
+          <Group title="Otras" tickets={grouped.other} ctxFor={ctxFor} onOpen={openTicket} accent="info" />
         </div>
       )}
 
@@ -665,7 +641,7 @@ export default function Requests() {
           )}
         </SheetContent>
       </Sheet>
-    </div>
+    </OperationalWorkspace>
   );
 }
 

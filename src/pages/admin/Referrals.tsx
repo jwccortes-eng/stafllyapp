@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
+import { OperationalWorkspace, WorkspaceSearch, WorkspaceTabs } from "@/components/stafly-ui/OperationalWorkspace";
+import { EntityCard } from "@/components/entities/EntityCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Inbox, Loader2, AlertTriangle, Phone, Mail, MapPin } from "lucide-react";
+import { Loader2, AlertTriangle, Phone, Mail, MapPin } from "lucide-react";
 import { format } from "date-fns";
 
 const STATUSES = [
@@ -25,14 +27,14 @@ const STATUSES = [
 ] as const;
 
 const STATUS_LABEL: Record<string, string> = {
-  pending_review: "Pending review",
-  possible_duplicate: "Possible duplicate",
-  matched_existing_person: "Matched",
-  needs_contact: "Needs contact",
-  approved_to_invite: "Approved to invite",
-  invited: "Invited",
-  rejected: "Rejected",
-  archived: "Archived",
+  pending_review: "Pendiente de revisión",
+  possible_duplicate: "Posible duplicado",
+  matched_existing_person: "Coincide con persona",
+  needs_contact: "Falta contacto",
+  approved_to_invite: "Aprobado para invitar",
+  invited: "Invitado",
+  rejected: "Rechazado",
+  archived: "Archivado",
 };
 
 const STATUS_TONE: Record<string, string> = {
@@ -117,13 +119,13 @@ export default function Referrals() {
       .update({ status: newStatus, admin_notes: adminNotes || null, reviewed_at: new Date().toISOString(), ...extra })
       .eq("id", selected.id);
     if (error) { toast.error(error.message); return; }
-    toast.success(`Status: ${STATUS_LABEL[newStatus]}`);
+    toast.success(`Estado: ${STATUS_LABEL[newStatus]}`);
     qc.invalidateQueries({ queryKey: ["admin-referrals"] });
     setSelected(null);
   };
 
   const routeToCompany = async () => {
-    if (!selected || !companyToRoute) { toast.error("Pick a company"); return; }
+    if (!selected || !companyToRoute) { toast.error("Elige una empresa"); return; }
     const { error } = await supabase
       .from("job_applications")
       .update({
@@ -135,7 +137,7 @@ export default function Referrals() {
       })
       .eq("id", selected.id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Referral routed to company");
+    toast.success("Referido enviado a la empresa");
     qc.invalidateQueries({ queryKey: ["admin-referrals"] });
     setSelected(null);
   };
@@ -144,9 +146,9 @@ export default function Referrals() {
     return (
       <div className="p-8">
         <Card className="p-6 max-w-md">
-          <h2 className="font-semibold">Restricted</h2>
+          <h2 className="font-semibold">Acceso restringido</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Only platform owners can view the global referral pool.
+            Solo la propiedad de la plataforma puede ver el fondo global de referidos.
           </p>
         </Card>
       </div>
@@ -154,68 +156,73 @@ export default function Referrals() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
-      <header className="space-y-1">
-        <div className="flex items-center gap-2">
-          <Inbox className="h-5 w-5 text-primary" />
-          <h1 className="text-2xl font-semibold tracking-tight">Referrals · Global pool</h1>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          External candidates submitted by partners or B2B clients. Nothing is activated until you route and invite.
-        </p>
-      </header>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant={statusFilter === "all" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("all")}>
-          All <span className="ml-1 opacity-70">{counts.all}</span>
-        </Button>
-        {STATUSES.map((s) => (
-          <Button key={s} variant={statusFilter === s ? "default" : "outline"} size="sm" onClick={() => setStatusFilter(s)}>
-            {STATUS_LABEL[s]} <span className="ml-1 opacity-70">{counts[s] ?? 0}</span>
-          </Button>
-        ))}
-        <div className="flex-1 min-w-[180px] max-w-xs ml-auto">
-          <Input placeholder="Search name / phone / email / ref" value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
+    <OperationalWorkspace
+      title="Referidos"
+      context="Candidatos externos enviados por socios o clientes. Nada se activa hasta que lo derives e invites."
+      search={
+        <WorkspaceSearch
+          value={search}
+          onChange={setSearch}
+          placeholder="Buscar nombre, teléfono, correo o referencia…"
+        />
+      }
+      tabs={
+        <WorkspaceTabs
+          items={[
+            { key: "all", label: "Todos", count: counts.all },
+            ...STATUSES.map((s) => ({
+              key: s as string,
+              label: STATUS_LABEL[s],
+              count: counts[s] ?? 0,
+              tone: s === "possible_duplicate" ? ("warning" as const) : undefined,
+            })),
+          ]}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          ariaLabel="Estado del referido"
+        />
+      }
+    >
+      <div className="pt-3">
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <Loader2 className="h-4 w-4 animate-spin" />Cargando…
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="rounded-xl border border-border/50 bg-card/40 p-12 text-center text-sm text-muted-foreground">
+            Todavía no hay referidos.
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border/50 bg-card divide-y divide-border/30 overflow-hidden">
+            {filtered.map((r: any) => {
+              const duplicate = !!(r.duplicate_of_application_id || r.duplicate_of_user_id);
+              return (
+                <EntityCard
+                  key={r.id}
+                  bare
+                  density="compact"
+                  kind="worker"
+                  name={`${r.first_name ?? ""} ${r.last_name ?? ""}`.trim() || "Sin nombre"}
+                  reference={r.reference_code ?? "—"}
+                  status={r.status === "rejected" || r.status === "archived" ? "historical" : "attention"}
+                  primaryDetail={[r.phone, r.email, r.city].filter(Boolean).join(" · ")}
+                  badges={[
+                    { label: STATUS_LABEL[r.status] ?? r.status, tone: "info" as const },
+                    ...(duplicate ? [{ label: "Posible duplicado", tone: "warning" as const }] : []),
+                    ...(r.intake_kind ? [{ label: String(r.intake_kind), tone: "info" as const }] : []),
+                  ]}
+                  onClick={() => openDetail(r)}
+                  actions={
+                    <span className="text-[11px] text-muted-foreground tabular-nums">
+                      {format(new Date(r.created_at), "d MMM · HH:mm")}
+                    </span>
+                  }
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
-
-      {isLoading ? (
-        <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading…</div>
-      ) : filtered.length === 0 ? (
-        <Card className="p-12 text-center text-muted-foreground">No referrals yet.</Card>
-      ) : (
-        <div className="grid gap-2">
-          {filtered.map((r: any) => (
-            <Card key={r.id} className="p-4 cursor-pointer hover:bg-muted/40 transition-colors" onClick={() => openDetail(r)}>
-              <div className="flex items-start gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium">{r.first_name} {r.last_name}</span>
-                    <span className="text-xs font-mono text-muted-foreground">{r.reference_code}</span>
-                    {r.duplicate_of_application_id || r.duplicate_of_user_id ? (
-                      <Badge variant="outline" className="bg-orange-500/10 text-orange-700 border-orange-500/30">
-                        <AlertTriangle className="h-3 w-3 mr-1" />Possible duplicate
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                    {r.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{r.phone}</span>}
-                    {r.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{r.email}</span>}
-                    {r.city && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{r.city}</span>}
-                    <span>·</span>
-                    <span>{r.intake_kind}</span>
-                    {r.referral_source && <span>· {r.referral_source}</span>}
-                  </div>
-                </div>
-                <div className="text-right space-y-1">
-                  <Badge variant="outline" className={STATUS_TONE[r.status] ?? ""}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
-                  <div className="text-xs text-muted-foreground">{format(new Date(r.created_at), "MMM d, HH:mm")}</div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
 
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
@@ -228,76 +235,76 @@ export default function Referrals() {
 
               <div className="space-y-5 mt-6">
                 <Card className="p-3 space-y-1 text-sm">
-                  <div><span className="text-muted-foreground">Phone:</span> {selected.phone}</div>
-                  {selected.email && <div><span className="text-muted-foreground">Email:</span> {selected.email}</div>}
-                  {selected.city && <div><span className="text-muted-foreground">City:</span> {selected.city}</div>}
+                  <div><span className="text-muted-foreground">Teléfono:</span> {selected.phone}</div>
+                  {selected.email && <div><span className="text-muted-foreground">Correo:</span> {selected.email}</div>}
+                  {selected.city && <div><span className="text-muted-foreground">Ciudad:</span> {selected.city}</div>}
                   {selected.preferred_contact_method && (
-                    <div><span className="text-muted-foreground">Preferred contact:</span> {selected.preferred_contact_method}</div>
+                    <div><span className="text-muted-foreground">Contacto preferido:</span> {selected.preferred_contact_method}</div>
                   )}
-                  <div><span className="text-muted-foreground">Intake:</span> {selected.intake_kind}</div>
+                  <div><span className="text-muted-foreground">Origen:</span> {selected.intake_kind}</div>
                   {selected.referral_source && (
-                    <div><span className="text-muted-foreground">Source:</span> {selected.referral_source}</div>
+                    <div><span className="text-muted-foreground">Fuente:</span> {selected.referral_source}</div>
                   )}
-                  <div><span className="text-muted-foreground">Consent:</span> {selected.consent_at ? format(new Date(selected.consent_at), "PPp") : "—"}</div>
+                  <div><span className="text-muted-foreground">Consentimiento:</span> {selected.consent_at ? format(new Date(selected.consent_at), "PPp") : "—"}</div>
                 </Card>
 
                 {(selected.duplicate_of_application_id || selected.duplicate_of_user_id) && (
                   <Card className="p-3 bg-orange-500/5 border-orange-500/30">
                     <div className="flex items-center gap-2 text-sm">
                       <AlertTriangle className="h-4 w-4 text-orange-600" />
-                      <span className="font-medium">Possible duplicate detected</span>
+                      <span className="font-medium">Posible duplicado detectado</span>
                     </div>
                     {selected.duplicate_of_application_id && (
-                      <div className="text-xs text-muted-foreground mt-1">Application: <span className="font-mono">{selected.duplicate_of_application_id}</span></div>
+                      <div className="text-xs text-muted-foreground mt-1">Postulación: <span className="font-mono">{selected.duplicate_of_application_id}</span></div>
                     )}
                     {selected.duplicate_of_user_id && (
-                      <div className="text-xs text-muted-foreground mt-1">User: <span className="font-mono">{selected.duplicate_of_user_id}</span></div>
+                      <div className="text-xs text-muted-foreground mt-1">Persona: <span className="font-mono">{selected.duplicate_of_user_id}</span></div>
                     )}
                   </Card>
                 )}
 
                 {selected.notes && (
                   <div>
-                    <Label>Submitter notes</Label>
+                    <Label>Notas de quien lo envió</Label>
                     <Card className="p-3 text-sm whitespace-pre-wrap">{selected.notes}</Card>
                   </div>
                 )}
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="an">Admin notes</Label>
+                  <Label htmlFor="an">Notas internas</Label>
                   <Textarea id="an" value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={3} />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Route to company</Label>
+                  <Label>Derivar a empresa</Label>
                   <div className="flex gap-2">
                     <Select value={companyToRoute} onValueChange={setCompanyToRoute}>
-                      <SelectTrigger><SelectValue placeholder="Pick a company…" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Elige una empresa…" /></SelectTrigger>
                       <SelectContent>
                         {companies.map((c: any) => (
                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button onClick={routeToCompany} disabled={!companyToRoute}>Route & approve</Button>
+                    <Button onClick={routeToCompany} disabled={!companyToRoute}>Derivar y aprobar</Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Routing assigns the referral to a tenant and marks it as Approved. The candidate is NOT activated as a worker — admin must invite separately.
+                    Derivar asigna el referido a una empresa y lo marca como Aprobado. La persona NO queda activa: hay que invitarla aparte.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pt-2">
-                  <Button variant="outline" onClick={() => updateStatus("needs_contact")}>Mark needs contact</Button>
-                  <Button variant="outline" onClick={() => updateStatus("matched_existing_person")}>Mark matched</Button>
-                  <Button variant="outline" onClick={() => updateStatus("archived")}>Archive</Button>
-                  <Button variant="destructive" onClick={() => updateStatus("rejected", { rejection_reason: adminNotes || "Not a fit" })}>Reject</Button>
+                  <Button variant="outline" onClick={() => updateStatus("needs_contact")}>Falta contacto</Button>
+                  <Button variant="outline" onClick={() => updateStatus("matched_existing_person")}>Coincide con persona</Button>
+                  <Button variant="outline" onClick={() => updateStatus("archived")}>Archivar</Button>
+                  <Button variant="destructive" onClick={() => updateStatus("rejected", { rejection_reason: adminNotes || "No encaja" })}>Rechazar</Button>
                 </div>
               </div>
             </>
           )}
         </SheetContent>
       </Sheet>
-    </div>
+    </OperationalWorkspace>
   );
 }
 

@@ -17,7 +17,7 @@
  * de negocio: recibe todo por slots.
  */
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCompany } from "@/hooks/useCompany";
 import { CompanyLogo } from "@/components/ui/company-logo";
@@ -107,6 +107,130 @@ export function WorkspaceMetricChips({
     </div>
   );
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Buscador canónico de la cabecera. Una sola forma en todo el producto.
+ * ──────────────────────────────────────────────────────────────────────────*/
+export function WorkspaceSearch({
+  value,
+  onChange,
+  placeholder = "Buscar…",
+  className,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  className?: string;
+  ariaLabel?: string;
+}) {
+  return (
+    <div className={cn("relative w-full", className)}>
+      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={ariaLabel ?? placeholder}
+        className={cn(
+          "h-8 w-full rounded-md border border-input bg-background pl-8 pr-7 text-xs",
+          "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        )}
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label="Limpiar búsqueda"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Pestañas canónicas del workspace (subrayado + contador).
+ * ──────────────────────────────────────────────────────────────────────────*/
+export interface WorkspaceTabItem<K extends string = string> {
+  key: K;
+  label: string;
+  count?: number;
+  tone?: "warning" | "destructive";
+}
+
+export function WorkspaceTabs<K extends string>({
+  items,
+  value,
+  onChange,
+  className,
+  ariaLabel,
+}: {
+  items: WorkspaceTabItem<K>[];
+  value: K;
+  onChange: (key: K) => void;
+  className?: string;
+  ariaLabel?: string;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label={ariaLabel}
+      className={cn("flex items-center gap-0.5 overflow-x-auto", className)}
+    >
+      {items.map((tab) => {
+        const isActive = value === tab.key;
+        const isDestructive = tab.tone === "destructive";
+        const isWarning = tab.tone === "warning";
+        return (
+          <button
+            key={tab.key}
+            role="tab"
+            aria-selected={isActive}
+            type="button"
+            onClick={() => onChange(tab.key)}
+            className={cn(
+              "px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px whitespace-nowrap",
+              isActive
+                ? isDestructive
+                  ? "border-destructive text-destructive"
+                  : isWarning
+                    ? "border-warning text-warning"
+                    : "border-primary text-primary"
+                : isDestructive
+                  ? "border-transparent text-destructive/80 hover:text-destructive hover:border-destructive/40"
+                  : isWarning
+                    ? "border-transparent text-warning/80 hover:text-warning hover:border-warning/40"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+            )}
+          >
+            {tab.label}
+            {typeof tab.count === "number" ? (
+              <span
+                className={cn(
+                  "ml-1.5 text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md",
+                  isActive
+                    ? isDestructive
+                      ? "bg-destructive/10 text-destructive"
+                      : isWarning
+                        ? "bg-warning/15 text-warning"
+                        : "bg-primary/10 text-primary"
+                    : "bg-muted text-muted-foreground",
+                )}
+              >
+                {tab.count}
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+
 
 /* ────────────────────────────────────────────────────────────────────────────
  * Panel administrativo colapsable.
