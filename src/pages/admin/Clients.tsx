@@ -33,6 +33,7 @@ import { useClientDirectory } from "@/hooks/useClientDirectory";
 import { clientMatchesQuery, type ClientTruth } from "@/lib/clients/client-truth";
 import { QuickCreateClientDialog } from "@/components/clients/QuickCreateClientDialog";
 import { ClientDuplicatesPanel } from "@/components/clients/ClientDuplicatesPanel";
+import { ClientDirectoryCard } from "@/components/clients/ClientDirectoryCard";
 
 interface Client {
   id: string;
