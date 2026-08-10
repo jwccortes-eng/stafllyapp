@@ -23,6 +23,7 @@ import { useEmployeeReadiness } from "@/hooks/useEmployeeReadiness";
 import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
 import { useToast } from "@/hooks/use-toast";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
+import { buildWhatsAppTargets } from "@/lib/phone";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -130,6 +131,28 @@ export default function UnifiedPersonProfile() {
   const [identityOpen, setIdentityOpen] = useState(false);
   const [companyRoster, setCompanyRoster] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<string>("info");
+  // Deep tabs panel is collapsed by default. Every card CTA that targets a tab
+  // MUST open it, otherwise the click has no visible effect (dead button).
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const deepTabsRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * Single canonical entry point for every "go to tab X" CTA in this page.
+   * Opens the collapsed deep-tabs panel, normalizes legacy tab ids and scrolls
+   * to the panel. Without this, card CTAs silently did nothing.
+   */
+  const TAB_ALIASES: Record<string, string> = { log: "activity", activity_log: "activity" };
+  const openDeepTab = (tab: string, opts?: { edit?: boolean }) => {
+    const target = TAB_ALIASES[tab] ?? tab;
+    setActiveTab(target);
+    setDetailsOpen(true);
+    if (opts?.edit) setIsEditing(true);
+    requestAnimationFrame(() => {
+      deepTabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+
 
   // Snapshot data
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
@@ -763,9 +786,9 @@ export default function UnifiedPersonProfile() {
                     size="sm"
                     variant="outline"
                     className="hidden sm:inline-flex h-8 text-xs"
-                    onClick={() => setIsEditing(true)}
+                    onClick={() => openDeepTab("info", { edit: true })}
                   >
-                    <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+                    <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
                   </Button>
                 )}
 
@@ -867,18 +890,28 @@ export default function UnifiedPersonProfile() {
                   </>
                 )}
 
-                {employee.phone_number && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 text-xs"
-                    asChild
-                  >
-                    <a href={`https://wa.me/${String(employee.phone_number).replace(/[^\d]/g, "")}`} target="_blank" rel="noopener noreferrer">
-                      <Phone className="h-3.5 w-3.5 mr-1.5" /> WhatsApp
-                    </a>
-                  </Button>
-                )}
+                {(() => {
+                  // Canonical WhatsApp target (same helper as PortalAccessCard):
+                  // hides the button when the phone cannot produce a valid wa.me
+                  // link, instead of opening a broken chat.
+                  const wa = buildWhatsAppTargets(
+                    employee.phone_number,
+                    `Hola ${formatPersonName(employee.first_name) || ""}`.trim(),
+                  );
+                  if (!wa.phoneWithCountry) return null;
+                  return (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs"
+                      asChild
+                    >
+                      <a href={wa.waMeUrl} target="_blank" rel="noopener noreferrer">
+                        <Phone className="h-3.5 w-3.5 mr-1.5" /> WhatsApp
+                      </a>
+                    </Button>
+                  );
+                })()}
                 {(() => {
                   const isInactive = employee.is_active === false;
                   const decision = isInactive ? canActivateWorker(employee) : canArchiveWorker(employee);
@@ -969,25 +1002,20 @@ export default function UnifiedPersonProfile() {
               setInviteOpen(true);
               return;
             case "edit_contact":
-              setActiveTab(a.targetTab ?? "info");
-              if (!isEditing) setIsEditing(true);
-              break;
+              openDeepTab(a.targetTab ?? "info", { edit: true });
+              return;
             case "open_access":
-              setActiveTab("access");
-              break;
+              openDeepTab("access");
+              return;
             case "open_documents":
-              setActiveTab("docs");
-              break;
+              openDeepTab("docs");
+              return;
             case "none":
             default:
               return;
           }
-          requestAnimationFrame(() => {
-            document
-              .querySelector('[data-state="active"][role="tabpanel"]')
-              ?.scrollIntoView({ behavior: "smooth", block: "start" });
-          });
         };
+
 
         return <NextActionCard action={nextAction} onAction={handleAction} />;
       })()}
@@ -1042,15 +1070,8 @@ export default function UnifiedPersonProfile() {
         recentActivity={recentActivity}
         recentShifts={recentShifts}
         frontDeskVisits={frontDeskVisits}
-        onOpenTab={(tab) => {
-          setActiveTab(tab);
-          requestAnimationFrame(() => {
-            document
-              .querySelector('[data-state="active"][role="tabpanel"]')
-              ?.scrollIntoView({ behavior: "smooth", block: "start" });
-          });
-        }}
-        onEdit={() => setIsEditing(true)}
+        onOpenTab={(tab) => openDeepTab(tab)}
+        onEdit={() => openDeepTab("info", { edit: true })}
         onInvite={() => setInviteOpen(true)}
         onArchive={() => setArchiveOpen(true)}
         isPrivileged={isPrivileged}
@@ -1231,7 +1252,8 @@ export default function UnifiedPersonProfile() {
           saturation. All tabs/handlers preserved; no data hidden, just
           tucked behind one click. */}
       {stableCompanyId && (
-        <Collapsible defaultOpen={false}>
+        <div ref={deepTabsRef}>
+        <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
           <CollapsibleTrigger className="group inline-flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 hover:text-foreground transition-colors">
             <span className="inline-flex items-center gap-1.5">
               <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
@@ -1264,6 +1286,7 @@ export default function UnifiedPersonProfile() {
             </Card>
           </CollapsibleContent>
         </Collapsible>
+        </div>
       )}
 
       {/* ─── RECENT SHIFTS ─── */}
