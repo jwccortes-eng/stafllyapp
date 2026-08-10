@@ -48,8 +48,11 @@ export interface ServiceEventModel {
   /** Color de identidad del Cliente (CSS). Nunca representa estado. */
   accentColor: string | null;
   team: ServiceTeamMember[];
+  /** Preparación 0–100 (madurez del evento) — nunca es el estado operativo. */
+  preparation: ServicePreparation;
 
 }
+
 
 interface MinimalEmployee {
   id: string;
