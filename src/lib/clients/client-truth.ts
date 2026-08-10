@@ -136,6 +136,24 @@ function levenshtein(a: string, b: string): number {
   return prev[b.length];
 }
 
+/** Similitud por token: cada palabra del nombre más corto busca su mejor par. */
+function tokenSimilarity(x: string, y: string): number {
+  const xs = x.split(" ").filter(Boolean);
+  const ys = y.split(" ").filter(Boolean);
+  if (!xs.length || !ys.length) return 0;
+  const [short, long] = xs.length <= ys.length ? [xs, ys] : [ys, xs];
+  let total = 0;
+  for (const t of short) {
+    let best = 0;
+    for (const u of long) {
+      const max = Math.max(t.length, u.length);
+      best = Math.max(best, 1 - levenshtein(t, u) / max);
+    }
+    total += best;
+  }
+  return total / short.length;
+}
+
 export function nameSimilarity(a: string, b: string): number {
   const x = normalizeClientName(a);
   const y = normalizeClientName(b);
@@ -145,8 +163,9 @@ export function nameSimilarity(a: string, b: string): number {
   const base = 1 - levenshtein(x, y) / max;
   // Contención ("millennium" dentro de "the millennium simcha hall") cuenta.
   const contained = x.includes(y) || y.includes(x) ? 0.9 : 0;
-  return Math.max(base, contained);
+  return Math.max(base, contained, tokenSimilarity(x, y) * 0.95);
 }
+
 
 export const CLIENT_DUPLICATE_THRESHOLD = 0.82;
 
