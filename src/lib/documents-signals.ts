@@ -260,16 +260,16 @@ export function buildWorkerDocSignals(
 }
 
 export const DOC_STATUS_LABEL: Record<UnifiedDocStatus, string> = {
-  approved: "Approved",
-  pending: "Pending review",
-  rejected: "Rejected",
-  expired: "Expired",
-  expiring_soon: "Expiring soon",
+  approved: "Aprobado",
+  pending: "Pendiente de revisión",
+  rejected: "Rechazado",
+  expired: "Vencido",
+  expiring_soon: "Por vencer",
 };
 
 export const DOC_SOURCE_LABEL: Record<UnifiedDocSource, string> = {
-  admin_upload: "Admin upload",
-  onboarding: "Onboarding",
-  worker_upload: "Worker upload",
-  imported: "Imported",
+  admin_upload: "Subido por admin",
+  onboarding: "Alta",
+  worker_upload: "Subido por la persona",
+  imported: "Importado",
 };

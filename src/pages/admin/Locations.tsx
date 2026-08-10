@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Search, MapPin, Loader2, Trash2, RotateCcw, Pencil, Car, Clock, CreditCard, Phone, Mail, User } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { OperationalWorkspace, WorkspaceSearch } from "@/components/stafly-ui/OperationalWorkspace";
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 
 interface Location {
@@ -200,14 +200,52 @@ export default function Locations() {
     );
   }, [locations, search]);
 
+  const exportRows = () => {
+    const headers = ["Nombre", "Dirección", "Ciudad", "Estado", "Cliente", "Radio geocerca", "Pago default", "Fichaje default", "Req. carro", "Status"];
+    const rows = filtered.map(l => [
+      l.name, l.address ?? "", l.city ?? "", l.state ?? "",
+      clients.find(c => c.id === l.client_id)?.name ?? "",
+      String(l.geofence_radius ?? ""), l.default_pay_type ?? "",
+      l.default_clock_method ?? "", l.require_car ? "Sí" : "No", l.status,
+    ]);
+    return [headers, ...rows];
+  };
+
   return (
-    <div className="space-y-6">
-      <PageHeader
-        variant="1"
-        icon={MapPin}
-        title="Ubicaciones"
-        subtitle="Gestiona las ubicaciones de trabajo con defaults operacionales"
-        rightSlot={canEdit ? (
+    <OperationalWorkspace
+      title="Ubicaciones"
+      context={`${filtered.length} ubicación${filtered.length !== 1 ? "es" : ""} · defaults operativos de trabajo`}
+      search={
+        <WorkspaceSearch
+          value={search}
+          onChange={setSearch}
+          placeholder="Buscar ubicación…"
+        />
+      }
+      filters={
+        <Select value={showDeleted} onValueChange={setShowDeleted}>
+          <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Activos</SelectItem>
+            <SelectItem value="deleted">Archivados</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
+          </SelectContent>
+        </Select>
+      }
+      adminTitle="Exportación y actividad"
+      admin={
+        <div className="space-y-4">
+          {filtered.length > 0 && (
+            <ReportActionsBar
+              title="Ubicaciones"
+              subtitle={`${filtered.length} ubicación${filtered.length !== 1 ? "es" : ""}`}
+              onExportCSV={exportRows}
+            />
+          )}
+          <AuditPanel entityType="location" title="Actividad de ubicaciones" hideViews compact />
+        </div>
+      }
+      action={canEdit ? (
           <Dialog open={formOpen} onOpenChange={(o) => { setFormOpen(o); if (!o) resetForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Nueva ubicación</Button>
@@ -332,41 +370,8 @@ export default function Locations() {
               </div>
             </DialogContent>
           </Dialog>
-        ) : undefined}
-      />
-
-      {filtered.length > 0 && (
-        <ReportActionsBar
-          title="Ubicaciones"
-          subtitle={`${filtered.length} ubicación${filtered.length !== 1 ? "es" : ""}`}
-          onExportCSV={() => {
-            const headers = ["Nombre", "Dirección", "Ciudad", "Estado", "Cliente", "Radio geocerca", "Pago default", "Fichaje default", "Req. carro", "Status"];
-            const rows = filtered.map(l => [
-              l.name, l.address ?? "", l.city ?? "", l.state ?? "",
-              clients.find(c => c.id === l.client_id)?.name ?? "",
-              String(l.geofence_radius ?? ""), l.default_pay_type ?? "",
-              l.default_clock_method ?? "", l.require_car ? "Sí" : "No", l.status,
-            ]);
-            return [headers, ...rows];
-          }}
-        />
-      )}
-
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-9" />
-        </div>
-        <Select value={showDeleted} onValueChange={setShowDeleted}>
-          <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="active">Activos</SelectItem>
-            <SelectItem value="deleted">Archivados</SelectItem>
-            <SelectItem value="all">Todos</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
+      ) : undefined}
+    >
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -456,9 +461,6 @@ export default function Locations() {
         </div>
       )}
 
-      <div className="mt-8">
-        <AuditPanel entityType="location" title="Actividad de ubicaciones" hideViews compact />
-      </div>
-    </div>
+    </OperationalWorkspace>
   );
 }

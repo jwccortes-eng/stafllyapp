@@ -35,15 +35,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SmartDateInput } from "@/components/ui/smart-date-input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { PremiumPageHeader } from "@/components/ui/premium-page-header";
+import { OperationalWorkspace, WorkspaceSearch, WorkspaceTabs } from "@/components/stafly-ui/OperationalWorkspace";
 import { EmptyState } from "@/components/ui/empty-state";
-import { MobileQueueRow, MobileQueueDrawer, MobileFilterPills } from "@/components/admin/mobile";
+import { MobileQueueRow, MobileQueueDrawer } from "@/components/admin/mobile";
 import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil, Eye, ClipboardCheck, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateUS } from "@/lib/date-format";
@@ -310,49 +309,50 @@ export default function DocumentsCenter() {
   };
 
   const FILTERS: { key: FilterKey; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "needs_review", label: "Needs review" },
-    { key: "missing", label: "Missing" },
-    { key: "pending", label: "Pending" },
-    { key: "expired", label: "Expired" },
-    { key: "expiring_soon", label: "Expiring soon" },
-    { key: "missing_expiration", label: "Missing expiration" },
-    { key: "rejected", label: "Rejected" },
-    { key: "approved", label: "Approved" },
+    { key: "all", label: "Todos" },
+    { key: "needs_review", label: "Necesitan revisión" },
+    { key: "missing", label: "Faltantes" },
+    { key: "pending", label: "Pendientes" },
+    { key: "expired", label: "Vencidos" },
+    { key: "expiring_soon", label: "Por vencer" },
+    { key: "missing_expiration", label: "Sin fecha de vencimiento" },
+    { key: "rejected", label: "Rechazados" },
+    { key: "approved", label: "Aprobados" },
   ];
 
   return (
-    <div className="space-y-4 p-3 sm:p-4">
-      <PremiumPageHeader
-        icon={FileText}
-        title="Documents & Compliance"
-        subtitle="Read-only view of every uploaded document and missing required item across the company."
-        kpis={[
-          { label: "Total", value: counts.all },
-          { label: "Necesitan revisión", value: counts.needs_review, accent: "warning" },
-          { label: "Requisitos faltantes", value: counts.missing, hint: "Puede haber varios requisitos por worker.", accent: "warning" },
-          { label: "Vencidos", value: counts.expired, accent: "destructive" },
-        ]}
-      />
-
-      <Card>
-        <CardContent className="p-3 sm:p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search worker or document type…"
-                className="h-9 pl-8 text-sm"
-              />
-            </div>
-            <Button variant="outline" size="sm" className="h-9" onClick={exportCsv} disabled={filtered.length === 0}>
-              <Download className="h-3.5 w-3.5 mr-1.5" />
-              Export CSV
-            </Button>
-          </div>
-
+    <OperationalWorkspace
+      title="Documentos y cumplimiento"
+      context="Vista de solo lectura de cada documento subido y de los requisitos que faltan en la empresa."
+      search={
+        <WorkspaceSearch
+          value={search}
+          onChange={setSearch}
+          placeholder="Buscar persona o tipo de documento…"
+        />
+      }
+      action={
+        <Button variant="outline" size="sm" className="h-8 text-xs" onClick={exportCsv} disabled={filtered.length === 0}>
+          <Download className="h-3.5 w-3.5 mr-1.5" />
+          Exportar CSV
+        </Button>
+      }
+      metrics={[
+        { label: "Total", value: counts.all, tone: "neutral" as const },
+        { label: "Necesitan revisión", value: counts.needs_review, tone: "warning" as const },
+        { label: "Requisitos faltantes", value: counts.missing, tone: "warning" as const },
+        { label: "Vencidos", value: counts.expired, tone: "critical" as const },
+      ]}
+      tabs={
+        <WorkspaceTabs
+          items={FILTERS.map((f) => ({ key: f.key, label: f.label, count: counts[f.key] }))}
+          value={activeFilter}
+          onChange={(k) => setFilter(k as FilterKey)}
+          ariaLabel="Estado del documento"
+        />
+      }
+    >
+      <div className="space-y-3 pt-3">
           {/* Scoped-employee chip — shown when we arrived via ?employee=<id>
               (e.g. from Worker Profile "Revisar documentos pendientes"). */}
           {employeeParam && scopedEmployeeName && (
@@ -373,39 +373,13 @@ export default function DocumentsCenter() {
             </div>
           )}
 
-          {/* Mobile: horizontal scrollable pill chips, one-handed, no vertical stacking. */}
-          <MobileFilterPills<FilterKey>
-            items={FILTERS.map((f) => ({ key: f.key, label: f.label, count: counts[f.key] }))}
-            value={activeFilter}
-            onChange={setFilter}
-            ariaLabel="Document status filter"
-          />
-
-          {/* Desktop: existing wrapped Tabs, untouched semantics. */}
-          <Tabs
-            value={activeFilter}
-            onValueChange={(v) => setFilter(v as FilterKey)}
-            className="hidden md:block"
-          >
-            <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/40 p-1">
-              {FILTERS.map((f) => (
-                <TabsTrigger key={f.key} value={f.key} className="text-[11px] h-7 px-2.5 data-[state=active]:bg-background">
-                  {f.label}
-                  <span className="ml-1.5 text-[10px] tabular-nums opacity-70">
-                    {counts[f.key]}
-                  </span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-
           {loading && !initialLoadComplete.current && rows.length === 0 ? (
-            <div className="text-sm text-muted-foreground py-10 text-center">Loading documents…</div>
+            <div className="text-sm text-muted-foreground py-10 text-center">Cargando documentos…</div>
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={FileText}
-              title="No documents match"
-              description="Adjust the filters or search term."
+              title="Ningún documento coincide"
+              description="Ajusta los filtros o el término de búsqueda."
             />
           ) : (
             <>
@@ -436,13 +410,13 @@ export default function DocumentsCenter() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Worker</TableHead>
-                      <TableHead>Document type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Expiration</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Uploaded</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>Persona</TableHead>
+                      <TableHead>Tipo de documento</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Vencimiento</TableHead>
+                      <TableHead>Origen</TableHead>
+                      <TableHead>Subido</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -498,7 +472,7 @@ export default function DocumentsCenter() {
                             <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[11px]">
                               <Link to={`/app/employees/${r.employee_id}`}>
                                 <UserSearch className="h-3 w-3 mr-1" />
-                                Worker
+                                Perfil
                               </Link>
                             </Button>
                           </div>
@@ -510,8 +484,7 @@ export default function DocumentsCenter() {
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+      </div>
 
       <DocumentPreviewDialog
         open={!!previewRow}
@@ -620,7 +593,7 @@ export default function DocumentsCenter() {
               <Button asChild variant="outline" className={cn("w-full gap-1.5", !drawerRow.file_path && "col-span-2")}>
                 <Link to={`/app/employees/${drawerRow.employee_id}`} onClick={() => setDrawerRow(null)}>
                   <UserSearch className="h-3.5 w-3.5" />
-                  Worker
+                  Perfil
                 </Link>
               </Button>
             </div>
@@ -630,13 +603,13 @@ export default function DocumentsCenter() {
         {drawerRow && (
           <>
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <DocMetaCell label="Expiration" value={
+              <DocMetaCell label="Vencimiento" value={
                 drawerRow.expires_at
                   ? formatExpirationDisplay(drawerRow.expires_at)
                   : (expirationPolicyFor(drawerRow.category) === "required" || expirationPolicyFor(drawerRow.category) === "recommended" ? "Falta" : "—")
               } />
-              <DocMetaCell label="Uploaded" value={fmtDate(drawerRow.created_at)} />
-              <DocMetaCell label="Source" value={DOC_SOURCE_LABEL[drawerRow.source]} />
+              <DocMetaCell label="Subido" value={fmtDate(drawerRow.created_at)} />
+              <DocMetaCell label="Origen" value={DOC_SOURCE_LABEL[drawerRow.source]} />
               <DocMetaCell label="Category" value={String(drawerRow.category)} />
             </div>
 
@@ -653,7 +626,7 @@ export default function DocumentsCenter() {
           </>
         )}
       </MobileQueueDrawer>
-    </div>
+    </OperationalWorkspace>
   );
 }
 
@@ -694,7 +667,7 @@ function ExpirationCell({
       if (!isNaN(d.getTime())) return formatDateUS(d) || "—";
     }
     if (policy === "not_applicable") return "—";
-    if (policy === "required" || policy === "recommended") return "Missing";
+    if (policy === "required" || policy === "recommended") return "Falta";
     return "—";
   })();
 
@@ -724,7 +697,7 @@ function ExpirationCell({
       toast({ title: "Could not save expiration", description: error, variant: "destructive" });
       return;
     }
-    toast({ title: "Expiration updated" });
+    toast({ title: "Vencimiento actualizado" });
     setOpen(false);
     await onSaved();
   };
@@ -750,14 +723,14 @@ function ExpirationCell({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-3 space-y-2" align="start">
-        <div className="text-[11px] font-semibold">Edit expiration date</div>
+        <div className="text-[11px] font-semibold">Editar fecha de vencimiento</div>
         <SmartDateInput value={value} onChange={setValue} allowClear showCalendar />
         <div className="text-[10px] text-muted-foreground">
-          Leave empty if this document has no expiration.
+          Déjalo vacío si el documento no vence.
         </div>
         <div className="flex justify-end gap-1.5 pt-1">
-          <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
-          <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+          <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={saving}>Cancelar</Button>
+          <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? "Guardando…" : "Guardar"}</Button>
         </div>
       </PopoverContent>
     </Popover>

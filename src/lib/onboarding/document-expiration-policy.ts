@@ -31,10 +31,10 @@ export function expirationPolicyFor(category: string | null | undefined): Expira
 }
 
 export const EXPIRATION_POLICY_LABEL: Record<ExpirationPolicy, string> = {
-  required:       "Expiration required",
-  recommended:    "Expiration recommended",
-  optional:       "Expiration optional",
-  not_applicable: "No expiration needed",
+  required:       "Vencimiento obligatorio",
+  recommended:    "Vencimiento recomendado",
+  optional:       "Vencimiento opcional",
+  not_applicable: "No necesita vencimiento",
 };
 
 /** Derived expiration state for a single document (already classified by signals). */
@@ -66,9 +66,9 @@ export function classifyExpiration(
 }
 
 export const EXPIRATION_STATE_LABEL: Record<ExpirationState, string> = {
-  no_expiration_needed: "No expiration needed",
-  missing_expiration:   "Missing expiration",
-  valid:                "Valid",
-  expiring_soon:        "Expiring soon",
-  expired:              "Expired",
+  no_expiration_needed: "No necesita vencimiento",
+  missing_expiration:   "Falta vencimiento",
+  valid:                "Vigente",
+  expiring_soon:        "Por vencer",
+  expired:              "Vencido",
 };

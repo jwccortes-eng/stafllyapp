@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
-import { PageHeader } from "@/components/ui/page-header";
+import { OperationalWorkspace, WorkspaceSearch, WorkspaceTabs } from "@/components/stafly-ui/OperationalWorkspace";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { MobileFilterPills } from "@/components/admin/mobile";
 
 const APPLICATION_TAB_ITEMS = [
   { key: "pending", label: "Pendientes" },
@@ -420,33 +419,39 @@ export default function Applications() {
   const applicationLink = selectedCompany?.slug ? applyUrl(selectedCompany.slug) : "";
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Aplicaciones"
-        subtitle="Gestiona las solicitudes de nuevos trabajadores"
-        icon={UserPlus2}
-        rightSlot={
-          applicationLink ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { navigator.clipboard.writeText(applicationLink); toast.success("Link copiado"); }}
-              className="gap-2"
-            >
-              <Link2 className="h-3.5 w-3.5" /> Copiar link
-            </Button>
-          ) : null
-        }
-      />
-
-      {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Buscar por nombre, teléfono, email..." className="pl-10 h-10 rounded-xl" />
-        </div>
+    <OperationalWorkspace
+      title="Postulaciones"
+      context="Solicitudes de personas que quieren trabajar contigo"
+      search={
+        <WorkspaceSearch
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Buscar por nombre, teléfono o correo…"
+        />
+      }
+      action={
+        applicationLink ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => { navigator.clipboard.writeText(applicationLink); toast.success("Link copiado"); }}
+          >
+            <Link2 className="h-3.5 w-3.5 mr-1.5" /> Copiar link
+          </Button>
+        ) : null
+      }
+      tabs={
+        <WorkspaceTabs
+          items={APPLICATION_TAB_ITEMS.map((t) => ({ key: t.key, label: t.label, count: counts[t.key] ?? 0 }))}
+          value={tab}
+          onChange={(k) => setTab(k)}
+          ariaLabel="Estado de la postulación"
+        />
+      }
+      filters={
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-40 h-10 rounded-xl">
+          <SelectTrigger className="w-44 h-8 text-xs">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
           <SelectContent>
@@ -456,43 +461,23 @@ export default function Applications() {
             ))}
           </SelectContent>
         </Select>
+      }
+    >
+      <div className="pt-3">
+        {isLoading ? (
+          <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : filtered.length === 0 ? (
+          <EmptyState tab={tab} applicationLink={applicationLink} />
+        ) : (
+          <div className="bg-card rounded-xl border divide-y">
+            {filtered.map((app) => (
+              <ApplicationRow key={app.id} app={app} onClick={() => openDetail(app)} />
+            ))}
+          </div>
+        )}
       </div>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        {/* S6 — shared <MobileFilterPills>. Desktop TabsList preserved below. */}
-        <MobileFilterPills
-          items={APPLICATION_TAB_ITEMS.map((t) => ({ ...t, count: counts[t.key] ?? 0 }))}
-          value={tab}
-          onChange={setTab}
-          ariaLabel="Application status filter"
-        />
 
-        {/* Desktop: existing wrapped Tabs, untouched semantics. */}
-        <TabsList className="hidden md:flex bg-muted/50 h-10 flex-wrap">
-          {APPLICATION_TAB_ITEMS.map((t) => (
-            <TabsTrigger key={t.key} value={t.key} className="gap-1 text-[11px] data-[state=active]:shadow-sm">
-              {t.label}
-              {(counts[t.key] ?? 0) > 0 && (
-                <Badge variant="secondary" className="h-4 min-w-4 text-[9px] px-1">{counts[t.key]}</Badge>
-              )}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        <div className="mt-4">
-          {isLoading ? (
-            <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-          ) : filtered.length === 0 ? (
-            <EmptyState tab={tab} applicationLink={applicationLink} />
-          ) : (
-            <div className="bg-card rounded-xl border divide-y">
-              {filtered.map((app) => (
-                <ApplicationRow key={app.id} app={app} onClick={() => openDetail(app)} />
-              ))}
-            </div>
-          )}
-        </div>
-      </Tabs>
 
       {/* Detail Sheet */}
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
@@ -910,7 +895,7 @@ export default function Applications() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </OperationalWorkspace>
   );
 }
 

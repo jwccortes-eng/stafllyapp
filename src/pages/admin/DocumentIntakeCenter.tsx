@@ -16,6 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { OperationalWorkspace, WorkspaceTabs } from "@/components/stafly-ui/OperationalWorkspace";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -203,18 +204,29 @@ export default function DocumentIntakeCenter() {
     return <div className="p-6 text-sm text-muted-foreground">Solo administradores pueden ver la bandeja de documentos.</div>;
   }
 
+  const allItems = itemsQ.data ?? [];
+  const counts = {
+    pending: allItems.filter((i: any) => ["pending_extraction", "extracted", "needs_review", "failed"].includes(i.status)).length,
+    ready: allItems.filter((i: any) => ["extracted", "needs_review"].includes(i.status)).length,
+    indexed: allItems.filter((i: any) => i.status === "indexed").length,
+    rejected: allItems.filter((i: any) => i.status === "rejected").length,
+    all: allItems.length,
+  };
+  const filteredItems = allItems.filter((i: any) => {
+    switch (filter) {
+      case "pending": return ["pending_extraction", "extracted", "needs_review", "failed"].includes(i.status);
+      case "ready": return ["extracted", "needs_review"].includes(i.status);
+      case "indexed": return i.status === "indexed";
+      case "rejected": return i.status === "rejected";
+      default: return true;
+    }
+  });
+
   return (
-    <div className="p-4 md:p-6 space-y-4 max-w-[1400px] mx-auto">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Bandeja de documentos</h1>
-          <p className="text-sm text-muted-foreground">
-            Sugerencias del sistema. No se guarda nada sin revisión humana.
-          </p>
-        </div>
-        {/* Desktop-only: importación / subida masiva de documentos sensibles.
-            Oculto en mobile para proteger IDs, licencias, W-9, SSN y evitar
-            errores de asignación al empleado equivocado. */}
+    <OperationalWorkspace
+      title="Bandeja de documentos"
+      context="Sugerencias del sistema. No se guarda nada sin revisión humana."
+      action={
         <div className="hidden md:block">
           <input
             ref={fileInputRef}
@@ -224,96 +236,57 @@ export default function DocumentIntakeCenter() {
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
           />
-          <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-            {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+          <Button size="sm" className="h-8 text-xs" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+            {uploading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}
             Importar documentos
           </Button>
         </div>
-      </div>
-
-      {/* Mobile-only aviso: importación legacy/sensible es desktop-only. */}
-      <div className="md:hidden">
-        <Card className="p-3 flex items-start gap-2.5 border-amber-200 bg-amber-50/60 text-amber-900">
-          <Monitor className="h-4 w-4 mt-0.5 shrink-0" />
-          <div className="text-xs leading-relaxed">
-            <p className="font-medium">Importación disponible solo en desktop</p>
-            <p className="text-amber-900/80">
-              La subida de documentos existentes (IDs, licencias, W-9, fotos, archivos sensibles)
-              se hace desde computadora para proteger información sensible y evitar asignaciones
-              incorrectas. Aquí puedes revisar y aprobar documentos ya subidos.
-            </p>
+      }
+      tabs={
+        <WorkspaceTabs
+          items={[
+            { key: "pending", label: "Pendientes", count: counts.pending },
+            { key: "ready", label: "Listos para revisar", count: counts.ready },
+            { key: "indexed", label: "Indexados", count: counts.indexed },
+            { key: "rejected", label: "Rechazados", count: counts.rejected },
+            { key: "all", label: "Todos", count: counts.all },
+          ]}
+          value={filter}
+          onChange={(k) => setFilter(k as QueueFilter)}
+          ariaLabel="Estado del documento"
+        />
+      }
+      adminTitle="Cómo funciona la importación"
+      admin={
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          La subida de documentos existentes (IDs, licencias, W-9, fotos, archivos sensibles)
+          se hace desde computadora para proteger información sensible y evitar asignaciones
+          incorrectas. Desde el móvil puedes revisar y aprobar documentos ya subidos.
+        </p>
+      }
+    >
+      <div className="pt-3">
+        {itemsQ.isLoading ? (
+          <div className="flex items-center justify-center h-40"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : filteredItems.length === 0 ? (
+          <div className="rounded-xl border border-border/50 bg-card/40 p-8 text-center text-sm text-muted-foreground">
+            {allItems.length === 0
+              ? "No hay documentos en la bandeja. Sube imágenes o PDFs para empezar."
+              : filter === "pending"
+                ? "Bandeja al día. No hay documentos pendientes de revisión."
+                : "Sin documentos en esta vista."}
           </div>
-        </Card>
+        ) : (
+          <div className="space-y-3">
+            {filteredItems.map((it: any) => (
+              <IntakeItemRow key={it.id} item={it} employees={empQ.data ?? []} empById={empById} onChanged={() => qc.invalidateQueries({ queryKey: ["intake-items", selectedCompanyId] })} />
+            ))}
+          </div>
+        )}
       </div>
-
-
-
-      {(() => {
-        const all = itemsQ.data ?? [];
-        const counts = {
-          pending: all.filter((i: any) => i.status === "pending_extraction" || i.status === "extracted" || i.status === "needs_review" || i.status === "failed").length,
-          ready: all.filter((i: any) => i.status === "extracted" || i.status === "needs_review").length,
-          indexed: all.filter((i: any) => i.status === "indexed").length,
-          rejected: all.filter((i: any) => i.status === "rejected").length,
-          all: all.length,
-        };
-        const filtered = all.filter((i: any) => {
-          switch (filter) {
-            case "pending": return ["pending_extraction", "extracted", "needs_review", "failed"].includes(i.status);
-            case "ready": return ["extracted", "needs_review"].includes(i.status);
-            case "indexed": return i.status === "indexed";
-            case "rejected": return i.status === "rejected";
-            case "all": return true;
-          }
-        });
-        const tabs: { key: QueueFilter; label: string; count: number }[] = [
-          { key: "pending", label: "Pendientes", count: counts.pending },
-          { key: "ready", label: "Listos para revisar", count: counts.ready },
-          { key: "indexed", label: "Indexados", count: counts.indexed },
-          { key: "rejected", label: "Rechazados", count: counts.rejected },
-          { key: "all", label: "Todos", count: counts.all },
-        ];
-        return (
-          <>
-            <div className="flex flex-wrap gap-1.5 border-b pb-2">
-              {tabs.map((t) => (
-                <Button
-                  key={t.key}
-                  size="sm"
-                  variant={filter === t.key ? "default" : "ghost"}
-                  onClick={() => setFilter(t.key)}
-                  className="h-8"
-                >
-                  {t.label}
-                  <Badge variant="outline" className="ml-2 bg-background/60 text-[10px] py-0">{t.count}</Badge>
-                </Button>
-              ))}
-            </div>
-            {itemsQ.isLoading ? (
-              <div className="flex items-center justify-center h-40"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-            ) : filtered.length === 0 ? (
-              <Card className="p-8 text-center text-sm text-muted-foreground">
-                {all.length === 0
-                  ? "No hay documentos en la bandeja. Sube imágenes o PDFs para empezar."
-                  : filter === "pending"
-                    ? "Bandeja al día. No hay documentos pendientes de revisión."
-                    : "Sin documentos en esta vista."}
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {filtered.map((it: any) => (
-                  <IntakeItemRow key={it.id} item={it} employees={empQ.data ?? []} empById={empById} onChanged={() => qc.invalidateQueries({ queryKey: ["intake-items", selectedCompanyId] })} />
-                ))}
-              </div>
-            )}
-          </>
-        );
-      })()}
-    </div>
+    </OperationalWorkspace>
   );
 }
-
-
 
 function IntakeItemRow({
   item, employees, empById, onChanged,
