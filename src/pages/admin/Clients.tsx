@@ -527,9 +527,15 @@ export default function Clients() {
               <List className="h-3.5 w-3.5" />
             </button>
           </div>
-          <Button variant="outline" size="sm" className="h-9 text-xs" onClick={handleExport} disabled={filtered.length === 0}>
+          {canEdit && (
+            <Button variant="outline" size="sm" className="h-9 text-xs" onClick={() => setQuickCreateOpen(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" /> Crear rápido
+            </Button>
+          )}
+          <Button variant="outline" size="sm" className="h-9 text-xs" onClick={handleExport} disabled={visibleTruths.length === 0}>
             <Download className="h-3.5 w-3.5 mr-1.5" /> Exportar
           </Button>
+
         </div>
       )}
 
