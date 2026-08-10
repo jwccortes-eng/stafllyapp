@@ -42,7 +42,7 @@ Mapa a campos reales ya auditados (no se inventaron estados):
 | Crear Servicio / Editar / Asignar equipo (`EmployeeCombobox`) | activo + no placeholder | `isAssignableWorker` |
 | Quick Create móvil (`MobileQuickCreateShiftSheet`) | solo `is_active` | `getAssignableWorkers` |
 | Team hub móvil (`MobileShiftTeamHub`) | solo `is_active` | `isAssignableWorker` |
-| Picker simple / drivers (`SingleEmployeePicker`, `MultiDriverPicker`) | sin regla | `getAssignableWorkers` |
+| Picker simple (`SingleEmployeePicker`, incl. modo drivers) | sin regla | `getAssignableWorkers` |
 | Reemplazo (`ReplacementSuggestionDialog`) | query `is_active = true` | query + `getAssignableWorkers` y `deleted_at IS NULL` |
 | Duplicar / copiar equipo (`DuplicateShiftDialog`) | sin regla, copiaba tal cual | valida elegibilidad **solo** de los `employee_id` del Servicio origen |
 
