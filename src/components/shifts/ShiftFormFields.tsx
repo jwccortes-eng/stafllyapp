@@ -628,6 +628,51 @@ export function ShiftFormFields({
       );
     }
 
+    // EDIT — SERVICE COPILOT: el editor se organiza por etapas cuando el
+    // contenedor aporta las etapas de solo lectura (Tiempo · Historial).
+    if (copilotStages) {
+      const anchorStage: Record<string, ServiceStageKey> = {
+        [SERVICE_CLIENT_ANCHOR]: "resumen",
+        [SERVICE_JOB_SITE_ANCHOR]: "resumen",
+        [SERVICE_TEAM_ANCHOR]: "equipo",
+        [SERVICE_MEETING_POINT_ANCHOR]: "operacion",
+        [SERVICE_INFO_ANCHOR]: "operacion",
+        [SERVICE_PAY_ANCHOR]: "pago",
+      };
+      return (
+        <ServiceStageLayout
+          anchorStage={anchorStage}
+          stages={{
+            resumen: (
+              <>
+                {basicInfoNode}
+                {jobSiteNode}
+              </>
+            ),
+            equipo: (
+              <div id={SERVICE_TEAM_ANCHOR} className="space-y-3 scroll-mt-24">
+                {teamNode}
+                {transportationNode}
+              </div>
+            ),
+            operacion: (
+              <div id={SERVICE_INFO_ANCHOR} className="space-y-3 scroll-mt-24">
+                {meetingPointsNode}
+                {advancedNode}
+              </div>
+            ),
+            tiempo: copilotStages.tiempo,
+            pago: (
+              <div id={SERVICE_PAY_ANCHOR} className="space-y-3 scroll-mt-24">
+                {payNode}
+              </div>
+            ),
+            historial: copilotStages.historial,
+          }}
+        />
+      );
+    }
+
     return (
       <ShiftWorkspaceLayout
         displayName={displayName}
