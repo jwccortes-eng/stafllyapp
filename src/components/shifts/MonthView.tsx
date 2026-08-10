@@ -87,7 +87,9 @@ function MonthViewImpl({
 
   return (
     <div className="w-full">
-      <div className="w-full">
+      {/* Desktop: cuadrícula mensual completa */}
+      <div className="hidden md:block w-full">
+
         <div className="grid grid-cols-7 gap-px bg-border/30 rounded-t-xl overflow-hidden">
           {dayHeaders.map(dh => (
             <div key={dh} className="text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-2 bg-muted/30">{dh}</div>
