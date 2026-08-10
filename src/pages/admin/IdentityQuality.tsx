@@ -29,11 +29,11 @@ import {
   type IdentityGroup,
 } from "@/lib/identity/person-truth";
 import {
-import { EntityCard } from "@/components/entities/EntityCard";
-import { buildWorkerEntityView, type WorkerEntityInput } from "@/lib/entities/entity-presenters";
   ASSIGNMENT_RISK_LABELS,
   ASSIGNMENT_RISK_TONE,
 } from "@/lib/identity/assignment-risk";
+import { EntityCard } from "@/components/entities/EntityCard";
+import { buildWorkerEntityView, type WorkerEntityInput } from "@/lib/entities/entity-presenters";
 
 const RISK_VARIANT: Record<IdentityGroup["risk"], "destructive" | "secondary" | "outline"> = {
   high: "destructive",
