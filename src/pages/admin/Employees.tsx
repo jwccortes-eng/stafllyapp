@@ -1111,6 +1111,231 @@ export default function Employees() {
     ...(riskFilter !== "all" ? [{ key: "risk", label: <>Risk: <strong className="ml-0.5">{riskFilter.replace(/_/g, " ")}</strong></>, onRemove: () => setRiskFilter("all") }] : []),
   ];
 
+  /* ────────────────────────────────────────────────────────────────────
+   * P0 — Operational First Layout.
+   * Los KPIs dejan de ser cards grandes: pasan a chips compactos con la
+   * MISMA acción (cambiar de pestaña). La calidad de datos baja al panel
+   * administrativo colapsable. Nada de lógica cambia aquí.
+   * ──────────────────────────────────────────────────────────────────*/
+  const workspaceMetrics: WorkspaceMetric[] = kpis.map((k) => ({
+    label: k.label,
+    value: k.value,
+    hint: k.hint,
+    onClick: k.onClick,
+    active: k.active,
+    tone:
+      k.accent === "success"
+        ? "success"
+        : k.accent === "warning"
+          ? "warning"
+          : k.accent === "destructive"
+            ? "critical"
+            : k.accent === "primary"
+              ? "primary"
+              : "neutral",
+  }));
+
+  const statusTabsNode = (
+    <div className="flex items-center gap-0.5 overflow-x-auto">
+      {([
+        { key: "active" as const, label: "Active", count: statusCounts.active },
+        { key: "pending" as const, label: "Pending App Activation", count: statusCounts.pending },
+        { key: "invited" as const, label: "Invited", count: statusCounts.invited },
+        ...(statusCounts.failed > 0
+          ? [{ key: "failed" as const, label: "Invite Failed", count: statusCounts.failed, tone: "destructive" as const }]
+          : []),
+        {
+          key: "missing-docs" as const,
+          label: "Missing Documents",
+          count: statusCounts["missing-docs"],
+          tone: statusCounts["missing-docs"] > 0 ? ("warning" as const) : undefined,
+        },
+        {
+          key: "no-photo" as const,
+          label: "Photo Required",
+          count: statusCounts["no-photo"],
+          tone: statusCounts["no-photo"] > 0 ? ("warning" as const) : undefined,
+        },
+        { key: "new" as const, label: "New", count: statusCounts.new },
+        { key: "drivers" as const, label: "Drivers", count: statusCounts.drivers },
+        { key: "no-activity" as const, label: "No Recent Activity", count: statusCounts["no-activity"] },
+        { key: "inactive" as const, label: "Historical / Inactive", count: statusCounts.inactive },
+        { key: "all" as const, label: "All", count: statusCounts.all },
+      ]).map(tab => {
+        const isActive = statusTab === tab.key;
+        const tone = (tab as any).tone as "destructive" | "warning" | undefined;
+        const isDestructive = tone === "destructive";
+        const isWarning = tone === "warning";
+        return (
+          <button
+            key={tab.key}
+            onClick={() => setStatusTab(tab.key)}
+            className={cn(
+              "px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px whitespace-nowrap",
+              isActive
+                ? isDestructive
+                  ? "border-destructive text-destructive"
+                  : isWarning
+                    ? "border-warning text-warning"
+                    : "border-primary text-primary"
+                : isDestructive
+                  ? "border-transparent text-destructive/80 hover:text-destructive hover:border-destructive/40"
+                  : isWarning
+                    ? "border-transparent text-warning/80 hover:text-warning hover:border-warning/40"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+            )}
+          >
+            {tab.label}
+            <span className={cn(
+              "ml-1.5 text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md",
+              isActive
+                ? isDestructive
+                  ? "bg-destructive/10 text-destructive"
+                  : isWarning
+                    ? "bg-warning/15 text-warning"
+                    : "bg-primary/10 text-primary"
+                : isDestructive
+                  ? "bg-destructive/10 text-destructive"
+                  : isWarning
+                    ? "bg-warning/15 text-warning"
+                    : "bg-muted text-muted-foreground",
+            )}>{tab.count}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const filtersNode = (
+    <PremiumFilterBar
+      search={search}
+      onSearchChange={setSearch}
+      searchPlaceholder="Search by name, phone, email, or Stafly ID…"
+      quickFilters={
+        <>
+          {uniqueRoles.length > 0 && (
+            <Select value={filterRole} onValueChange={setFilterRole}>
+              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All roles</SelectItem>{uniqueRoles.map(r => (<SelectItem key={r} value={r}>{formatDisplayText(r, "label")}</SelectItem>))}</SelectContent>
+            </Select>
+          )}
+          {uniqueGroups.length > 0 && (
+            <Select value={filterGroup} onValueChange={setFilterGroup}>
+              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Group" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All groups</SelectItem>{uniqueGroups.map(g => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
+            </Select>
+          )}
+          <Select
+            value={sort.key}
+            onValueChange={(v) => setSort({ key: v as SortKey, direction: sort.direction })}
+          >
+            <SelectTrigger className="w-[170px] h-8 text-xs" aria-label="Ordenar por">
+              <ArrowUpDown className="h-3 w-3 mr-1 text-muted-foreground" />
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Ordenar: Nombre</SelectItem>
+              <SelectItem value="code">Ordenar: ID Stafly</SelectItem>
+              <SelectItem value="last_activity">Ordenar: Última actividad</SelectItem>
+              <SelectItem value="photo">Ordenar: Foto</SelectItem>
+              <SelectItem value="role">Ordenar: Rol</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 text-[11px]"
+            onClick={() => setSort({ key: sort.key, direction: sort.direction === "asc" ? "desc" : "asc" })}
+            title={sort.direction === "asc" ? "Ascendente" : "Descendente"}
+          >
+            {sort.direction === "asc" ? "Asc ↑" : "Desc ↓"}
+          </Button>
+        </>
+      }
+      activeChips={activeChips}
+      resultCount={filtered.length}
+      onReset={clearFilters}
+      rightSlot={
+        <>
+          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setColPrefsOpen(true)} title="Column preferences">
+            <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+          </Button>
+          <ViewSwitcher value={viewMode} onChange={setViewMode} modes={["roster", "table", "compact"]} />
+        </>
+      }
+    />
+  );
+
+  const adminPanelNode = isPrivileged ? (
+    <div className="space-y-3">
+      <Card
+        className="border-warning/20 bg-gradient-to-r from-warning/5 via-card to-card hover:border-warning/40 transition-colors cursor-pointer group"
+        onClick={() => navigate("/app/workers/duplicates")}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            navigate("/app/workers/duplicates");
+          }
+        }}
+      >
+        <CardContent className="p-3 flex items-center gap-3">
+          <div className="h-9 w-9 rounded-lg bg-warning/10 text-warning flex items-center justify-center shrink-0">
+            <UserSearch className="h-4 w-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-foreground">Data Quality</span>
+              {strongDuplicateCount > 0 ? (
+                <Badge
+                  variant="outline"
+                  className="h-5 px-1.5 bg-warning/10 text-warning border-warning/30 text-[10px] font-semibold"
+                  title="Cuenta grupos detectados, no personas únicas."
+                >
+                  {strongDuplicateCount} {strongDuplicateCount === 1 ? "grupo con posible duplicado" : "grupos con posible duplicado"}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground border-border">
+                  Sin duplicados detectados
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+              {strongDuplicateCount > 0
+                ? "Grupos con posibles duplicados. Revisa antes de que impacten shifts o payroll."
+                : "Sin señales fuertes de duplicados en la vista actual. Puedes correr un escaneo profundo cuando quieras."}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs shrink-0 group-hover:border-warning/40 group-hover:text-warning"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate("/app/workers/duplicates");
+            }}
+          >
+            <UserSearch className="h-3.5 w-3.5 mr-1.5" />
+            Revisar duplicados
+          </Button>
+        </CardContent>
+      </Card>
+
+      {employees.length > 0 && (
+        <DataQualityRiskPanel
+          employees={employees}
+          documentSignals={documentSignals}
+          riskFilter={riskFilter}
+          onRiskFilterChange={setRiskFilter}
+          compact
+          companyName={selectedCompany?.name ?? null}
+        />
+      )}
+    </div>
+  ) : undefined;
+
+
   return (
     <div className="space-y-3 overflow-x-hidden max-w-full">
       {isMobile && (
