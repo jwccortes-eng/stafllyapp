@@ -78,6 +78,8 @@ function EntityField({
   raw: string;
   catalog: CatalogItem[];
   placeholder: string;
+  /** Alta rápida canónica (sólo clientes). */
+  onQuickCreate?: (name: string) => void;
   onChange: (next: { id: string | null; raw: string }) => void;
 }) {
   const [focused, setFocused] = useState(false);
