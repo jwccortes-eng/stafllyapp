@@ -80,87 +80,26 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
     };
   };
 
-  const renderShiftPill = (shift: Shift, color: ReturnType<typeof getClientColor>) => {
-    const names = getAssignedNames(shift.id);
-    const shiftAssignments = assignments.filter(a => a.shift_id === shift.id);
-    const assignCount = shiftAssignments.length;
-    const isLocked = shift.status === "locked";
-    const totalSlots = shift.slots ?? 1;
-
-    // P0 — fuente única: cobertura = asignados activos / plazas.
-    const metrics = getShiftStaffingMetrics(shiftAssignments as any[], totalSlots);
-
-
+  /** Un Servicio = una ServiceEventCard. Los workers son metadata. */
+  const renderShiftPill = (shift: Shift, _color: ReturnType<typeof getClientColor>) => {
+    const model = buildServiceEventModel(shift as any, {
+      assignments,
+      employees,
+      clientName: clients.find(c => c.id === shift.client_id)?.name ?? null,
+      locationName: locations.find(l => l.id === shift.location_id)?.name ?? null,
+    });
     return (
-      <div
+      <ServiceEventCard
         key={shift.id}
-        className={cn(
-          "rounded-lg px-2 py-2 text-[10px] cursor-pointer border-l-[3px] transition-all hover:shadow-md hover:-translate-y-0.5 border border-border/10 bg-card",
-          color.border,
-          isLocked && "opacity-70"
-        )}
-        onClick={() => onShiftClick(shift)}
-        onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-2", "ring-primary/30"); }}
-        onDragLeave={e => { e.currentTarget.classList.remove("ring-2", "ring-primary/30"); }}
-        onDrop={e => {
-          e.preventDefault();
-          e.currentTarget.classList.remove("ring-2", "ring-primary/30");
-          const data = e.dataTransfer.getData("application/assignment");
-          if (data) onDropOnShift(shift.id, data);
-        }}
-      >
-        {/* Title */}
-        <div className="font-bold truncate text-[10px] leading-snug text-foreground/85">
-          {displayShiftRef(shift) !== "—" && <span className="text-foreground/40">{displayShiftRef(shift)}</span>}{" "}
-          <span className="uppercase">{shift.title}</span>
-          {totalSlots > 1 && <span className="text-foreground/40 ml-0.5">({totalSlots})</span>}
-        </div>
-
-        {/* Time */}
-        <div className="text-muted-foreground/55 flex items-center gap-1 mt-0.5">
-          <Clock className="h-2.5 w-2.5 shrink-0" />
-          <span>{shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}</span>
-        </div>
-
-        {/* Employee names */}
-        {names.length > 0 && (
-          <div className="mt-1.5 space-y-0">
-            {names.slice(0, 2).map((n, i) => (
-              <div key={i} className="flex items-center gap-1 text-muted-foreground/50 text-[10px] leading-tight">
-                <Users className="h-2.5 w-2.5 shrink-0" />
-                <span className="truncate">{n}</span>
-              </div>
-            ))}
-            {names.length > 2 && (
-              <span className="text-muted-foreground/35 text-[10px] ml-[14px]">+{names.length - 2} más</span>
-            )}
-          </div>
-        )}
-
-        {/* Cobertura (asignados/plazas) + confirmación como dato secundario */}
-        <div className="flex items-center gap-1 mt-1.5">
-          <div className="flex-1 h-1 bg-muted/30 rounded-full overflow-hidden flex">
-            {metrics.confirmed > 0 && (
-              <div className="h-full bg-emerald-400 transition-all" style={{ width: `${Math.round((metrics.confirmed / (totalSlots || 1)) * 100)}%` }} />
-            )}
-            {metrics.pendingResponse > 0 && (
-              <div className="h-full bg-amber-400 transition-all" style={{ width: `${Math.round((metrics.pendingResponse / (totalSlots || 1)) * 100)}%` }} />
-            )}
-          </div>
-          <span
-            title={`${metrics.coverageLabel}${metrics.confirmationLabel ? ` · ${metrics.confirmationLabel}` : ""}`}
-            className={cn(
-              "text-[8px] tabular-nums font-semibold shrink-0",
-              metrics.isFullyCovered ? "text-emerald-500" : metrics.assignedActive > 0 ? "text-amber-500" : "text-muted-foreground/40"
-            )}
-          >
-            {metrics.assignedActive}/{totalSlots}
-          </span>
-        </div>
-
-      </div>
+        model={model}
+        density="week"
+        dateLabel={shift.date ? format(new Date(shift.date + "T00:00:00"), "EEEE d 'de' MMMM", { locale: es }) : undefined}
+        onOpen={() => onShiftClick(shift)}
+        onDropAssignment={(data) => onDropOnShift(shift.id, data)}
+      />
     );
   };
+
 
   const clientGroups = clients.filter(c => shifts.some(s => s.client_id === c.id));
   const hasNoClientShifts = shifts.some(s => !s.client_id);
