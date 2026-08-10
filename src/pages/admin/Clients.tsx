@@ -28,6 +28,11 @@ import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { ClientAvatar } from "@/components/ui/client-avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { KpiCard } from "@/components/ui/kpi-card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useClientDirectory } from "@/hooks/useClientDirectory";
+import { clientMatchesQuery, type ClientTruth } from "@/lib/clients/client-truth";
+import { QuickCreateClientDialog } from "@/components/clients/QuickCreateClientDialog";
+import { ClientDuplicatesPanel } from "@/components/clients/ClientDuplicatesPanel";
 
 interface Client {
   id: string;
