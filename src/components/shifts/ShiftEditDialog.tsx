@@ -66,27 +66,44 @@ export function ShiftEditDialog({
     return [...clients, ...inlineClients.filter((c) => !seen.has(c.id))];
   }, [clients, inlineClients]);
 
+  /**
+   * CLIENT TRUTH LAYER V1 — el alta rápida usa el helper canónico.
+   * Nunca crea en silencio: si hay coincidencia, abre el diálogo de decisión.
+   */
+  const [quickClientOpen, setQuickClientOpen] = useState(false);
+  const [quickClientName, setQuickClientName] = useState("");
+
+  const selectClient = (client: { id: string; name: string }, origin: "created" | "existing") => {
+    setInlineClients((prev) =>
+      prev.some((c) => c.id === client.id)
+        ? prev
+        : [...prev, { id: client.id, name: client.name } as SelectOption],
+    );
+    setForm((prev) => ({ ...prev, clientId: client.id }));
+    setTouched(true);
+    toast.success(
+      origin === "created" ? `Cliente "${client.name}" creado` : `Cliente "${client.name}" seleccionado`,
+      { description: "Seleccionado en este servicio. Guarda para aplicarlo." },
+    );
+  };
+
   const handleQuickAddClient = async (name: string) => {
     const companyId = (shift as any)?.company_id ?? null;
     if (!companyId || !name.trim()) return;
-    const { data, error } = await supabase
-      .from("clients")
-      .insert({ company_id: companyId, name: name.trim() } as any)
-      .select("id, name")
-      .single();
-    if (error) {
-      toast.error("No se pudo crear el cliente", { description: error.message });
+    const result = await createClientCanonical({ companyId, name });
+    if (result.status === "created") {
+      selectClient(result.client, "created");
       return;
     }
-    if (data) {
-      setInlineClients((prev) => [...prev, { id: data.id, name: data.name } as SelectOption]);
-      setForm((prev) => ({ ...prev, clientId: data.id }));
-      setTouched(true);
-      toast.success(`Cliente "${data.name}" creado`, {
-        description: "Seleccionado en este servicio. Guarda para aplicarlo.",
-      });
+    if (result.status === "error" || result.status === "blocked") {
+      toast.error("No se pudo crear el cliente", { description: result.reason });
+      return;
     }
+    // exact_match / possible_duplicate → decide la persona.
+    setQuickClientName(name.trim());
+    setQuickClientOpen(true);
   };
+
 
 
   useEffect(() => {
