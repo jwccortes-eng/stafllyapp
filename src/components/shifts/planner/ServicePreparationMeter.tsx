@@ -1,19 +1,18 @@
 /**
- * ServicePreparationMeter — expresión visual ÚNICA de la preparación (0–100)
- * de un Servicio. UI-only, sin datos propios: consume `getServicePreparation`.
+ * ServicePreparationMeter — lectura del readiness (0–100) de un Servicio en
+ * calendario, lista y drawer. Comparte tonos y barra con `ReadinessBar`, la
+ * expresión canónica del ÚNICO indicador de madurez del ecosistema.
  *
  * Nunca usa rojo para un borrador: un evento en construcción no es un error.
  */
 import { memo } from "react";
 import { cn } from "@/lib/utils";
+import { READINESS_TONE } from "@/components/shifts/copilot/ReadinessBar";
 import type { PreparationBand, ServicePreparation } from "@/lib/shifts/service-preparation";
 
-const BAND_TONE: Record<PreparationBand, { bar: string; text: string; dot: string }> = {
-  ready: { bar: "bg-earning", text: "text-earning", dot: "bg-earning" },
-  attention: { bar: "bg-warning", text: "text-warning", dot: "bg-warning" },
-  later: { bar: "bg-primary/70", text: "text-primary", dot: "bg-primary/70" },
-  closed: { bar: "bg-muted-foreground/40", text: "text-muted-foreground", dot: "bg-muted-foreground/40" },
-};
+const BAND_TONE: Record<PreparationBand, { bar: string; text: string; dot: string }> =
+  READINESS_TONE;
+
 
 export function PreparationDot({
   preparation,
@@ -24,7 +23,7 @@ export function PreparationDot({
 }) {
   return (
     <span
-      aria-label={`Preparación ${preparation.score}% · ${preparation.bandLabel}`}
+      aria-label={`Readiness ${preparation.score}% · ${preparation.bandLabel}`}
       className={cn(
         "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
         BAND_TONE[preparation.band].dot,
@@ -64,7 +63,7 @@ function ServicePreparationMeterImpl({ preparation, variant = "full", className 
     <div className={cn("space-y-1.5", className)}>
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Preparación
+          Readiness
         </span>
         <span className={cn("text-[12px] font-bold tabular-nums", tone.text)}>
           {preparation.score}% · {preparation.bandLabel}

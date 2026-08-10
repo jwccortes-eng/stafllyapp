@@ -61,6 +61,8 @@ interface Props {
   children: React.ReactNode;
   /** Sticky right panel (typically <ShiftSummaryPanel/>). Optional. */
   summary?: React.ReactNode;
+  /** SERVICE COPILOT — resumen operativo que reemplaza el título del header. */
+  headerSummary?: React.ReactNode;
   /** When provided, clicking the primary publish button opens a "Antes de publicar"
    *  review modal instead of calling onSave directly. The modal forwards confirm to onSave. */
   publishReview?: PrePublishReviewData | null;
@@ -95,6 +97,7 @@ export function ShiftFormShell({
   footerBanner,
   children,
   summary,
+  headerSummary,
   publishReview,
 }: Props) {
   const headerTitle = mode === "create" ? `${ADMIN_LEX.create} rápido` : ADMIN_LEX.edit;
@@ -176,39 +179,40 @@ export function ShiftFormShell({
       >
         {/* Sticky header */}
         <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border/30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold font-heading leading-tight">{headerTitle}</h2>
-                {mode === "create" && (
-                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 border border-primary/20">
-                    Creación rápida
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground">
-                {clientName && (
-                  <span className="inline-flex items-center gap-1 max-w-[160px] truncate">
-                    <Building2 className="h-3 w-3 shrink-0" />
-                    <span className="truncate">{clientName}</span>
-                  </span>
-                )}
-                {clientName && date && <span className="text-muted-foreground/40">·</span>}
-                {date && (
-                  <span className="inline-flex items-center gap-1">
-                    <CalendarIcon className="h-3 w-3 shrink-0" />
-                    {fmtDateChip(date)}
-                    {startTime && endTime && (
-                      <span className="text-muted-foreground/70"> · {startTime}–{endTime}</span>
-                    )}
-                  </span>
-                )}
-                {!clientName && !date && (
-                  <span>{headerSubtitle}</span>
-                )}
+          {headerSummary ?? (
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold font-heading leading-tight">{headerTitle}</h2>
+                  {mode === "create" && (
+                    <span className="inline-flex items-center rounded-full bg-primary/10 text-primary text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 border border-primary/20">
+                      Creación rápida
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground">
+                  {clientName && (
+                    <span className="inline-flex items-center gap-1 max-w-[160px] truncate">
+                      <Building2 className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{clientName}</span>
+                    </span>
+                  )}
+                  {clientName && date && <span className="text-muted-foreground/40">·</span>}
+                  {date && (
+                    <span className="inline-flex items-center gap-1">
+                      <CalendarIcon className="h-3 w-3 shrink-0" />
+                      {fmtDateChip(date)}
+                      {startTime && endTime && (
+                        <span className="text-muted-foreground/70"> · {startTime}–{endTime}</span>
+                      )}
+                    </span>
+                  )}
+                  {!clientName && !date && <span>{headerSubtitle}</span>}
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
 
           <div className="flex items-center gap-2 shrink-0">
             <Button

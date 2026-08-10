@@ -20,6 +20,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { createClientCanonical } from "@/lib/clients/create-client";
 import { QuickCreateClientDialog } from "@/components/clients/QuickCreateClientDialog";
+import { getServiceCopilot } from "@/lib/shifts/service-copilot";
+import { SERVICE_TEAM_ANCHOR, SERVICE_INFO_ANCHOR } from "@/lib/shifts/service-focus";
+import { SERVICE_CLIENT_ANCHOR } from "@/lib/shifts/service-operational-readiness";
+import {
+  SERVICE_JOB_SITE_ANCHOR,
+  SERVICE_MEETING_POINT_ANCHOR,
+} from "@/lib/shifts/service-publish-readiness";
+import { ServiceCopilotHeader } from "./copilot/ServiceCopilotHeader";
+import { ServiceTimePanel } from "./copilot/ServiceTimePanel";
+import { ShiftLifecycleTimeline } from "./ShiftLifecycleTimeline";
 import type { Shift, SelectOption, Employee, Assignment } from "./types";
 
 interface ShiftEditDialogProps {
@@ -243,6 +253,71 @@ export function ShiftEditDialog({
     }
   };
 
+  // ── SERVICE COPILOT — UNA sola lectura del servicio (readiness + siguiente
+  // paso + checklist). Motor puro: no consulta nada y no muta nada.
+  const publicationStatus = (shift as any)?.publication_status ?? null;
+  const daysUntil = (() => {
+    if (!form.date) return null;
+    const today = new Date();
+    const base = new Date(`${form.date}T00:00:00`);
+    const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    return Math.round((base.getTime() - t0) / 86_400_000);
+  })();
+
+  const copilot = useMemo(
+    () =>
+      getServiceCopilot({
+        clientId: form.clientId,
+        date: form.date,
+        startTime: form.startTime,
+        endTime: form.endTime,
+        hasVenue: Boolean(
+          form.locationId || form.jobSiteLocationId || (form.jobSiteAddress ?? "").trim(),
+        ),
+        meetingRequired: form.transportRequired,
+        hasMeetingPoint: Boolean(form.meetingPoint.trim() || form.meetingPointLocationId),
+        slots: signals.slotsNum,
+        assignedCount: signals.assignedCount,
+        claimable: form.claimable,
+        publicationStatus,
+        infoComplete: Boolean(form.title.trim()) && signals.readiness.blockers.length === 0,
+        daysUntil,
+        anchors: {
+          client: SERVICE_CLIENT_ANCHOR,
+          date: SERVICE_CLIENT_ANCHOR,
+          schedule: SERVICE_CLIENT_ANCHOR,
+          venue: SERVICE_JOB_SITE_ANCHOR,
+          staffing: SERVICE_TEAM_ANCHOR,
+          meeting_point: SERVICE_MEETING_POINT_ANCHOR,
+          info: SERVICE_INFO_ANCHOR,
+        },
+      }),
+    [
+      form.clientId, form.date, form.startTime, form.endTime, form.locationId,
+      form.jobSiteLocationId, form.jobSiteAddress, form.transportRequired,
+      form.meetingPoint, form.meetingPointLocationId, form.claimable, form.title,
+      signals.slotsNum, signals.assignedCount, signals.readiness.blockers.length,
+      publicationStatus, daysUntil,
+    ],
+  );
+
+  const statusTone =
+    publicationStatus === "published"
+      ? "published"
+      : publicationStatus === "cancelled"
+        ? "cancelled"
+        : publicationStatus === "archived"
+          ? "closed"
+          : "draft";
+  const statusLabel =
+    publicationStatus === "published"
+      ? "Publicado"
+      : publicationStatus === "cancelled"
+        ? "Cancelado"
+        : publicationStatus === "archived"
+          ? "Archivado"
+          : "Borrador";
+
   const payTypeLabel =
     form.payType === "daily"
       ? `por día · ${form.dayType === "full_day" ? "día completo" : "medio día"}`
@@ -286,6 +361,7 @@ export function ShiftEditDialog({
       publicationStatus={(shift as any).publication_status ?? null}
       timezone={(shift as any).timezone ?? null}
       publishBlockers={signals.readiness.blockers}
+      copilot={copilot}
     />
   );
 
@@ -314,6 +390,20 @@ export function ShiftEditDialog({
       saveDisabled={!form.date || (shiftAssignedIds.length > 0 && (!form.shiftAdminId || !adminIsAssigned))}
       footerBanner={footerBanner}
       summary={summary}
+      headerSummary={
+        <ServiceCopilotHeader
+          clientId={form.clientId || null}
+          clientName={signals.clientName}
+          serviceRef={(shift as any).shift_ref ?? null}
+          date={form.date}
+          startTime={form.startTime}
+          endTime={form.endTime}
+          statusLabel={statusLabel}
+          statusTone={statusTone}
+          readiness={copilot.readiness}
+          band={copilot.band}
+        />
+      }
       isDirty={isDirty}
       onDiscard={() => { autosave.clear(); setTouched(false); }}
     >
@@ -354,6 +444,32 @@ export function ShiftEditDialog({
         }}
         adminError={adminError}
         renderInlineSummary={false}
+        copilotStages={{
+          tiempo: (
+            <ServiceTimePanel
+              shiftId={shift.id}
+              date={form.date}
+              startTime={form.startTime}
+              endTime={form.endTime}
+              assignedCount={signals.assignedCount}
+              isPast={daysUntil !== null && daysUntil < 0}
+            />
+          ),
+          historial: (
+            <ShiftLifecycleTimeline
+              shift={{
+                id: shift.id,
+                date: form.date,
+                start_time: form.startTime,
+                end_time: form.endTime,
+                slots: signals.slotsNum,
+                status: shift.status,
+                publication_status: publicationStatus,
+              }}
+              assignments={assignments}
+            />
+          ),
+        }}
       />
       <QuickCreateClientDialog
         open={quickClientOpen}

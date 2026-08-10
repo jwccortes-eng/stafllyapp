@@ -28,6 +28,17 @@ import { PaySection } from "./form/PaySection";
 import { AdvancedDetailsSection } from "./form/AdvancedDetailsSection";
 import { ShiftSummaryPanel } from "./form/ShiftSummaryPanel";
 import { ShiftWorkspaceLayout } from "./workspace/ShiftWorkspaceLayout";
+import { ServiceStageLayout, type ServiceStageKey } from "./copilot/ServiceStageLayout";
+import {
+  SERVICE_TEAM_ANCHOR,
+  SERVICE_PAY_ANCHOR,
+  SERVICE_INFO_ANCHOR,
+} from "@/lib/shifts/service-focus";
+import { SERVICE_CLIENT_ANCHOR } from "@/lib/shifts/service-operational-readiness";
+import {
+  SERVICE_JOB_SITE_ANCHOR,
+  SERVICE_MEETING_POINT_ANCHOR,
+} from "@/lib/shifts/service-publish-readiness";
 import { QuickCreateWorkspace } from "./workspace/QuickCreateWorkspace";
 import { buildShiftDisplayName, isAutoDisplayName } from "@/lib/shifts/display-name";
 import { useLocationsV2 } from "@/hooks/useLocationsV2";
@@ -138,6 +149,16 @@ export interface ShiftFormFieldsProps {
    *    Activate from the create/edit dialogs on lg+ viewports.
    */
   layout?: "stack" | "workspace";
+
+  /**
+   * SERVICE COPILOT — contenido de solo lectura de las etapas que el formulario
+   * no posee (Tiempo e Historial). Cuando se provee en modo edición, el editor
+   * se organiza por etapas en vez de un formulario largo.
+   */
+  copilotStages?: {
+    tiempo?: React.ReactNode;
+    historial?: React.ReactNode;
+  };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -385,6 +406,7 @@ export function ShiftFormFields({
   companyId = null,
   renderInlineSummary = true,
   layout = "stack",
+  copilotStages,
 }: ShiftFormFieldsProps) {
   const signals = useShiftFormSignals({
     v,
@@ -603,6 +625,51 @@ export function ShiftFormFields({
           transportation={transportationNode}
           pay={payNode}
           advanced={advancedNode}
+        />
+      );
+    }
+
+    // EDIT — SERVICE COPILOT: el editor se organiza por etapas cuando el
+    // contenedor aporta las etapas de solo lectura (Tiempo · Historial).
+    if (copilotStages) {
+      const anchorStage: Record<string, ServiceStageKey> = {
+        [SERVICE_CLIENT_ANCHOR]: "resumen",
+        [SERVICE_JOB_SITE_ANCHOR]: "resumen",
+        [SERVICE_TEAM_ANCHOR]: "equipo",
+        [SERVICE_MEETING_POINT_ANCHOR]: "operacion",
+        [SERVICE_INFO_ANCHOR]: "operacion",
+        [SERVICE_PAY_ANCHOR]: "pago",
+      };
+      return (
+        <ServiceStageLayout
+          anchorStage={anchorStage}
+          stages={{
+            resumen: (
+              <>
+                {basicInfoNode}
+                {jobSiteNode}
+              </>
+            ),
+            equipo: (
+              <div id={SERVICE_TEAM_ANCHOR} className="space-y-3 scroll-mt-24">
+                {teamNode}
+                {transportationNode}
+              </div>
+            ),
+            operacion: (
+              <div id={SERVICE_INFO_ANCHOR} className="space-y-3 scroll-mt-24">
+                {meetingPointsNode}
+                {advancedNode}
+              </div>
+            ),
+            tiempo: copilotStages.tiempo,
+            pago: (
+              <div id={SERVICE_PAY_ANCHOR} className="space-y-3 scroll-mt-24">
+                {payNode}
+              </div>
+            ),
+            historial: copilotStages.historial,
+          }}
         />
       );
     }

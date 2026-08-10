@@ -23,6 +23,8 @@ import {
   type PendingTone,
 } from "@/lib/shifts/pending-flags";
 import type { ReadinessBlocker } from "@/lib/shifts/service-publish-readiness";
+import { ServiceCopilotPanel } from "../copilot/ServiceCopilotPanel";
+import type { ServiceCopilotResult } from "@/lib/shifts/service-copilot";
 
 interface Props {
   mode: "create" | "edit";
@@ -67,6 +69,12 @@ interface Props {
   timezone?: string | null;
   /** Bloqueos canónicos de publicación. */
   publishBlockers?: ReadinessBlocker[];
+  /**
+   * SERVICE COPILOT — cuando se provee, el rail encabeza con UNA sola
+   * recomendación y el checklist de lectura. Las tarjetas de semáforo y de
+   * compuertas se ocultan para no mostrar cinco recomendaciones a la vez.
+   */
+  copilot?: ServiceCopilotResult | null;
 }
 
 const TONE_BG: Record<PendingTone, string> = {
@@ -143,10 +151,14 @@ function WorkspaceSummaryImpl(p: Props) {
 
   return (
     <div className="space-y-3">
+      {/* 0) Copiloto — siguiente paso único + readiness + checklist */}
+      {p.copilot && <ServiceCopilotPanel copilot={p.copilot} />}
+
       {/* 1) Pending badges */}
-      <PendingBadgeRow flags={pending.flags} />
+      {!p.copilot && <PendingBadgeRow flags={pending.flags} />}
 
       {/* 2) Publish-state descriptor */}
+      {!p.copilot && (
       <div
         className={cn(
           "rounded-xl border px-3 py-2.5 flex items-start gap-2",
@@ -162,8 +174,10 @@ function WorkspaceSummaryImpl(p: Props) {
         </div>
       </div>
 
+      )}
+
       {/* 3) Publicar ≠ Exportar a Connecteam */}
-      <ServiceReadinessCard lifecycle={operational} />
+      {!p.copilot && <ServiceReadinessCard lifecycle={operational} />}
 
       {/* 4) Existing ops summary (unchanged) */}
       <ShiftSummaryPanel
