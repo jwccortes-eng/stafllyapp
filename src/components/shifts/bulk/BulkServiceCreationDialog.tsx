@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { notifyError, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
 import { rankCatalogMatches } from "@/lib/intake/entity-linking";
 import { SeriesPreviewDialog } from "@/components/shifts/series/SeriesPreviewDialog";
+import { QuickCreateClientDialog } from "@/components/clients/QuickCreateClientDialog";
 import {
   buildBulkPlan, buildBulkPreview, bulkResultMessage, bulkRowStatusLabel, duplicateBulkRow,
   newBulkBatchId, newBulkRow, parsePastedDates, summarizeBulkOutcomes, validateBulkRow,
