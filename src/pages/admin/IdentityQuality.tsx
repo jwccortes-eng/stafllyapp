@@ -118,28 +118,38 @@ function GroupCard({
 
 
 export default function IdentityQuality() {
-  const { model, loading, hasCompany } = useIdentityQuality();
+  const { model, loading, hasCompany, recordDecision } = useIdentityQuality();
+  const [activeGroup, setActiveGroup] = useState<IdentityGroup | null>(null);
 
   const duplicateGroups = useMemo(
     () =>
-      model?.groups.filter(
+      model?.openGroups.filter(
         (g) => g.verdict === "EXACT_MATCH" || g.verdict === "PROBABLE_DUPLICATE",
       ) ?? [],
     [model],
   );
   const reviewGroups = useMemo(
     () =>
-      model?.groups.filter(
+      model?.openGroups.filter(
         (g) => g.verdict === "POSSIBLE_DUPLICATE" || g.verdict === "AMBIGUOUS",
       ) ?? [],
     [model],
+  );
+
+  const renderGroup = (g: IdentityGroup) => (
+    <GroupCard
+      key={g.key}
+      group={g}
+      review={model?.reviewByGroup[g.key]}
+      onReview={setActiveGroup}
+    />
   );
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <OperationalScreenHeader
         title="Calidad de identidad"
-        context="Revisión de personas repetidas y fragmentadas. Solo lectura: nada se fusiona ni se modifica."
+        context="Revisión asistida de personas repetidas. Las decisiones se registran; nada se fusiona automáticamente."
       />
 
       {!hasCompany && (
@@ -167,7 +177,7 @@ export default function IdentityQuality() {
             <Metric label="Históricos" value={model.totals.historical} />
             <Metric label="Duplicados probables" value={model.totals.probableGroups} />
             <Metric label="Duplicados posibles" value={model.totals.possibleGroups} />
-            <Metric label="Portal inconsistente" value={model.totals.portalInconsistentGroups} />
+            <Metric label="Grupos revisados" value={model.totals.reviewedGroups} />
             <Metric label="Asignaciones sospechosas" value={model.totals.suspiciousAssignments} />
           </div>
 
@@ -175,7 +185,8 @@ export default function IdentityQuality() {
             <ShieldAlert className="h-4 w-4" />
             <AlertDescription>
               Esta pantalla no fusiona registros ni mueve documentos, horas, pagos o
-              accesos. La consolidación se planifica aparte, con evidencia.
+              accesos. La consolidación se planifica en seco, con evidencia y bloqueos
+              explícitos.
             </AlertDescription>
           </Alert>
 
@@ -188,6 +199,10 @@ export default function IdentityQuality() {
               <TabsTrigger value="review">Requieren criterio ({reviewGroups.length})</TabsTrigger>
               <TabsTrigger value="portal">
                 Portal inconsistente ({model.portalInconsistent.length})
+              </TabsTrigger>
+              <TabsTrigger value="reviewed">
+                <CheckCircle2 className="mr-1.5 h-4 w-4" />
+                Revisados ({model.reviewedGroups.length})
               </TabsTrigger>
               <TabsTrigger value="identifier">
                 <IdCard className="mr-1.5 h-4 w-4" />
@@ -202,25 +217,29 @@ export default function IdentityQuality() {
             <TabsContent value="duplicates" className="mt-4 space-y-3">
               {duplicateGroups.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  No hay grupos con evidencia fuerte de duplicado.
+                  No hay grupos pendientes con evidencia fuerte de duplicado.
                 </p>
               )}
-              {duplicateGroups.map((g) => (
-                <GroupCard key={g.key} group={g} />
-              ))}
+              {duplicateGroups.map(renderGroup)}
             </TabsContent>
 
             <TabsContent value="review" className="mt-4 space-y-3">
-              {reviewGroups.map((g) => (
-                <GroupCard key={g.key} group={g} />
-              ))}
+              {reviewGroups.map(renderGroup)}
             </TabsContent>
 
             <TabsContent value="portal" className="mt-4 space-y-3">
-              {model.portalInconsistent.map((g) => (
-                <GroupCard key={g.key} group={g} />
-              ))}
+              {model.portalInconsistent.map(renderGroup)}
             </TabsContent>
+
+            <TabsContent value="reviewed" className="mt-4 space-y-3">
+              {model.reviewedGroups.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Todavía no hay decisiones registradas.
+                </p>
+              )}
+              {model.reviewedGroups.map(renderGroup)}
+            </TabsContent>
+
 
             <TabsContent value="identifier" className="mt-4 space-y-2">
               {model.withoutStrongIdentifier.slice(0, 200).map((r) => (
