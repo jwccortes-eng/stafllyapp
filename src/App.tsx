@@ -63,6 +63,8 @@ const InviteEmployees = lazy(() => import("./pages/admin/InviteEmployees"));
 const EmployeeMerge = lazy(() => import("./pages/admin/EmployeeMerge"));
 const Directory = lazy(() => import("./pages/admin/Directory"));
 const Clients = lazy(() => import("./pages/admin/Clients"));
+const IdentityQuality = lazy(() => import("./pages/admin/IdentityQuality"));
+
 const ClientProfile = lazy(() => import("./pages/admin/ClientProfile"));
 const LocationProfile = lazy(() => import("./pages/admin/LocationProfile"));
 const Locations = lazy(() => import("./pages/admin/Locations"));
@@ -346,6 +348,8 @@ function App() {
                 <Route path="reports" element={<CompanyRequiredGuard><ModuleGate moduleKey="reports"><PeriodSummary /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="reports/employee" element={<CompanyRequiredGuard><ModuleGate moduleKey="reports"><EmployeeReport /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="users" element={<CompanyRequiredGuard><UsersPage /></CompanyRequiredGuard>} />
+                <Route path="identity-quality" element={<CompanyRequiredGuard><IdentityQuality /></CompanyRequiredGuard>} />
+
                 <Route path="companies" element={<CompaniesPage />} />
                 <Route path="global" element={<OwnerDashboard />} />
                 <Route path="invite" element={<CompanyRequiredGuard><InviteEmployees /></CompanyRequiredGuard>} />
