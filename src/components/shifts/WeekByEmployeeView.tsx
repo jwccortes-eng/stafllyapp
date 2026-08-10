@@ -154,7 +154,7 @@ function WeekByEmployeeViewImpl({
           const stats = getEmployeeStats(emp.id);
           return (
             <div key={emp.id} className="rounded-xl border border-border/40 bg-card/50 overflow-hidden">
-              <div className={INDEX_COL.replace("w-[200px] lg:w-[280px] shrink-0", "w-full")}>
+              <div className="w-full border-b border-border/30">
                 <EntityRow
                   avatar={<EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="sm" />}
                   name={`${emp.first_name} ${emp.last_name}`}
