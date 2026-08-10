@@ -82,6 +82,8 @@ export function PortalAccessCard({ employee, companyName, invitation, onInvite }
                 {state === "incomplete" && "Faltan datos para invitar"}
                 {state === "inactive" && "Cuenta desactivada"}
                 {state === "failed" && "Falló el último envío"}
+                {state === "unlinked" && "Invitación aceptada · falta vincular la cuenta"}
+
               </p>
             </div>
           </div>
