@@ -676,6 +676,21 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
             </div>
           )}
 
+          {/* Invitación aceptada pero sin cuenta vinculada en ESTE registro */}
+          {isAcceptedUnlinked && (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <div className="h-14 w-14 rounded-full bg-warning/10 flex items-center justify-center">
+                <AlertTriangle className="h-7 w-7 text-warning" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground">Activación sin vincular</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                La invitación fue aceptada, pero este registro no tiene cuenta vinculada. Suele indicar
+                un registro duplicado de la misma persona: revisa Calidad de identidad antes de reenviar.
+              </p>
+            </div>
+          )}
+
+
           {!isAccepted && !companyMismatch && (
             <>
               {/* Readiness checklist */}
