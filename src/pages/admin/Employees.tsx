@@ -40,6 +40,8 @@ import { normalizePhone } from "@/lib/phone";
 import { BulkActionsBar } from "@/components/ui/bulk-actions-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { PremiumPageHeader, type PremiumPageHeaderKpi } from "@/components/ui/premium-page-header";
+import { OperationalWorkspace, type WorkspaceMetric } from "@/components/stafly-ui/OperationalWorkspace";
+
 import { PremiumFilterBar, type ActiveFilterChip } from "@/components/ui/premium-filter-bar";
 import { PremiumAvatar, type PremiumAvatarStatus } from "@/components/ui/premium-avatar";
 import { ViewSwitcher, type ViewMode } from "@/components/ui/view-switcher";
