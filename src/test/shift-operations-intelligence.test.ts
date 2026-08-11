@@ -55,9 +55,31 @@ describe("getShiftOperationalStatus", () => {
     expect(r.message).toMatch(/2 workers confirmados/);
   });
 
+  // P0 Service Location SSOT: la ubicación se deriva del turno, no de ctx.
   it("draft missing info when no location", () => {
-    const r = getShiftOperationalStatus(draft, [], { hasLocation: false, hasMeetingPoint: false });
+    const r = getShiftOperationalStatus(
+      { ...draft, location_id: null, job_site_location_id: null, job_site_address: null },
+      [],
+    );
     expect(r.code).toBe("draft_missing_info");
+  });
+
+  it("no reclama punto de encuentro cuando no hay transporte (Turno 427)", () => {
+    const r = getShiftOperationalStatus(
+      {
+        ...draft,
+        status: "published",
+        publication_status: "published",
+        location_id: null,
+        job_site_location_id: null,
+        job_site_address: "3514 West 89th Street",
+        meeting_point: null,
+        meeting_point_location_id: null,
+        transportation_required: false,
+      },
+      [mkA("confirmed"), mkA("confirmed"), mkA("confirmed")],
+    );
+    expect(r.code).toBe("published_ready");
   });
 
   it("published at risk when missing 2+", () => {
@@ -88,9 +110,17 @@ describe("getShiftOperationalStatus", () => {
 describe("getShiftMissingItems", () => {
   it("flags missing job site + meeting point + workers", () => {
     const r = getShiftMissingItems(
-      { ...draft, special_instructions: "x" },
+      {
+        ...draft,
+        special_instructions: "x",
+        location_id: null,
+        job_site_location_id: null,
+        job_site_address: null,
+        meeting_point: null,
+        meeting_point_location_id: null,
+        transportation_required: true,
+      },
       [],
-      { hasLocation: false, hasMeetingPoint: false, hasLocationAddress: false },
     );
     const keys = r.map(x => x.key);
     expect(keys).toContain("job_site");
