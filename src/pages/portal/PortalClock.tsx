@@ -523,7 +523,7 @@ export default function PortalClock() {
             // alert so admins can see the pattern without payroll being touched.
             if (gpsEnforcement === "block") {
               toast({ title: t("portal.clock.enable_location"), description: t("portal.clock.gps_required"), variant: "destructive" });
-              setActing(false); return;
+              throw new Error(t("portal.clock.gps_required"));
             }
             try {
               await supabase.from("clock_alerts").insert({
