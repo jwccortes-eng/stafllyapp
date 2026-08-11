@@ -679,9 +679,10 @@ export default function PortalClock() {
       //   • true  → GPS valid AND inside radius at clock-out
       //   • false → GPS valid AND outside radius at clock-out
       let withinGeofence: boolean | null = null;
-      if (activeEntry.shift_id && pos) {
+      const shiftIdForOut = activeEntry?.shift_id ?? pendingClockIn?.shift_id ?? null;
+      if (shiftIdForOut && pos) {
         const { data: shiftData } = await supabase.from("scheduled_shifts")
-          .select("locations(latitude, longitude, geofence_radius)").eq("id", activeEntry.shift_id).maybeSingle();
+          .select("locations(latitude, longitude, geofence_radius)").eq("id", shiftIdForOut).maybeSingle();
         const loc = (shiftData as any)?.locations;
         if (loc?.latitude && loc?.longitude) {
           const { data: clockCfgRow } = await supabase.from("company_settings")
@@ -692,47 +693,90 @@ export default function PortalClock() {
           const dist = distanceMeters(pos.latitude, pos.longitude, loc.latitude, loc.longitude);
           withinGeofence = dist <= radius;
         }
-      } else if (activeEntry.shift_id && !pos) {
+      } else if (shiftIdForOut && !pos) {
         // Distinct, low-severity signal: GPS unavailable at clock-out.
         // Never treated as fraud, never alters payroll.
         try {
           await supabase.from("clock_alerts").insert({
-            employee_id: employeeId, company_id: companyId, shift_id: activeEntry.shift_id,
+            employee_id: employeeId, company_id: companyId, shift_id: shiftIdForOut,
             type: "GPS_UNAVAILABLE", severity: "low",
             description: "Clock-out without GPS (permission denied, timeout or unsupported).",
           } as any);
         } catch { /* alert is non-critical */ }
       }
 
-      await supabase.from("clock_events").insert({
-        employee_id: employeeId, company_id: companyId, shift_id: activeEntry.shift_id, time_entry_id: activeEntry.id,
-        type: "clock_out", latitude: pos?.latitude ?? null, longitude: pos?.longitude ?? null, accuracy: pos?.accuracy ?? null, device, photo_url: photoUrl,
-      } as any);
-      if (!scheduleCheck.withinSchedule) {
-        await supabase.from("time_entries").update({
-          clock_out: clockOutTime, status: "pending", notes: `⚠️ Clock-out outside scheduled hours.`,
-          clock_out_lat: pos?.latitude ?? null,
-          clock_out_lng: pos?.longitude ?? null,
-          clock_out_within_geofence: withinGeofence,
-        } as any).eq("id", activeEntry.id);
-        // Log out-of-schedule clock-out as alert instead of ticket (more reliable)
-        try {
-          await supabase.from("clock_alerts").insert({
-            employee_id: employeeId, company_id: companyId,
-            shift_id: activeEntry.shift_id,
-            type: "OUT_OF_SCHEDULE_CLOCKOUT", severity: "medium",
-            description: `Clock-out at ${format(new Date(), "HH:mm")} outside scheduled hours.`,
-          } as any);
-        } catch { /* non-critical */ }
-      } else {
-        const { error } = await supabase.from("time_entries").update({
-          clock_out: clockOutTime,
-          clock_out_lat: pos?.latitude ?? null,
-          clock_out_lng: pos?.longitude ?? null,
-          clock_out_within_geofence: withinGeofence,
-        } as any).eq("id", activeEntry.id);
-        if (error) throw error;
+      // ── P0 · Offline-first · salida ────────────────────────────────────
+      const queueOfflineOut = async () => {
+        await offlineQueue.enqueue({
+          client_event_id: clientEventId,
+          type: "CLOCK_OUT",
+          employee_id: employeeId,
+          company_id: companyId,
+          shift_id: shiftIdForOut,
+          assignment_id: null,
+          time_entry_id: activeEntry?.id ?? null,
+          closes_client_event_id: activeEntry ? null : pendingClockIn?.client_event_id ?? null,
+          event_time_device: eventTimeDevice,
+          timezone: deviceTimezone(),
+          device_id: device,
+          gps: pos,
+          within_geofence: withinGeofence,
+          photo_url: photoUrl,
+          offline: true,
+        });
+      };
+
+      const offlineNow = typeof navigator !== "undefined" && navigator.onLine === false;
+      if (!activeEntry || offlineNow) {
+        // Entrada aún no canónica, o sin red: la salida queda pendiente y se
+        // reconcilia sin duplicar time_entries al sincronizar.
+        await queueOfflineOut();
+        return;
       }
+
+      try {
+        await supabase.from("clock_events").insert({
+          employee_id: employeeId, company_id: companyId, shift_id: activeEntry.shift_id, time_entry_id: activeEntry.id,
+          type: "clock_out", latitude: pos?.latitude ?? null, longitude: pos?.longitude ?? null, accuracy: pos?.accuracy ?? null, device, photo_url: photoUrl,
+        } as any);
+        if (!scheduleCheck.withinSchedule) {
+          const { error } = await supabase.from("time_entries").update({
+            clock_out: clockOutTime, status: "pending", notes: `⚠️ Clock-out outside scheduled hours.`,
+            clock_out_lat: pos?.latitude ?? null,
+            clock_out_lng: pos?.longitude ?? null,
+            clock_out_within_geofence: withinGeofence,
+            synced_at: new Date().toISOString(),
+            sync_delay_seconds: 0,
+          } as any).eq("id", activeEntry.id).is("clock_out", null);
+          if (error) throw error;
+          // Log out-of-schedule clock-out as alert instead of ticket (more reliable)
+          try {
+            await supabase.from("clock_alerts").insert({
+              employee_id: employeeId, company_id: companyId,
+              shift_id: activeEntry.shift_id,
+              type: "OUT_OF_SCHEDULE_CLOCKOUT", severity: "medium",
+              description: `Clock-out at ${format(new Date(), "HH:mm")} outside scheduled hours.`,
+            } as any);
+          } catch { /* non-critical */ }
+        } else {
+          const { error } = await supabase.from("time_entries").update({
+            clock_out: clockOutTime,
+            clock_out_lat: pos?.latitude ?? null,
+            clock_out_lng: pos?.longitude ?? null,
+            clock_out_within_geofence: withinGeofence,
+            synced_at: new Date().toISOString(),
+            sync_delay_seconds: 0,
+          } as any).eq("id", activeEntry.id).is("clock_out", null);
+          if (error) throw error;
+        }
+      } catch (err) {
+        if (isAmbiguousFailure(err)) {
+          await queueOfflineOut();
+          return;
+        }
+        throw err;
+      }
+
       setSuccessState({ type: "out", time: format(new Date(), "HH:mm"), shift: activeShift?.title ?? "Shift" });
       setTimeout(() => setSuccessState(null), 4000);
     });
