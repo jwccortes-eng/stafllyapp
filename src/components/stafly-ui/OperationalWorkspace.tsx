@@ -372,7 +372,28 @@ export function OperationalWorkspace({
             {search ? <div className="md:hidden pb-2">{search}</div> : null}
 
             {tabs ? <div className="overflow-x-auto">{tabs}</div> : null}
-            {filters ? <div className="py-2">{filters}</div> : null}
+            {filters ? (
+              <>
+                {/* Desktop: filtros inline. */}
+                <div className="hidden md:block py-2">{filters}</div>
+                {/* Móvil: mismas opciones, dentro de una hoja inferior. */}
+                <div className="md:hidden py-2">
+                  <button
+                    type="button"
+                    onClick={() => setFiltersOpen(true)}
+                    className="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-border/60 bg-card text-[13px] font-medium"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                    {mobileFiltersTitle}
+                    {filtersActiveCount > 0 ? (
+                      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-[11px] font-bold tabular-nums text-primary">
+                        {filtersActiveCount}
+                      </span>
+                    ) : null}
+                  </button>
+                </div>
+              </>
+            ) : null}
           </div>
         )}
 
