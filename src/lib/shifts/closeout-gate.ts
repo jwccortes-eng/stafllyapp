@@ -188,3 +188,48 @@ export function evaluateCloseoutGate(input: CloseoutGateInput): CloseoutGateResu
 export function isReconciled(state: ShiftReconciliationState): boolean {
   return state === "FULLY_RECONCILED" || state === "PAYROLL_READY";
 }
+
+/**
+ * Puente para superficies que sólo disponen del paquete de evidencia agregada
+ * (`EvidencePacket`) y no de las filas. Mantiene UNA sola definición de
+ * pendientes: construye una verdad mínima y delega en `evaluateCloseoutGate`.
+ */
+export function evaluateCloseoutGateFromEvidence(args: {
+  shiftId: string;
+  evidence: {
+    assigned: number;
+    accepted: number;
+    clockIns: number;
+    clockOuts: number;
+    missingClockOut: number;
+    incidents: number;
+    pendingReviewHours: number;
+  } | null;
+  closeout: ShiftCloseout | null;
+  shiftEnded: boolean;
+}): CloseoutGateResult {
+  const e = args.evidence;
+  const counts = {
+    expected: e?.assigned ?? 0,
+    confirmed: e?.accepted ?? 0,
+    clockedIn: e?.clockIns ?? 0,
+    clockOuts: e?.clockOuts ?? 0,
+    active: 0,
+    missingClockOut: e?.missingClockOut ?? 0,
+    noClockIn: Math.max(0, (e?.assigned ?? 0) - (e?.clockIns ?? 0)),
+    extras: 0,
+    incidents: e?.incidents ?? 0,
+  };
+  const emptyExplain = Object.fromEntries(
+    Object.keys(counts).map((k) => [k, [] as string[]]),
+  ) as CloseoutGateInput["truth"]["explain"];
+
+  return evaluateCloseoutGate({
+    shiftId: args.shiftId,
+    truth: { rows: [], counts, explain: emptyExplain },
+    closeout: args.closeout,
+    shiftEnded: args.shiftEnded,
+    pendingHoursReview: e?.pendingReviewHours ?? 0,
+    unresolvedIncidents: e?.incidents ?? 0,
+  });
+}
