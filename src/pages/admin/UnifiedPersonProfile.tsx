@@ -82,6 +82,8 @@ import { isInviteStatusFailure } from "@/lib/invitation-status";
 import { hasPortalAccess } from "@/lib/portal/portal-status";
 import { resolvePersonStatus } from "@/lib/people/person-status";
 import { PersonStatusMatrix } from "@/components/employee/PersonStatusMatrix";
+import { IdentifiersBlock } from "@/components/employee/IdentifiersBlock";
+
 
 import { cn } from "@/lib/utils";
 import { isDocDialogOpen, subscribeDocDialog } from "@/lib/document-dialog-suspend";
