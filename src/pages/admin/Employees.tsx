@@ -62,6 +62,15 @@ import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parse
 import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  resolveExistingEmployeeIdentity,
+  resolveIdentityFromIndex,
+  buildEmployeeIdentityIndex,
+  identityBlockMessage,
+  EMPLOYEE_IDENTITY_FIELDS,
+  type IdentityCandidateRecord,
+} from "@/lib/identity/employee-identity-resolver";
+import { buildEmployeeCreationTrace, logEmployeeCreation } from "@/lib/identity/creation-trace";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
 import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
@@ -209,7 +218,7 @@ function EmployeeForm({ fields, form, setForm, loading, onSubmit, submitLabel }:
 export default function Employees() {
   usePageView("Employees");
   const { selectedCompanyId, selectedCompany } = useCompany();
-  const { role, allRoles, canAccessAdminForCompany } = useAuth();
+  const { role, allRoles, canAccessAdminForCompany, user } = useAuth();
   // S3.5A: tenant-scoped admin check (was global canAccessAdmin).
   // Effective privilege: trust either the resolved highest-priority role OR
   // company-scoped admin access for the currently selected tenant. Same admin
