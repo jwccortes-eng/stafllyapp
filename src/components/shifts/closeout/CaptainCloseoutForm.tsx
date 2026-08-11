@@ -95,12 +95,38 @@ export function CaptainCloseoutForm({
   const locked =
     current?.status === "reviewed" || current?.status === "rejected";
 
+  // P0-B · SINGLE CLOSEOUT GATE — un único validador canónico. El capitán
+  // puede entregar su cierre operativo, pero eso jamás equivale a
+  // FULLY_RECONCILED ni a PAYROLL_READY.
+  const gate = useMemo(
+    () =>
+      evaluateCloseoutGateFromEvidence({
+        shiftId,
+        evidence: evidence
+          ? {
+              assigned: evidence.assigned,
+              accepted: evidence.accepted,
+              clockIns: evidence.clockIns,
+              clockOuts: evidence.clockOuts,
+              missingClockOut: evidence.missingClockOut,
+              incidents: Math.max(evidence.incidents, num(incidents)),
+              pendingReviewHours: evidence.pendingReviewHours,
+            }
+          : null,
+        closeout: current,
+        shiftEnded: true,
+      }),
+    [evidence, current, shiftId, incidents],
+  );
+
   const hasUnresolved = useMemo(() => {
     const missingClockOut = evidence?.missingClockOut ?? 0;
     const noShow = num(noShows);
     const inc = num(incidents);
-    return missingClockOut > 0 || noShow > 0 || inc > 0;
-  }, [evidence?.missingClockOut, noShows, incidents]);
+    return (
+      !gate.canFullyReconcile || missingClockOut > 0 || noShow > 0 || inc > 0
+    );
+  }, [gate.canFullyReconcile, evidence?.missingClockOut, noShows, incidents]);
 
   // Dictation (Web Speech API only — optional, no storage)
   const SpeechRecognitionCtor = useMemo(() => getSpeechRecognitionCtor(), []);
