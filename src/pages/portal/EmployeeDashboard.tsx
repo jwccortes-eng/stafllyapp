@@ -118,6 +118,13 @@ export default function EmployeeDashboard() {
       setEmpAvatar(nextEmpAvatar);
 
     const today = new Date().toISOString().split("T")[0];
+    // Ventana operativa del Home (P0 portal module/window fix):
+    // desde ayer (00:00 local) hacia adelante, para que un turno de hoy ya
+    // terminado o de ayer pendiente de clock-out / cierre siga siendo visible.
+    // No incluye historial: solo [hoy - 1 día, ∞).
+    const operationalWindowStart = new Date();
+    operationalWindowStart.setDate(operationalWindowStart.getDate() - 1);
+    const windowStartDate = operationalWindowStart.toISOString().split("T")[0];
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
     const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
 
@@ -135,7 +142,7 @@ export default function EmployeeDashboard() {
         .eq("scheduled_shifts.publication_status", "published")
         .not("scheduled_shifts.status", "in", "(cancelled,canceled)")
         .is("scheduled_shifts.deleted_at", null)
-        .gte("scheduled_shifts.date", today).order("created_at", { ascending: true }).limit(5),
+        .gte("scheduled_shifts.date", windowStartDate).order("scheduled_shifts(date)", { ascending: true }).order("created_at", { ascending: true }).limit(5),
       supabase.from("time_entries").select("id, clock_in, clock_out, shift_id, scheduled_shifts(title)").eq("employee_id", employeeId).is("clock_out", null).limit(1) as any,
       supabase.from("time_entries").select("clock_in, clock_out")
         .eq("employee_id", employeeId).gte("clock_in", weekStart).lte("clock_in", weekEnd),
