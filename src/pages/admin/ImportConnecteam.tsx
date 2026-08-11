@@ -14,6 +14,13 @@ import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile } fr
 import type { SafeWorkbook } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  buildEmployeeIdentityIndex,
+  resolveIdentityFromIndex,
+  EMPLOYEE_IDENTITY_FIELDS,
+  type IdentityCandidateRecord,
+} from "@/lib/identity/employee-identity-resolver";
+import { buildEmployeeCreationTrace, logEmployeeCreation, newCorrelationId } from "@/lib/identity/creation-trace";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
@@ -92,7 +99,7 @@ interface Period { id: string; start_date: string; end_date: string; status: str
 
 export default function ImportConnecteam() {
   const { selectedCompanyId } = useCompany();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const canSeeSsn = role === "owner" || role === "admin";
   const isSsnHeader = (h: string) => /ssn|ein|social.?security/i.test(h);
   const [periods, setPeriods] = useState<Period[]>([]);
@@ -159,12 +166,62 @@ export default function ImportConnecteam() {
         .filter(u => u.first_name.trim() && u.last_name.trim())
         .map(u => ({ first_name: u.first_name.trim(), last_name: u.last_name.trim(), company_id: selectedCompanyId }));
 
-      if (toCreate.length > 0) {
-        const { error } = await supabase.from("employees").insert(toCreate);
+      // P0 Fase 1 · resolver canónico de identidad antes de crear.
+      const { data: existingRows } = await supabase
+        .from("employees")
+        .select(EMPLOYEE_IDENTITY_FIELDS)
+        .eq("company_id", selectedCompanyId)
+        .limit(5000);
+      const identityIndex = buildEmployeeIdentityIndex(
+        (existingRows ?? []) as unknown as IdentityCandidateRecord[],
+      );
+      const correlationId = newCorrelationId("connecteam-import");
+      const safeToCreate = toCreate.filter(
+        (c) =>
+          resolveIdentityFromIndex(identityIndex, {
+            firstName: c.first_name,
+            lastName: c.last_name,
+          }).outcome === "NOT_FOUND",
+      );
+      const blocked = toCreate.length - safeToCreate.length;
+
+      let createdIds: string[] = [];
+      if (safeToCreate.length > 0) {
+        const { data: created, error } = await supabase
+          .from("employees")
+          .insert(
+            safeToCreate.map((c) => ({
+              ...c,
+              ...buildEmployeeCreationTrace({
+                source: "connecteam_import",
+                actorId: user?.id,
+                actorLabel: user?.email,
+                correlationId,
+              }),
+            })),
+          )
+          .select("id");
         if (error) throw error;
+        createdIds = (created ?? []).map((r: any) => r.id);
+        void logEmployeeCreation({
+          companyId: selectedCompanyId,
+          employeeIds: createdIds,
+          trace: {
+            source: "connecteam_import",
+            actorId: user?.id,
+            actorLabel: user?.email,
+            correlationId,
+          },
+          preventedDuplicates: blocked,
+        });
       }
 
-      toast({ title: `${toCreate.length} empleados creados`, description: "Se crearon los empleados faltantes. Recalculando resumen..." });
+      toast({
+        title: `${safeToCreate.length} empleados creados`,
+        description: blocked > 0
+          ? `${blocked} quedaron retenidos por posible duplicado y requieren revisión de identidad.`
+          : "Se crearon los empleados faltantes. Recalculando resumen...",
+      });
       // Re-run summary to reflect new employees
       await computePreImportSummary();
     } catch (err: any) {

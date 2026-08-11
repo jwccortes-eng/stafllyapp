@@ -11,11 +11,18 @@
  *              + NO placeholder/system (worker_type / identity_status /
  *                payroll_safe / person_type_guess → isPlaceholderWorker)
  *              + employee_role !== 'historical'
- *              + added_via !== 'Pending approval'
+ *              + NO "pendiente de aprobación real"
+ *
+ * P0 · Fase 2 (remediación de identidad): `added_via` describe ORIGEN /
+ * HISTORIA DE ALTA y NO puede por sí solo decidir asignabilidad. Un canónico
+ * activo, con portal real (`user_id`) y sin bloqueo operativo real debe
+ * aparecer en staffing aunque su `added_via` histórico diga "Pending approval".
+ * No se cambia el valor de `added_via`: se corrige su interpretación.
  *
  * No borra, no muta, no toca payroll/time_entries/historial. Solo decide
  * visibilidad en las superficies de asignación.
  */
+
 import { isPlaceholderWorker } from "@/lib/employee-identity";
 
 export type AssignabilityBucket =
@@ -30,6 +37,9 @@ export interface AssignableCandidate {
   is_active?: boolean | null;
   employee_role?: string | null;
   added_via?: string | null;
+  /** Portal real: presencia de cuenta vinculada. Evidencia de persona operativa. */
+  user_id?: string | null;
+  onboarding_status?: string | null;
   worker_type?: string | null;
   identity_status?: string | null;
   requires_identity_resolution?: boolean | null;
@@ -37,6 +47,7 @@ export interface AssignableCandidate {
   payroll_safe?: boolean | null;
   person_type_guess?: string | null;
 }
+
 
 export interface AssignabilityVerdict {
   bucket: AssignabilityBucket;
@@ -75,9 +86,23 @@ function isHistorical(e: AssignableCandidate): boolean {
   return (e.employee_role ?? "").toLowerCase().trim() === "historical";
 }
 
-function isPendingApproval(e: AssignableCandidate): boolean {
-  return (e.added_via ?? "").toLowerCase().trim() === "pending approval";
+/**
+ * `added_via='Pending approval'` es historia de alta, no un bloqueo.
+ * Solo se interpreta como pendiente real cuando NO hay evidencia operativa
+ * de persona: sin portal, sin onboarding completado y sin aprobación.
+ */
+function hasRealOperationalEvidence(e: AssignableCandidate): boolean {
+  if (e.user_id) return true;
+  const onboarding = (e.onboarding_status ?? "").toLowerCase().trim();
+  return onboarding === "completed" || onboarding === "complete" || onboarding === "active";
 }
+
+function isPendingApproval(e: AssignableCandidate): boolean {
+  const pendingLabel = (e.added_via ?? "").toLowerCase().trim() === "pending approval";
+  if (!pendingLabel) return false;
+  return !hasRealOperationalEvidence(e);
+}
+
 
 /** Veredicto canónico. Precedencia: inactivo → placeholder → histórico → pendiente. */
 export function classifyWorkerAssignability(

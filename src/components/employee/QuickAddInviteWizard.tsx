@@ -11,6 +11,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { findExistingEmployeeInCompany, describeDuplicateMatch } from "@/lib/employee-duplicates";
+import { resolveExistingEmployeeIdentity } from "@/lib/identity/employee-identity-resolver";
+import { buildEmployeeCreationTrace, logEmployeeCreation } from "@/lib/identity/creation-trace";
 import { normalizePhone } from "@/lib/phone";
 import { UserPlus, ArrowRight, Loader2, CheckCircle2, Phone, Mail, User, KeyRound } from "lucide-react";
 import { EmployeeInviteDialog } from "./EmployeeInviteDialog";
@@ -80,10 +82,28 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
     // Pre-check: surface duplicates BEFORE insert with a clear, actionable message.
     // The DB has UNIQUE(phone_number, company_id) — without this pre-check the user
     // gets a generic "duplicate key" error.
-    const existingMatch = await findExistingEmployeeInCompany(selectedCompanyId, {
+    // P0 Fase 1 · resolver canónico de identidad (id, teléfono, email, nombre).
+    const identity = await resolveExistingEmployeeIdentity(selectedCompanyId, {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
       phone: digits,
       email,
     });
+
+    if (identity.outcome !== "NOT_FOUND" && identity.outcome !== "EXACT_MATCH") {
+      toast({
+        title: "Posible duplicado: revisión requerida",
+        description: identity.reason,
+        variant: "destructive",
+      });
+      setSaving(false);
+      return false;
+    }
+
+    const existingMatch = identity.outcome === "EXACT_MATCH"
+      ? await findExistingEmployeeInCompany(selectedCompanyId, { phone: digits, email })
+        ?? { employee: identity.match as Record<string, any>, matchedBy: "phone" as const }
+      : null;
 
     if (existingMatch) {
       const { employee, matchedBy } = existingMatch;
@@ -106,6 +126,7 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
       phone_number: digits,
       email: email.trim() || null,
       is_active: true,
+      ...buildEmployeeCreationTrace({ source: "quick_add", actorId: user?.id, actorLabel: user?.email }),
     };
 
     const { data, error } = await supabase
@@ -134,6 +155,11 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
     }
 
     const emp = data as Record<string, any>;
+    void logEmployeeCreation({
+      companyId: selectedCompanyId,
+      employeeIds: [emp.id],
+      trace: { source: "quick_add", actorId: user?.id, actorLabel: user?.email },
+    });
 
     // Phase B: generate initial PIN via SECURITY DEFINER RPC. Returned exactly once.
     let initialPin: string | null = null;

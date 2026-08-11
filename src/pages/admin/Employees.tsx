@@ -62,6 +62,15 @@ import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parse
 import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  resolveExistingEmployeeIdentity,
+  resolveIdentityFromIndex,
+  buildEmployeeIdentityIndex,
+  identityBlockMessage,
+  EMPLOYEE_IDENTITY_FIELDS,
+  type IdentityCandidateRecord,
+} from "@/lib/identity/employee-identity-resolver";
+import { buildEmployeeCreationTrace, logEmployeeCreation, newCorrelationId } from "@/lib/identity/creation-trace";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
 import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
@@ -209,7 +218,7 @@ function EmployeeForm({ fields, form, setForm, loading, onSubmit, submitLabel }:
 export default function Employees() {
   usePageView("Employees");
   const { selectedCompanyId, selectedCompany } = useCompany();
-  const { role, allRoles, canAccessAdminForCompany } = useAuth();
+  const { role, allRoles, canAccessAdminForCompany, user } = useAuth();
   // S3.5A: tenant-scoped admin check (was global canAccessAdmin).
   // Effective privilege: trust either the resolved highest-priority role OR
   // company-scoped admin access for the currently selected tenant. Same admin
@@ -550,7 +559,38 @@ export default function Employees() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.from("employees").insert({ ...buildInsertData(form), company_id: selectedCompanyId } as any);
+    const draft = buildInsertData(form);
+    // P0 Fase 1 · resolver canónico de identidad antes de crear.
+    const identity = await resolveExistingEmployeeIdentity(selectedCompanyId!, {
+      firstName: draft.first_name,
+      lastName: draft.last_name,
+      phone: draft.phone_number,
+      email: draft.email,
+      employerIdentification: draft.employer_identification,
+      externalId: draft.connecteam_employee_id,
+    });
+    if (identity.outcome !== "NOT_FOUND") {
+      notifyWarning({
+        key: "employee-identity-guard",
+        title:
+          identity.outcome === "EXACT_MATCH"
+            ? "Esta persona ya existe"
+            : "Posible duplicado: revisión requerida",
+        fact: identityBlockMessage(identity),
+        consequence: "No se creó ningún registro nuevo. Abre el perfil existente o resuelve la duplicidad.",
+      });
+      setLoading(false);
+      return;
+    }
+    const { data: createdRow, error } = await supabase
+      .from("employees")
+      .insert({
+        ...draft,
+        ...buildEmployeeCreationTrace({ source: "manual", actorId: user?.id, actorLabel: user?.email }),
+        company_id: selectedCompanyId,
+      } as any)
+      .select("id")
+      .single();
     if (error) {
       notifyError({
         key: "employee-create",
@@ -560,12 +600,18 @@ export default function Employees() {
         cause: error,
       });
     } else {
+      void logEmployeeCreation({
+        companyId: selectedCompanyId!,
+        employeeIds: createdRow?.id ? [createdRow.id] : [],
+        trace: { source: "manual", actorId: user?.id, actorLabel: user?.email },
+      });
       notifySuccess({
         key: "employee-create",
         title: "Worker creado",
         fact: "El perfil quedó guardado.",
         consequence: "Ya puedes asignarlo a turnos.",
       });
+
       setOpen(false);
       setForm(emptyForm());
       fetchEmployees();
@@ -725,16 +771,63 @@ export default function Employees() {
     setImportStep("preview");
   }, [employees]);
 
+  /** Índice canónico de identidad del tenant (P0 Fase 1). */
+  const loadIdentityIndex = async () => {
+    const { data } = await supabase
+      .from("employees")
+      .select(EMPLOYEE_IDENTITY_FIELDS)
+      .eq("company_id", selectedCompanyId!)
+      .limit(5000);
+    return buildEmployeeIdentityIndex((data ?? []) as unknown as IdentityCandidateRecord[]);
+  };
+
   const executeImport = async () => {
     setImporting(true);
     const toCreate = importPreview.filter(r => !r.exists);
+    const index = await loadIdentityIndex();
+    const correlationId = newCorrelationId("csv-import");
+    const createdIds: string[] = [];
     let created = 0;
+    let blocked = 0;
     for (const emp of toCreate) {
       const data = buildInsertData(emp);
-      const { error } = await supabase.from("employees").insert({ ...data, company_id: selectedCompanyId } as any);
-      if (!error) created++;
+      const identity = resolveIdentityFromIndex(index, {
+        firstName: data.first_name,
+        lastName: data.last_name,
+        phone: data.phone_number,
+        email: data.email,
+        employerIdentification: data.employer_identification,
+        externalId: data.connecteam_employee_id,
+      });
+      if (identity.outcome !== "NOT_FOUND") { blocked++; continue; }
+      const { data: row, error } = await supabase
+        .from("employees")
+        .insert({
+          ...data,
+          ...buildEmployeeCreationTrace({ source: "csv", actorId: user?.id, actorLabel: user?.email, correlationId }),
+          company_id: selectedCompanyId,
+        } as any)
+        .select("id")
+        .single();
+      if (!error) { created++; if (row?.id) createdIds.push(row.id); }
     }
-    setImportResult({ created, skipped: importPreview.filter(r => r.exists).length });
+    if (createdIds.length) {
+      void logEmployeeCreation({
+        companyId: selectedCompanyId!,
+        employeeIds: createdIds,
+        trace: { source: "csv", actorId: user?.id, actorLabel: user?.email, correlationId },
+        preventedDuplicates: blocked,
+      });
+    }
+    if (blocked > 0) {
+      notifyWarning({
+        key: "csv-identity-guard",
+        title: "Filas retenidas por posible duplicado",
+        fact: `${blocked} personas ya existen o requieren revisión de identidad.`,
+        consequence: "No se crearon esos registros. Resuélvelos en Calidad de identidad.",
+      });
+    }
+    setImportResult({ created, skipped: importPreview.filter(r => r.exists).length + blocked });
     setImportStep("done");
     setImporting(false);
     fetchEmployees();
@@ -792,21 +885,42 @@ export default function Employees() {
   const executeUpdateDiffs = async () => {
     setUpdating(true);
     const selected = updateDiffs.filter(d => d.selected);
-    let updated = 0, created = 0;
+    let updated = 0, created = 0, blockedByIdentity = 0;
     for (const diff of selected) {
       const updateData: Record<string, any> = {};
       diff.changes.forEach(c => { updateData[c.field] = NAME_FIELDS.includes(c.field) ? toTitleCase(c.newVal) : (c.newVal || null); });
       if (diff.employeeId.startsWith("__new__")) {
         updateData.first_name = updateData.first_name || "";
         updateData.last_name = updateData.last_name || "";
-        const { error } = await supabase.from("employees").insert({ ...updateData, company_id: selectedCompanyId } as any);
+        const identity = await resolveExistingEmployeeIdentity(selectedCompanyId!, {
+          firstName: updateData.first_name,
+          lastName: updateData.last_name,
+          phone: updateData.phone_number,
+          email: updateData.email,
+          employerIdentification: updateData.employer_identification,
+          externalId: updateData.connecteam_employee_id,
+        });
+        if (identity.outcome !== "NOT_FOUND") { blockedByIdentity++; continue; }
+        const { error } = await supabase.from("employees").insert({
+          ...updateData,
+          ...buildEmployeeCreationTrace({ source: "csv", actorId: user?.id, actorLabel: user?.email }),
+          company_id: selectedCompanyId,
+        } as any);
         if (!error) created++;
       } else {
         const { error } = await supabase.from("employees").update(updateData as any).eq("id", diff.employeeId);
         if (!error) updated++;
       }
     }
-    setUpdateResult({ updated, skipped: updateDiffs.length - selected.length, created });
+    if (blockedByIdentity > 0) {
+      notifyWarning({
+        key: "csv-update-identity-guard",
+        title: "Altas retenidas por posible duplicado",
+        fact: `${blockedByIdentity} personas nuevas ya existen o requieren revisión de identidad.`,
+        consequence: "No se crearon esos registros. Resuélvelos en Calidad de identidad.",
+      });
+    }
+    setUpdateResult({ updated, skipped: updateDiffs.length - selected.length + blockedByIdentity, created });
     setUpdateStep("done");
     setUpdating(false);
     fetchEmployees();

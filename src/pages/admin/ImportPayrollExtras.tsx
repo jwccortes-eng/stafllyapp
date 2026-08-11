@@ -21,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { resolveExistingEmployeeIdentity, identityBlockMessage } from "@/lib/identity/employee-identity-resolver";
+import { buildEmployeeCreationTrace, logEmployeeCreation } from "@/lib/identity/creation-trace";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -338,16 +340,41 @@ export default function ImportPayrollExtras() {
     if (!emp || emp.employeeId || !selectedCompanyId) return;
     setCreatingEmployee(true);
     try {
+      // P0 Fase 1 · resolver canónico de identidad antes de crear.
+      const identity = await resolveExistingEmployeeIdentity(selectedCompanyId, {
+        firstName: emp.firstName,
+        lastName: emp.lastName,
+      });
+      if (identity.outcome === "EXACT_MATCH" && identity.employeeId) {
+        setEmployeeExtras(prev => prev.map((e, i) => i === idx ? { ...e, employeeId: identity.employeeId! } : e));
+        toast({ title: "Empleado existente vinculado", description: identityBlockMessage(identity) });
+        setCreatingEmployee(false);
+        return;
+      }
+      if (identity.outcome !== "NOT_FOUND") {
+        toast({ title: "Revisión de identidad requerida", description: identity.reason, variant: "destructive" });
+        setCreatingEmployee(false);
+        return;
+      }
+
       const { data, error } = await supabase.from("employees").insert({
         first_name: emp.firstName,
         last_name: emp.lastName,
         company_id: selectedCompanyId,
         tags: "datos-pendientes",
-        added_via: "import-extras",
-        added_by: user?.id ?? null,
+        ...buildEmployeeCreationTrace({
+          source: "payroll_extras_import",
+          actorId: user?.id,
+          actorLabel: user?.email,
+        }),
       }).select("id").single();
 
       if (error) throw error;
+      void logEmployeeCreation({
+        companyId: selectedCompanyId,
+        employeeIds: [data.id],
+        trace: { source: "payroll_extras_import", actorId: user?.id, actorLabel: user?.email },
+      });
 
       // Update local state with the new employee id
       setEmployeeExtras(prev => prev.map((e, i) =>
