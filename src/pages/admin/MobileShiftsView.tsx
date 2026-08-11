@@ -543,28 +543,8 @@ export default function MobileShiftsView() {
         </>
       }
     >
-      {/* Pulso de la vista: una sola línea, no cuatro tarjetas */}
-      {!loading && !error && tab !== "requests" && summary.shifts > 0 && (
-        <div className="px-4 pt-3">
-          <p className="text-[13px] text-muted-foreground">
-            <span className="font-semibold text-foreground tabular-nums">{summary.shifts}</span>{" "}
-            {summary.shifts === 1 ? "turno" : "turnos"} ·{" "}
-            <span className="font-semibold text-foreground tabular-nums">{summary.workers}</span>{" "}
-            {summary.workers === 1 ? "persona" : "personas"} ·{" "}
-            <span className={cn(
-              "font-semibold tabular-nums",
-              summary.coverage >= 90 ? "text-status-success" : summary.coverage >= 60 ? "text-status-warning" : "text-status-danger"
-            )}>
-              {summary.coverage}%
-            </span>{" "}
-            de cobertura
-          </p>
-        </div>
-      )}
-
-
       {/* List */}
-      <div className="px-4 pt-4">
+      <div>
         {tab === "requests" ? (
           pendingRequests.length === 0 ? (
             <EmptyState tab="requests" />
@@ -643,32 +623,6 @@ export default function MobileShiftsView() {
           </div>
         )}
       </div>
-
-      {/* Filters Sheet */}
-      <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl px-4 pt-4 overflow-y-auto">
-          <SheetHeader className="text-left mb-3">
-            <SheetTitle>Filtros</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4">
-            <ShiftFilters
-              filters={filters}
-              onChange={setFilters}
-              clients={clients}
-              locations={locations}
-              allowClaims={true}
-            />
-          </div>
-          <div className="sticky bottom-0 bg-background pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] flex items-center gap-2 mt-4 border-t border-border/40">
-            <Button variant="ghost" className="flex-1" onClick={() => setFilters(EMPTY_FILTERS)}>
-              Limpiar
-            </Button>
-            <Button className="flex-1" onClick={() => setFiltersOpen(false)}>
-              Aplicar
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
 
       {/* Operations Snapshot — mobile-first sheet (read-only Phase 1.5).
           S3: wrapped in Suspense for lazy import; fallback only shows while
