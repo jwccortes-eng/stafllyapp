@@ -5,8 +5,8 @@
  * Sustituye badges ad-hoc en cards, tablas, listas y cabeceras.
  */
 
-import type { LucideIcon, ReactNode } from "react";
-import type { ComponentType } from "react";
+import type { ReactNode, ComponentType } from "react";
+
 import { cn } from "@/lib/utils";
 import {
   STAFLY_BADGE_BASE,
