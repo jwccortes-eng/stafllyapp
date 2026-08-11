@@ -290,8 +290,12 @@ export interface OperationalWorkspaceProps {
   action?: ReactNode;
   /** Pestañas — permanecen visibles durante el scroll. */
   tabs?: ReactNode;
-  /** Filtros — permanecen visibles durante el scroll. */
+  /** Filtros — inline en desktop, hoja inferior en móvil (mismas opciones). */
   filters?: ReactNode;
+  /** Nº de filtros activos: se muestra sobre el botón "Filtros" en móvil. */
+  filtersActiveCount?: number;
+  /** Acciones secundarias en móvil (van dentro de "Más" del propio slot action). */
+  mobileFiltersTitle?: string;
   /** Resumen compacto de métricas (chips). */
   metrics?: WorkspaceMetric[];
   /** Contenido administrativo (calidad, duplicados, diagnóstico). Colapsado. */
