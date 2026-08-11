@@ -578,7 +578,7 @@ export default function ImportWizard() {
       // ── Fetch master data ──
       setImportProgress("Cargando datos maestros...");
       const [{ data: employees }, { data: clients }, { data: concepts }] = await Promise.all([
-        supabase.from("employees").select(`id, first_name, last_name, ${EMPLOYEE_IDENTITY_FIELDS}`.replace("id, first_name, last_name, id,", "id,")).eq("company_id", selectedCompanyId),
+        supabase.from("employees").select(EMPLOYEE_IDENTITY_FIELDS).eq("company_id", selectedCompanyId),
         supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
         supabase.from("concepts").select("id, name, category").eq("company_id", selectedCompanyId).eq("is_active", true),
       ]);
