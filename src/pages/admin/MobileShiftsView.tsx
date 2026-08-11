@@ -17,6 +17,7 @@ import {
   WorkspaceSearch,
   WorkspaceTabs,
   type WorkspaceMetric,
+  type WorkspaceTabItem,
 } from "@/components/stafly-ui/OperationalWorkspace";
 import {
   DropdownMenu,
@@ -467,7 +468,7 @@ export default function MobileShiftsView() {
   const handleOpenRequests = () => navigate("/app/shift-requests");
 
   const tabItems = useMemo(() => {
-    const items = TABS.map((t) => ({ key: t.key, label: t.label, count: tabCounts[t.key] }));
+    const items: WorkspaceTabItem<TabKey>[] = TABS.map((t) => ({ key: t.key, label: t.label, count: tabCounts[t.key] }));
     for (const t of SECONDARY_TABS) {
       const count = tabCounts[t.key];
       if (count > 0 || tab === t.key) {
@@ -506,7 +507,7 @@ export default function MobileShiftsView() {
           placeholder={`Buscar ${ADMIN_LEX.entity.toLowerCase()}, cliente o referencia…`}
         />
       }
-      tabs={<WorkspaceTabs items={tabItems} value={tab} onChange={setTab} ariaLabel={ADMIN_LEX.EntityPlural} />}
+      tabs={<WorkspaceTabs<TabKey> items={tabItems} value={tab} onChange={setTab} ariaLabel={ADMIN_LEX.EntityPlural} />}
       filtersActiveCount={activeFiltersCount}
       filters={
         <div className="space-y-4">
