@@ -1169,7 +1169,7 @@ export default function Employees() {
     { label: "Activos con portal", value: statusCounts.active, hint: "Workers activos con cuenta de portal vinculada.", accent: "success", onClick: () => setStatusTab("active"), active: statusTab === "active" },
     { label: "Pendientes de activar app", value: statusCounts.pending, hint: "Invitación enviada, portal aún sin acceder.", accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
     { label: "Workers con docs pendientes", value: statusCounts["missing-docs"], hint: "Cuenta workers con onboarding/documentos pendientes, no requisitos totales.", accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
-    { label: "Drivers", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
+    { label: "Conductores", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
   ];
 
   // ── Strong duplicate signal count (lightweight, mirrors WorkerDuplicates filters) ──
@@ -1257,29 +1257,29 @@ export default function Employees() {
   const statusTabsNode = (
     <div className="flex items-center gap-0.5 overflow-x-auto">
       {([
-        { key: "active" as const, label: "Active", count: statusCounts.active },
-        { key: "pending" as const, label: "Pending App Activation", count: statusCounts.pending },
-        { key: "invited" as const, label: "Invited", count: statusCounts.invited },
+        { key: "active" as const, label: "Activos", count: statusCounts.active },
+        { key: "pending" as const, label: "Pendientes", count: statusCounts.pending },
+        { key: "invited" as const, label: "Invitados", count: statusCounts.invited },
         ...(statusCounts.failed > 0
-          ? [{ key: "failed" as const, label: "Invite Failed", count: statusCounts.failed, tone: "destructive" as const }]
+          ? [{ key: "failed" as const, label: "Invitación fallida", count: statusCounts.failed, tone: "destructive" as const }]
           : []),
         {
           key: "missing-docs" as const,
-          label: "Missing Documents",
+          label: "Documentos",
           count: statusCounts["missing-docs"],
           tone: statusCounts["missing-docs"] > 0 ? ("warning" as const) : undefined,
         },
         {
           key: "no-photo" as const,
-          label: "Photo Required",
+          label: "Foto requerida",
           count: statusCounts["no-photo"],
           tone: statusCounts["no-photo"] > 0 ? ("warning" as const) : undefined,
         },
-        { key: "new" as const, label: "New", count: statusCounts.new },
-        { key: "drivers" as const, label: "Drivers", count: statusCounts.drivers },
-        { key: "no-activity" as const, label: "No Recent Activity", count: statusCounts["no-activity"] },
-        { key: "inactive" as const, label: "Historical / Inactive", count: statusCounts.inactive },
-        { key: "all" as const, label: "All", count: statusCounts.all },
+        { key: "new" as const, label: "Nuevos", count: statusCounts.new },
+        { key: "drivers" as const, label: "Conductores", count: statusCounts.drivers },
+        { key: "no-activity" as const, label: "Sin actividad", count: statusCounts["no-activity"] },
+        { key: "inactive" as const, label: "Históricos", count: statusCounts.inactive },
+        { key: "all" as const, label: "Todos", count: statusCounts.all },
       ]).map(tab => {
         const isActive = statusTab === tab.key;
         const tone = (tab as any).tone as "destructive" | "warning" | undefined;
