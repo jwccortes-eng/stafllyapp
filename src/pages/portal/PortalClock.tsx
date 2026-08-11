@@ -539,7 +539,7 @@ export default function PortalClock() {
               if (gpsEnforcement === "block") {
                 toast({ title: t("portal.clock.outside_work_area"), description: t("portal.clock.outside_work_area_desc", { meters: Math.round(dist) }), variant: "destructive" });
                 await supabase.from("clock_alerts").insert({ employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE", severity: "high", description: `Clock-in blocked at ${Math.round(dist)}m` } as any);
-                setActing(false); return;
+                throw new Error(t("portal.clock.outside_work_area_desc", { meters: Math.round(dist) }));
               } else {
                 // warn or none — just log
                 await supabase.from("clock_alerts").insert({ employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE", severity: gpsEnforcement === "warn" ? "high" : "low", description: `Clock-in at ${Math.round(dist)}m` } as any);
