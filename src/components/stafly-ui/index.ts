@@ -52,7 +52,21 @@ export {
   STAFLY_TIME_TEXT,
   STAFLY_MUTED_CAPTION,
   STAFLY_ACTION_GRID,
+  STAFLY_RADIUS,
+  STAFLY_ELEVATION,
+  STAFLY_GUTTER,
+  STAFLY_STACK,
+  STAFLY_ROW_GAP,
+  STAFLY_TAP_TARGET,
+  STAFLY_TEXT,
+  STAFLY_TONE_SOFT,
+  STAFLY_TONE_TEXT,
+  STAFLY_TONE_DOT,
+  STAFLY_STATE,
+  STAFLY_BADGE_BASE,
+  STAFLY_CHIP_BASE,
 } from "./tokens";
+export type { StaflyTone } from "./tokens";
 
 // Components
 export { StaflyPageShell } from "./StaflyPageShell";
@@ -83,3 +97,39 @@ export type {
 // Hooks
 export { usePortalChrome } from "./usePortalChrome";
 export type { PortalChromeMode, PortalOutletContext } from "./usePortalChrome";
+
+// ── ONE DESIGN SYSTEM — componentes canónicos (Fase 2) ─────────────────────
+// Regla: no crear variantes nuevas. Si algo no encaja, se extiende el canónico.
+
+export { StaflyStatusBadge } from "./StaflyStatusBadge";
+export type { StaflyStatusBadgeProps } from "./StaflyStatusBadge";
+
+export { StaflyKpiCard } from "./StaflyKpiCard";
+export type { StaflyKpiCardProps } from "./StaflyKpiCard";
+
+export { StaflySummaryStrip } from "./StaflySummaryStrip";
+export type { StaflySummaryStripProps } from "./StaflySummaryStrip";
+
+export { StaflyAlertBanner } from "./StaflyAlertBanner";
+export type { StaflyAlertBannerProps } from "./StaflyAlertBanner";
+
+export { StaflyEmptyState } from "./StaflyEmptyState";
+export type { StaflyEmptyStateProps } from "./StaflyEmptyState";
+
+export { StaflyLoadingState } from "./StaflyLoadingState";
+export type { StaflyLoadingStateProps, StaflyLoadingVariant } from "./StaflyLoadingState";
+
+export { StaflySearchBar } from "./StaflySearchBar";
+export type { StaflySearchBarProps } from "./StaflySearchBar";
+
+export { StaflyFilterBar } from "./StaflyFilterBar";
+export type { StaflyFilterBarProps, StaflyFilterOption } from "./StaflyFilterBar";
+
+export { StaflyActionBar } from "./StaflyActionBar";
+export type { StaflyActionBarProps } from "./StaflyActionBar";
+
+export { StaflyOverlay } from "./StaflyOverlay";
+export type { StaflyOverlayProps, StaflyOverlayVariant, StaflyOverlaySize } from "./StaflyOverlay";
+
+export { StaflyTimeline } from "./StaflyTimeline";
+export type { StaflyTimelineProps, StaflyTimelineItem } from "./StaflyTimeline";
