@@ -30,6 +30,7 @@ import { BulkServiceCreationDialog } from "@/components/shifts/bulk/BulkServiceC
 
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { displayShiftRef } from "@/lib/shifts/shift-ref";
+import { clientAccentColor } from "@/lib/clients/client-accent";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
