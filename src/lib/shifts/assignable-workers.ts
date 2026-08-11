@@ -37,6 +37,11 @@ export interface AssignableCandidate {
   is_active?: boolean | null;
   employee_role?: string | null;
   added_via?: string | null;
+  /** Portal real: presencia de cuenta vinculada. Evidencia de persona operativa. */
+  user_id?: string | null;
+  /** Fecha de aprobación explícita, si la superficie la conoce. */
+  approved_at?: string | null;
+  onboarding_status?: string | null;
   worker_type?: string | null;
   identity_status?: string | null;
   requires_identity_resolution?: boolean | null;
@@ -44,6 +49,7 @@ export interface AssignableCandidate {
   payroll_safe?: boolean | null;
   person_type_guess?: string | null;
 }
+
 
 export interface AssignabilityVerdict {
   bucket: AssignabilityBucket;
