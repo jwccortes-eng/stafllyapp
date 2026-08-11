@@ -550,8 +550,39 @@ export default function Employees() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.from("employees").insert({ ...buildInsertData(form), company_id: selectedCompanyId } as any);
-    if (error) {
+    const draft = buildInsertData(form);
+    // P0 Fase 1 · resolver canónico de identidad antes de crear.
+    const identity = await resolveExistingEmployeeIdentity(selectedCompanyId!, {
+      firstName: draft.first_name,
+      lastName: draft.last_name,
+      phone: draft.phone_number,
+      email: draft.email,
+      employerIdentification: draft.employer_identification,
+      externalId: draft.connecteam_employee_id,
+    });
+    if (identity.outcome !== "NOT_FOUND") {
+      notifyWarning({
+        key: "employee-identity-guard",
+        title:
+          identity.outcome === "EXACT_MATCH"
+            ? "Esta persona ya existe"
+            : "Posible duplicado: revisión requerida",
+        fact: identityBlockMessage(identity),
+        consequence: "No se creó ningún registro nuevo. Abre el perfil existente o resuelve la duplicidad.",
+      });
+      setLoading(false);
+      return;
+    }
+    const { data: createdRow, error } = await supabase
+      .from("employees")
+      .insert({
+        ...draft,
+        ...buildEmployeeCreationTrace({ source: "manual", actorId: user?.id, actorLabel: user?.email }),
+        company_id: selectedCompanyId,
+      } as any)
+      .select("id")
+      .single();
+
       notifyError({
         key: "employee-create",
         title: "No pudimos crear el worker",
