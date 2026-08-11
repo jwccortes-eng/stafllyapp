@@ -1333,13 +1333,13 @@ export default function Employees() {
         <>
           {uniqueRoles.length > 0 && (
             <Select value={filterRole} onValueChange={setFilterRole}>
-              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
+              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Rol" /></SelectTrigger>
               <SelectContent><SelectItem value="all">Todos los roles</SelectItem>{uniqueRoles.map(r => (<SelectItem key={r} value={r}>{formatDisplayText(r, "label")}</SelectItem>))}</SelectContent>
             </Select>
           )}
           {uniqueGroups.length > 0 && (
             <Select value={filterGroup} onValueChange={setFilterGroup}>
-              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Group" /></SelectTrigger>
+              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Grupo" /></SelectTrigger>
               <SelectContent><SelectItem value="all">Todos los grupos</SelectItem>{uniqueGroups.map(g => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
             </Select>
           )}
