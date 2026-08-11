@@ -97,7 +97,6 @@ import { analyzeEmployeeRisks, type RiskKey } from "@/lib/data-quality-risks";
 import { buildBulkRemindersText } from "@/lib/data-quality-actions";
 import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
 import MobileDataQualitySummary from "@/components/employee/MobileDataQualitySummary";
-import MobileWorkersCommandView from "@/components/employee/MobileWorkersCommandView";
 import { WorkerPhotoStatusChip } from "@/components/employee/WorkerPhotoStatusChip";
 import { PhotoReviewCriteriaCard } from "@/components/employee/PhotoReviewCriteriaCard";
 
@@ -320,7 +319,8 @@ export default function Employees() {
   const isMobile = useIsMobile();
   // On mobile we always render the premium card view to avoid horizontal overflow
   // and to hide noisy admin metadata (employer_identification etc.) from the list.
-  const effectiveViewMode: ViewMode = isMobile ? "cards" : viewMode;
+  // P1 responsive: móvil usa SIEMPRE el roster canónico (EntityCard), no una vista aparte.
+  const effectiveViewMode: ViewMode = isMobile ? "roster" : viewMode;
   const [updateDiffs, setUpdateDiffs] = useState<UpdateDiff[]>([]);
   const [updateStep, setUpdateStep] = useState<"upload" | "preview" | "done">("upload");
   const [updateResult, setUpdateResult] = useState<{ updated: number; skipped: number; created?: number } | null>(null);
