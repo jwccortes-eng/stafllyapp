@@ -12,7 +12,19 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useShiftsConfig } from "@/hooks/useShiftsConfig";
 import { Button } from "@/components/ui/button";
-import { OperationalScreenHeader } from "@/components/stafly-ui/OperationalScreenHeader";
+import {
+  OperationalWorkspace,
+  WorkspaceSearch,
+  WorkspaceTabs,
+  type WorkspaceMetric,
+} from "@/components/stafly-ui/OperationalWorkspace";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
@@ -698,7 +710,7 @@ export default function MobileShiftsView() {
           setTab(shiftDate === todayStr ? "today" : "upcoming");
         }}
       />
-    </div>
+    </OperationalWorkspace>
   );
 }
 
