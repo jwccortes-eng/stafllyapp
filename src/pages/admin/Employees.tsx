@@ -1328,7 +1328,7 @@ export default function Employees() {
     <PremiumFilterBar
       search={search}
       onSearchChange={setSearch}
-      searchPlaceholder="Search by name, phone, email, or Stafly ID…"
+      searchPlaceholder="Buscar por nombre, teléfono, email o ID Stafly…"
       quickFilters={
         <>
           {uniqueRoles.length > 0 && (
@@ -1480,8 +1480,8 @@ export default function Employees() {
         action={
 
           <>
-            {/* Mobile keeps only Quick add to avoid header overflow */}
-            <div className="hidden md:contents">
+            {/* Móvil y tablet: sólo la acción protagonista; el resto vive en el menú. */}
+            <div className="hidden lg:contents">
             {isPrivileged && (
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCampaignOpen(true)}>
                 <Rocket className="h-3.5 w-3.5 mr-1.5" />
@@ -1578,7 +1578,7 @@ export default function Employees() {
             </Dialog>
             {/* Import Dialog */}
             <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) resetImport(); }}>
-              <DialogTrigger asChild><Button variant="outline" size="sm" className="h-8 text-xs"><Upload className="h-3.5 w-3.5 mr-1.5" />Import</Button></DialogTrigger>
+              <DialogTrigger asChild><Button variant="outline" size="sm" className="h-8 text-xs"><Upload className="h-3.5 w-3.5 mr-1.5" />Importar</Button></DialogTrigger>
               <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader><DialogTitle>Import Workers</DialogTitle><DialogDescription>Only creates new records, does not update existing ones</DialogDescription></DialogHeader>
                 {importStep === "upload" && (
@@ -1599,18 +1599,18 @@ export default function Employees() {
               </DialogContent>
             </Dialog>
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(emptyForm()); }}>
-              <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />New (full form)</Button></DialogTrigger>
+              <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />Ficha completa</Button></DialogTrigger>
               <DialogContent className="max-w-md"><DialogHeader><DialogTitle>New Worker</DialogTitle><DialogDescription>Enter the new worker's information</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Limit of ${limits.maxEmployees} active workers`} /> : <EmployeeForm fields={CONNECTEAM_FIELDS} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Create" />}</DialogContent>
             </Dialog>
             </div>
             <Button size="sm" variant="default" className="h-8 text-xs" disabled={atEmployeeLimit} onClick={() => setQuickAddOpen(true)}>
-              <UserPlus className="h-3.5 w-3.5 mr-1.5" />Quick add
+              <UserPlus className="h-3.5 w-3.5 mr-1.5" />Nuevo trabajador
             </Button>
             <QuickAddInviteWizard open={quickAddOpen} onOpenChange={setQuickAddOpen} onEmployeeCreated={() => fetchEmployees()} />
             {/* Mobile-only: collapsed actions menu so users can still reach key actions */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 md:hidden" aria-label="More actions">
+                <Button variant="outline" size="icon" className="h-8 w-8 lg:hidden" aria-label="Más acciones">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -1622,7 +1622,7 @@ export default function Employees() {
                 )}
                 {isPrivileged && (
                   <DropdownMenuItem onClick={() => navigate("/app/workers/duplicates")} className="gap-2 text-sm">
-                    <UserSearch className="h-4 w-4" /> Detect duplicates
+                    <UserSearch className="h-4 w-4" /> Ver duplicados
                     {strongDuplicateCount > 0 && (
                       <Badge variant="outline" className="ml-auto h-5 px-1.5 bg-warning/10 text-warning border-warning/30 text-[10px]">
                         {strongDuplicateCount}
@@ -1631,33 +1631,33 @@ export default function Employees() {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={handleExport} disabled={filtered.length === 0} className="gap-2 text-sm">
-                  <Download className="h-4 w-4" /> Export
+                  <Download className="h-4 w-4" /> Exportar
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setOnboardingSettingsOpen(true)} className="gap-2 text-sm">
-                  <Settings2 className="h-4 w-4" /> Onboarding settings
+                  <Settings2 className="h-4 w-4" /> Ajustes de incorporación
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal">
-                  Desktop recommended
+                  Recomendado en escritorio
                 </DropdownMenuLabel>
                 <DropdownMenuItem
                   disabled
                   className="gap-2 text-sm opacity-70"
                 >
-                  <ArrowUpDown className="h-4 w-4" /> Update via file
-                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Desktop</Badge>
+                  <ArrowUpDown className="h-4 w-4" /> Actualizar por archivo
+                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Escritorio</Badge>
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled className="gap-2 text-sm opacity-70">
-                  <Upload className="h-4 w-4" /> Import workers
-                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Desktop</Badge>
+                  <Upload className="h-4 w-4" /> Importar trabajadores
+                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Escritorio</Badge>
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled className="gap-2 text-sm opacity-70">
-                  <Hash className="h-4 w-4" /> Bulk rates
-                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Desktop</Badge>
+                  <Hash className="h-4 w-4" /> Tarifas masivas
+                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Escritorio</Badge>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="icon" className="hidden md:inline-flex h-8 w-8" onClick={() => setOnboardingSettingsOpen(true)} title="Onboarding settings">
+            <Button variant="ghost" size="icon" className="hidden lg:inline-flex h-8 w-8" onClick={() => setOnboardingSettingsOpen(true)} title="Ajustes de incorporación">
               <Settings2 className="h-4 w-4" />
             </Button>
           </>
