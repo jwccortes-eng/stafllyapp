@@ -12,7 +12,20 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useShiftsConfig } from "@/hooks/useShiftsConfig";
 import { Button } from "@/components/ui/button";
-import { OperationalScreenHeader } from "@/components/stafly-ui/OperationalScreenHeader";
+import {
+  OperationalWorkspace,
+  WorkspaceSearch,
+  WorkspaceTabs,
+  type WorkspaceMetric,
+  type WorkspaceTabItem,
+} from "@/components/stafly-ui/OperationalWorkspace";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
@@ -454,137 +467,97 @@ export default function MobileShiftsView() {
 
   const handleOpenRequests = () => navigate("/app/shift-requests");
 
+  const tabItems = useMemo(() => {
+    const items: WorkspaceTabItem<TabKey>[] = TABS.map((t) => ({ key: t.key, label: t.label, count: tabCounts[t.key] }));
+    for (const t of SECONDARY_TABS) {
+      const count = tabCounts[t.key];
+      if (count > 0 || tab === t.key) {
+        items.push({
+          key: t.key,
+          label: t.label,
+          count,
+          ...(t.key === "needs" && count > 0 ? { tone: "warning" as const } : {}),
+        });
+      }
+    }
+    return items;
+  }, [tabCounts, tab]);
+
+  const workspaceMetrics: WorkspaceMetric[] = (!loading && !error && tab !== "requests" && summary.shifts > 0)
+    ? [
+        { label: ADMIN_LEX.entityPlural, value: summary.shifts, tone: "primary" as const },
+        { label: summary.workers === 1 ? "persona" : "personas", value: summary.workers },
+        {
+          label: "cobertura",
+          value: `${summary.coverage}%`,
+          tone: summary.coverage >= 90 ? ("success" as const) : summary.coverage >= 60 ? ("warning" as const) : ("critical" as const),
+        },
+      ]
+    : [];
+
   return (
-    <div className="min-h-full bg-background">
-      {/* Header (non-sticky on purpose — AdminLayout already provides a sticky
-          status-bar-safe header on mobile; double-stickies caused overlap and
-          status-bar collisions on iOS). */}
-      <div className="px-4 pt-3 pb-3 bg-background border-b border-border/40">
-        {/* OX-8.1 — cabecera canónica: empresa anfitriona → título → contexto → acción. */}
-        <OperationalScreenHeader
-          padded={false}
-          title={ADMIN_LEX.EntityPlural}
-          context={format(new Date(), "EEE d MMM", { locale: es })}
-          className="mb-3"
-          action={
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-11 w-11 rounded-xl relative"
-                onClick={() => setFiltersOpen(true)}
-                aria-label="Filtros"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                {activeFiltersCount > 0 && (
-                  <span className="absolute top-1 right-1 h-4 min-w-4 px-1 text-[10px] font-bold leading-none flex items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    {activeFiltersCount}
-                  </span>
-                )}
-              </Button>
-              {canEdit && (
-                <Button
-                  size="sm"
-                  className="h-11 px-4 rounded-xl gap-1.5 font-semibold"
-                  onClick={() => setCreateOpen(true)}
-                  aria-label={ADMIN_LEX.create}
-                >
-                  <Plus className="h-4 w-4" />
-                  {ADMIN_LEX.create}
-                </Button>
-              )}
-              {canEdit && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-11 w-11 rounded-xl"
-                  onClick={() => setBulkCreateOpen(true)}
-                  aria-label="Crear varios servicios"
-                >
-                  <CalendarDays className="h-4 w-4" />
-                </Button>
-              )}
-            </>
-          }
+    <OperationalWorkspace
+      title={ADMIN_LEX.EntityPlural}
+      className="min-h-full"
+      metrics={workspaceMetrics}
+      search={
+        <WorkspaceSearch
+          value={filters.search ?? ""}
+          onChange={(v) => setFilters({ ...filters, search: v })}
+          placeholder={`Buscar ${ADMIN_LEX.entity.toLowerCase()}, cliente o referencia…`}
         />
-
-
-
-        {/* Dos anclas principales: Hoy y Próximos */}
-        <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-muted/50">
-          {TABS.map(t => {
-            const count = tabCounts[t.key];
-            const active = tab === t.key;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={cn(
-                  "h-11 rounded-xl text-sm font-semibold transition-all inline-flex items-center justify-center gap-1.5",
-                  active
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground active:scale-[0.97]"
-                )}
-              >
-                <span>{t.label}</span>
-                <span className={cn(
-                  "tabular-nums text-xs font-semibold",
-                  active ? "text-primary" : "text-muted-foreground/70"
-                )}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+      }
+      tabs={<WorkspaceTabs<TabKey> items={tabItems} value={tab} onChange={setTab} ariaLabel={ADMIN_LEX.EntityPlural} />}
+      filtersActiveCount={activeFiltersCount}
+      filters={
+        <div className="space-y-4">
+          <ShiftFilters
+            filters={filters}
+            onChange={setFilters}
+            clients={clients}
+            locations={locations}
+            allowClaims={true}
+          />
+          <Button variant="ghost" className="w-full h-11" onClick={() => setFilters(EMPTY_FILTERS)}>
+            Limpiar filtros
+          </Button>
         </div>
-
-        {/* Secundarias: sólo aparecen cuando hay algo que atender */}
-        <div className="flex items-center gap-2 mt-2">
-          {SECONDARY_TABS.map(t => {
-            const count = tabCounts[t.key];
-            const active = tab === t.key;
-            if (count === 0 && !active) return null;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-medium transition-all border",
-                  active
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : "border-border/50 text-muted-foreground active:scale-[0.97]"
-                )}
-              >
-                {t.label}
-                <span className="tabular-nums font-semibold">{count}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Pulso de la vista: una sola línea, no cuatro tarjetas */}
-      {!loading && !error && tab !== "requests" && summary.shifts > 0 && (
-        <div className="px-4 pt-3">
-          <p className="text-[13px] text-muted-foreground">
-            <span className="font-semibold text-foreground tabular-nums">{summary.shifts}</span>{" "}
-            {summary.shifts === 1 ? "turno" : "turnos"} ·{" "}
-            <span className="font-semibold text-foreground tabular-nums">{summary.workers}</span>{" "}
-            {summary.workers === 1 ? "persona" : "personas"} ·{" "}
-            <span className={cn(
-              "font-semibold tabular-nums",
-              summary.coverage >= 90 ? "text-status-success" : summary.coverage >= 60 ? "text-status-warning" : "text-status-danger"
-            )}>
-              {summary.coverage}%
-            </span>{" "}
-            de cobertura
-          </p>
-        </div>
-      )}
-
-
+      }
+      action={
+        <>
+          {canEdit && (
+            <Button
+              size="sm"
+              className="h-9 px-3 rounded-xl gap-1.5 font-semibold"
+              onClick={() => setCreateOpen(true)}
+              aria-label={ADMIN_LEX.create}
+            >
+              <Plus className="h-4 w-4" />
+              {ADMIN_LEX.create}
+            </Button>
+          )}
+          {canEdit && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-muted-foreground" aria-label="Más opciones">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setBulkCreateOpen(true)}>
+                  <CalendarDays className="h-4 w-4 mr-2" /> Crear varios servicios
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleOpenRequests}>
+                  <Users className="h-4 w-4 mr-2" /> Solicitudes
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </>
+      }
+    >
       {/* List */}
-      <div className="px-4 pt-4">
+      <div>
         {tab === "requests" ? (
           pendingRequests.length === 0 ? (
             <EmptyState tab="requests" />
@@ -664,32 +637,6 @@ export default function MobileShiftsView() {
         )}
       </div>
 
-      {/* Filters Sheet */}
-      <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl px-4 pt-4 overflow-y-auto">
-          <SheetHeader className="text-left mb-3">
-            <SheetTitle>Filtros</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4">
-            <ShiftFilters
-              filters={filters}
-              onChange={setFilters}
-              clients={clients}
-              locations={locations}
-              allowClaims={true}
-            />
-          </div>
-          <div className="sticky bottom-0 bg-background pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] flex items-center gap-2 mt-4 border-t border-border/40">
-            <Button variant="ghost" className="flex-1" onClick={() => setFilters(EMPTY_FILTERS)}>
-              Limpiar
-            </Button>
-            <Button className="flex-1" onClick={() => setFiltersOpen(false)}>
-              Aplicar
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
-
       {/* Operations Snapshot — mobile-first sheet (read-only Phase 1.5).
           S3: wrapped in Suspense for lazy import; fallback only shows while
           the chunk is in flight on first open. */}
@@ -764,7 +711,7 @@ export default function MobileShiftsView() {
           setTab(shiftDate === todayStr ? "today" : "upcoming");
         }}
       />
-    </div>
+    </OperationalWorkspace>
   );
 }
 
