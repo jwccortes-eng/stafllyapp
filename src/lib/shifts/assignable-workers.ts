@@ -88,9 +88,24 @@ function isHistorical(e: AssignableCandidate): boolean {
   return (e.employee_role ?? "").toLowerCase().trim() === "historical";
 }
 
-function isPendingApproval(e: AssignableCandidate): boolean {
-  return (e.added_via ?? "").toLowerCase().trim() === "pending approval";
+/**
+ * `added_via='Pending approval'` es historia de alta, no un bloqueo.
+ * Solo se interpreta como pendiente real cuando NO hay evidencia operativa
+ * de persona: sin portal, sin onboarding completado y sin aprobación.
+ */
+function hasRealOperationalEvidence(e: AssignableCandidate): boolean {
+  if (e.user_id) return true;
+  if (e.approved_at) return true;
+  const onboarding = (e.onboarding_status ?? "").toLowerCase().trim();
+  return onboarding === "completed" || onboarding === "complete" || onboarding === "active";
 }
+
+function isPendingApproval(e: AssignableCandidate): boolean {
+  const pendingLabel = (e.added_via ?? "").toLowerCase().trim() === "pending approval";
+  if (!pendingLabel) return false;
+  return !hasRealOperationalEvidence(e);
+}
+
 
 /** Veredicto canónico. Precedencia: inactivo → placeholder → histórico → pendiente. */
 export function classifyWorkerAssignability(
