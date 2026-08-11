@@ -21,7 +21,24 @@
  * Puro: sin acceso a datos, sin efectos. Todas las superficies (portal,
  * live map, editor) deben derivar de aquí.
  */
-import { getShiftLocationStatus, type ShiftLocationStatusResult } from "./location-status";
+import {
+  getShiftLocationStatus,
+  type ShiftLocationInput,
+  type ShiftLocationStatusResult,
+} from "./location-classification";
+
+export {
+  getShiftLocationStatus,
+  hasSavedJobSite,
+  hasManualAddress,
+  hasMeetingPoint,
+  hasAnyOperationalLocation,
+} from "./location-classification";
+export type {
+  ShiftLocationStatus,
+  ShiftLocationInput,
+  ShiftLocationStatusResult,
+} from "./location-classification";
 
 export type ServiceLocationSource =
   | "job_site_v2"
