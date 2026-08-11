@@ -216,7 +216,9 @@ export function CaptainCloseoutForm({
       });
       toast.success(
         status === "submitted"
-          ? "Cierre enviado a revisión de horas"
+          ? gate.canFullyReconcile
+            ? "Cierre enviado a revisión de horas"
+            : "Cierre enviado con pendientes: el turno no queda reconciliado"
           : "Borrador guardado",
       );
       setConfirmOpen(false);
