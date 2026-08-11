@@ -82,6 +82,8 @@ import { isInviteStatusFailure } from "@/lib/invitation-status";
 import { hasPortalAccess } from "@/lib/portal/portal-status";
 import { resolvePersonStatus } from "@/lib/people/person-status";
 import { PersonStatusMatrix } from "@/components/employee/PersonStatusMatrix";
+import { IdentifiersBlock } from "@/components/employee/IdentifiersBlock";
+
 
 import { cn } from "@/lib/utils";
 import { isDocDialogOpen, subscribeDocDialog } from "@/lib/document-dialog-suspend";
@@ -1399,7 +1401,20 @@ export default function UnifiedPersonProfile() {
       )}
 
 
+      {/* ─── IDENTIFICADORES (admin only, solo lectura) ───
+          Internal ID = número de la operación/pagadora, inmutable.
+          El resto son identificadores técnicos, nunca visibles en el portal. */}
+      {isPrivileged && (
+        <IdentifiersBlock
+          internalId={employee.employer_identification}
+          employeeUuid={employee.id}
+          authUserId={employee.user_id ?? employee.auth_user_id}
+          externalId={employee.connecteam_employee_id}
+        />
+      )}
+
       {/* ─── DATOS IMPORTADOS Y AUDITORÍA (admin/dev only, collapsed) ───
+
           Single legacy/audit block. Holds Connecteam IDs, direct_manager,
           recommended_by, groups/tags, added_via/added_by, source/import
           metadata, profile_status, reconciliation flag and timestamps.

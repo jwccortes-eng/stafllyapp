@@ -1328,7 +1328,7 @@ export default function Employees() {
     <PremiumFilterBar
       search={search}
       onSearchChange={setSearch}
-      searchPlaceholder="Buscar por nombre, teléfono, email o ID Stafly…"
+      searchPlaceholder="Buscar por nombre, teléfono, email o Internal ID…"
       quickFilters={
         <>
           {uniqueRoles.length > 0 && (
@@ -1353,7 +1353,7 @@ export default function Employees() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="name">Ordenar: Nombre</SelectItem>
-              <SelectItem value="code">Ordenar: ID Stafly</SelectItem>
+              <SelectItem value="code">Ordenar: Internal ID</SelectItem>
               <SelectItem value="last_activity">Ordenar: Última actividad</SelectItem>
               <SelectItem value="photo">Ordenar: Foto</SelectItem>
               <SelectItem value="role">Ordenar: Rol</SelectItem>
@@ -1468,7 +1468,7 @@ export default function Employees() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nombre, teléfono o ID Stafly…"
+              placeholder="Buscar por nombre, teléfono o Internal ID…"
               className="h-10 pl-9 text-[14px] rounded-xl"
             />
           </div>
@@ -2046,7 +2046,7 @@ export default function Employees() {
                         <TooltipTrigger asChild>
                           <span className="shrink-0 text-[10px] font-mono tabular-nums text-muted-foreground">{e.employer_identification}</span>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">ID Stafly · referencia de payroll</TooltipContent>
+                        <TooltipContent side="top" className="text-xs">Internal ID · referencia de payroll</TooltipContent>
                       </Tooltip>
                     )}
                     {!e.is_active && (
@@ -2101,7 +2101,7 @@ export default function Employees() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="inline-block mt-0.5 text-[10px] font-mono tabular-nums text-muted-foreground">
-                            ID Stafly · {e.employer_identification}
+                            Internal ID · {e.employer_identification}
                           </span>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="text-xs">Referencia de payroll</TooltipContent>
@@ -2203,9 +2203,9 @@ export default function Employees() {
                   >
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="inline-flex items-center gap-1">ID Stafly <SortIndicator direction={directionFor("code")} /></span>
+                        <span className="inline-flex items-center gap-1">Internal ID <SortIndicator direction={directionFor("code")} /></span>
                       </TooltipTrigger>
-                      <TooltipContent side="top" className="text-xs">ID Stafly · referencia de payroll</TooltipContent>
+                      <TooltipContent side="top" className="text-xs">Internal ID · referencia de payroll</TooltipContent>
                     </Tooltip>
                   </TableHead>
                 )}

@@ -16,7 +16,7 @@ export interface ColumnDef {
 }
 
 export const EMPLOYEE_COLUMNS: ColumnDef[] = [
-  { key: "employer_identification", label: "ID Stafly", defaultVisible: true },
+  { key: "employer_identification", label: "Internal ID", defaultVisible: true },
   { key: "phone_number", label: "Teléfono", defaultVisible: true },
   { key: "email", label: "Email", defaultVisible: false },
   { key: "employee_role", label: "Rol", defaultVisible: false },

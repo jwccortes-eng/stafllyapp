@@ -9,6 +9,8 @@ import { Loader2, UserPlus, Link2, FileText, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PayrollTruthRow } from "@/lib/payroll-truth-parser";
+import { assignInternalId, INTERNAL_ID_LABEL } from "@/lib/identity/internal-id";
+
 
 export type ResolutionMode = "create" | "link" | "truth_only";
 
@@ -189,13 +191,21 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
         });
       }
 
-      // Update employer_identification / ssn if provided in truth and missing on employee
-      if (truthRow.employerIdentification || truthRow.verificationSsnEin) {
-        const updates: Record<string, any> = {};
-        if (truthRow.employerIdentification) updates.employer_identification = truthRow.employerIdentification;
-        if (truthRow.verificationSsnEin) updates.verification_ssn_ein = truthRow.verificationSsnEin;
-        await supabase.from("employees").update(updates).eq("id", selectedLinkId);
+      // SSN/EIN puede completarse; el Internal ID NO se escribe desde aquí.
+      // Política canónica: único escritor = `assign_internal_id`. Si la persona
+      // ya tiene número, se conserva; si no, la RPC entrega el que corresponde.
+      if (truthRow.verificationSsnEin) {
+        await supabase
+          .from("employees")
+          .update({ verification_ssn_ein: truthRow.verificationSsnEin } as any)
+          .eq("id", selectedLinkId);
       }
+      await assignInternalId({
+        employeeId: selectedLinkId,
+        source: "import_reconciliation",
+        reason: "import_reconciliation",
+      });
+
 
       // Audit
       await supabase.from("activity_log").insert({
@@ -282,7 +292,7 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
           ) : null}
           {truthRow.employerIdentification && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Employer ID:</span>
+              <span className="text-muted-foreground">Internal ID:</span>
               <span className="font-mono">{truthRow.employerIdentification}</span>
             </div>
           )}
@@ -343,8 +353,8 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
                 <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className="h-8 text-sm" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Employer ID</Label>
-                <Input value={employerId} onChange={e => setEmployerId(e.target.value)} placeholder="Employer ID" className="h-8 text-sm" />
+                <Label className="text-xs">Internal ID</Label>
+                <Input value={employerId} onChange={e => setEmployerId(e.target.value)} placeholder="Internal ID" className="h-8 text-sm" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">SSN/EIN</Label>
