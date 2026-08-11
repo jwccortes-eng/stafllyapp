@@ -495,7 +495,11 @@ export default function PortalClock() {
   const handleClockIn = async (photoUrl: string | null) => {
     if (!employeeId || !companyId || !selectedShift) return;
     clockIntentRef.current = { type: "in", shiftId: selectedShift.id };
+    const clientEventId = createClientEventId();
+    const eventTimeDevice = new Date().toISOString();
+    const shiftForEvent = selectedShift;
     await clockRequest.submit(async () => {
+
       let pos: { latitude: number; longitude: number; accuracy: number } | null = null;
       try { pos = await capturePosition(); } catch { /* GPS unavailable */ }
       const device = getDeviceId();
