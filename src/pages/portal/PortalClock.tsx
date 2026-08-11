@@ -599,8 +599,8 @@ export default function PortalClock() {
     if (!activeEntry || !companyId || !employeeId) return;
     const activeShift = todayShifts.find(s => s.id === activeEntry.shift_id) ?? null;
     const scheduleCheck = isClockOutWithinSchedule(activeShift);
-    setActing(true);
-    try {
+    clockIntentRef.current = { type: "out", entryId: activeEntry.id };
+    await clockRequest.submit(async () => {
       const clockOutTime = new Date().toISOString();
       let pos: { latitude: number; longitude: number; accuracy: number } | null = null;
       try { pos = await capturePosition(); } catch { /* GPS unavailable */ }
