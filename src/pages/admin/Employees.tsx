@@ -582,7 +582,7 @@ export default function Employees() {
       } as any)
       .select("id")
       .single();
-
+    if (error) {
       notifyError({
         key: "employee-create",
         title: "No pudimos crear el worker",
@@ -591,12 +591,18 @@ export default function Employees() {
         cause: error,
       });
     } else {
+      void logEmployeeCreation({
+        companyId: selectedCompanyId!,
+        employeeIds: createdRow?.id ? [createdRow.id] : [],
+        trace: { source: "manual", actorId: user?.id, actorLabel: user?.email },
+      });
       notifySuccess({
         key: "employee-create",
         title: "Worker creado",
         fact: "El perfil quedó guardado.",
         consequence: "Ya puedes asignarlo a turnos.",
       });
+
       setOpen(false);
       setForm(emptyForm());
       fetchEmployees();
