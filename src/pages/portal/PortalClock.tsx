@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useClockRequest } from "@/hooks/useClockRequest";
+import { clockButtonLabel } from "@/lib/timeclock/clock-request-state";
 import {
   Dialog,
   DialogContent,
