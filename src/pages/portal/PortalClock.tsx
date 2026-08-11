@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useClockRequest } from "@/hooks/useClockRequest";
+import { clockButtonLabel } from "@/lib/timeclock/clock-request-state";
 import {
   Dialog,
   DialogContent,
@@ -134,7 +136,10 @@ export default function PortalClock() {
   const cached = getPageCache<ClockSnapshot>(PAGE_KEY, employeeId);
 
   const [loading, setLoading] = useState(!cached);
-  const [acting, setActing] = useState(false);
+  /** P0-A: intención en curso, para poder verificar el estado real del servidor. */
+  const clockIntentRef = useRef<
+    { type: "in"; shiftId: string } | { type: "out"; entryId: string } | null
+  >(null);
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(cached?.activeEntry ?? null);
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>(cached?.todayEntries ?? []);
   const [companyId, setCompanyId] = useState<string | null>(cached?.companyId ?? null);
@@ -369,6 +374,39 @@ export default function PortalClock() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // ── P0-A · Clock delivery integrity ───────────────────────────────────
+  // Verificación canónica contra el servidor. Nunca se asume éxito ni se crean
+  // time_entries locales: se relee la tabla real.
+  const verifyClockIntent = useCallback(async (): Promise<boolean> => {
+    const intent = clockIntentRef.current;
+    if (!intent || !employeeId) return false;
+    if (intent.type === "in") {
+      const { data, error } = await supabase
+        .from("time_entries")
+        .select("id")
+        .eq("employee_id", employeeId)
+        .eq("shift_id", intent.shiftId)
+        .gte("clock_in", startOfDay(new Date()).toISOString())
+        .limit(1);
+      if (error) throw error;
+      return (data?.length ?? 0) > 0;
+    }
+    const { data, error } = await supabase
+      .from("time_entries")
+      .select("id, clock_out")
+      .eq("id", intent.entryId)
+      .maybeSingle();
+    if (error) throw error;
+    return !!data?.clock_out;
+  }, [employeeId]);
+
+  const clockRequest = useClockRequest({
+    verify: verifyClockIntent,
+    onConfirmed: async () => { await loadData(); },
+  });
+  const acting = clockRequest.locked;
+
+
   const proceedWithClockIn = () => {
     if (clockPhotoRequired) { setPendingClockAction("in"); setPhotoDialogOpen(true); }
     else handleClockIn(null);
@@ -456,8 +494,8 @@ export default function PortalClock() {
 
   const handleClockIn = async (photoUrl: string | null) => {
     if (!employeeId || !companyId || !selectedShift) return;
-    setActing(true);
-    try {
+    clockIntentRef.current = { type: "in", shiftId: selectedShift.id };
+    await clockRequest.submit(async () => {
       let pos: { latitude: number; longitude: number; accuracy: number } | null = null;
       try { pos = await capturePosition(); } catch { /* GPS unavailable */ }
       const device = getDeviceId();
@@ -487,7 +525,7 @@ export default function PortalClock() {
             // alert so admins can see the pattern without payroll being touched.
             if (gpsEnforcement === "block") {
               toast({ title: t("portal.clock.enable_location"), description: t("portal.clock.gps_required"), variant: "destructive" });
-              setActing(false); return;
+              throw new Error(t("portal.clock.gps_required"));
             }
             try {
               await supabase.from("clock_alerts").insert({
@@ -503,7 +541,7 @@ export default function PortalClock() {
               if (gpsEnforcement === "block") {
                 toast({ title: t("portal.clock.outside_work_area"), description: t("portal.clock.outside_work_area_desc", { meters: Math.round(dist) }), variant: "destructive" });
                 await supabase.from("clock_alerts").insert({ employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE", severity: "high", description: `Clock-in blocked at ${Math.round(dist)}m` } as any);
-                setActing(false); return;
+                throw new Error(t("portal.clock.outside_work_area_desc", { meters: Math.round(dist) }));
               } else {
                 // warn or none — just log
                 await supabase.from("clock_alerts").insert({ employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE", severity: gpsEnforcement === "warn" ? "high" : "low", description: `Clock-in at ${Math.round(dist)}m` } as any);
@@ -556,18 +594,15 @@ export default function PortalClock() {
       toast({ title: labels.inSuccess });
       setTimeout(() => setSuccessState(null), 4000);
       setSelectedShift(null);
-      await loadData();
-    } catch (err: any) {
-      toast({ title: t("portal.clock.could_not_register"), description: err.message ?? t("portal.clock.try_again"), variant: "destructive" });
-    } finally { setActing(false); }
+    });
   };
 
   const handleClockOut = async (photoUrl: string | null) => {
     if (!activeEntry || !companyId || !employeeId) return;
     const activeShift = todayShifts.find(s => s.id === activeEntry.shift_id) ?? null;
     const scheduleCheck = isClockOutWithinSchedule(activeShift);
-    setActing(true);
-    try {
+    clockIntentRef.current = { type: "out", entryId: activeEntry.id };
+    await clockRequest.submit(async () => {
       const clockOutTime = new Date().toISOString();
       let pos: { latitude: number; longitude: number; accuracy: number } | null = null;
       try { pos = await capturePosition(); } catch { /* GPS unavailable */ }
@@ -637,10 +672,7 @@ export default function PortalClock() {
       }
       setSuccessState({ type: "out", time: format(new Date(), "HH:mm"), shift: activeShift?.title ?? "Shift" });
       setTimeout(() => setSuccessState(null), 4000);
-      await loadData();
-    } catch (err: any) {
-      toast({ title: t("portal.clock.could_not_register"), description: err.message ?? t("portal.clock.try_again"), variant: "destructive" });
-    } finally { setActing(false); }
+    });
   };
 
   const handleSendTimeRequest = async () => {
@@ -1006,6 +1038,38 @@ export default function PortalClock() {
               </div>
             )}
 
+            {/* ── P0-A · Estado explícito del envío del fichaje ── */}
+            {(clockRequest.state.status === "FAILED" || clockRequest.state.status === "UNKNOWN") && (
+              <div
+                className={cn(
+                  "mx-4 mb-3 rounded-lg px-3 py-2.5 border",
+                  clockRequest.state.status === "FAILED"
+                    ? "bg-destructive/[0.06] border-destructive/20"
+                    : "bg-warning/[0.06] border-warning/20",
+                )}
+                role="status"
+              >
+                <p className="text-[12px] font-semibold text-foreground">
+                  {clockRequest.state.status === "FAILED"
+                    ? "No se registró tu fichaje"
+                    : "No sabemos si tu fichaje quedó registrado"}
+                </p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
+                  {clockRequest.state.error ??
+                    "La conexión se interrumpió. Verificamos con el servidor antes de permitir otro intento."}
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 h-8 rounded-lg text-[12px]"
+                  disabled={clockRequest.state.verifying}
+                  onClick={() => { void clockRequest.retry(); }}
+                >
+                  {clockRequest.state.status === "UNKNOWN" ? "Verificar estado real" : "Reintentar"}
+                </Button>
+              </div>
+            )}
+
             {/* ── Primary CTA — single dominant action ── */}
             <div className="px-4 pb-4">
               {isClockedIn ? (
@@ -1015,9 +1079,12 @@ export default function PortalClock() {
                   className="w-full h-14 rounded-xl text-[15px] font-bold gap-2.5 transition-all active:scale-[0.98] bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-md shadow-destructive/15"
                 >
                   {acting ? (
-                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <>
+                      <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      {clockButtonLabel(clockRequest.state, t("portal.clock.mark_out"))}
+                    </>
                   ) : (
-                    <><LogOut className="h-4 w-4" /> {t("portal.clock.mark_out")}</>
+                    <><LogOut className="h-4 w-4" /> {clockButtonLabel(clockRequest.state, t("portal.clock.mark_out"))}</>
                   )}
                 </Button>
               ) : focusShift ? (
@@ -1027,9 +1094,12 @@ export default function PortalClock() {
                   className="w-full h-14 rounded-xl text-[15px] font-bold gap-2.5 transition-all active:scale-[0.98] bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/15 disabled:opacity-40 disabled:shadow-none"
                 >
                   {acting ? (
-                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <>
+                      <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      {clockButtonLabel(clockRequest.state, t("portal.clock.mark_in"))}
+                    </>
                   ) : (
-                    <><LogIn className="h-4 w-4" /> {t("portal.clock.mark_in")}</>
+                    <><LogIn className="h-4 w-4" /> {clockButtonLabel(clockRequest.state, t("portal.clock.mark_in"))}</>
                   )}
                 </Button>
               ) : (

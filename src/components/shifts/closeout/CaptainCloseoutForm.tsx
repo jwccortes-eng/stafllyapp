@@ -20,6 +20,10 @@ import {
   type EvidencePacket,
   upsertShiftCloseoutDraft,
 } from "@/lib/shifts/closeout";
+import {
+  evaluateCloseoutGateFromEvidence,
+  RECONCILIATION_LABEL,
+} from "@/lib/shifts/closeout-gate";
 
 interface Props {
   companyId: string;
@@ -95,12 +99,38 @@ export function CaptainCloseoutForm({
   const locked =
     current?.status === "reviewed" || current?.status === "rejected";
 
+  // P0-B · SINGLE CLOSEOUT GATE — un único validador canónico. El capitán
+  // puede entregar su cierre operativo, pero eso jamás equivale a
+  // FULLY_RECONCILED ni a PAYROLL_READY.
+  const gate = useMemo(
+    () =>
+      evaluateCloseoutGateFromEvidence({
+        shiftId,
+        evidence: evidence
+          ? {
+              assigned: evidence.assigned,
+              accepted: evidence.accepted,
+              clockIns: evidence.clockIns,
+              clockOuts: evidence.clockOuts,
+              missingClockOut: evidence.missingClockOut,
+              incidents: Math.max(evidence.incidents, num(incidents)),
+              pendingReviewHours: evidence.pendingReviewHours,
+            }
+          : null,
+        closeout: current,
+        shiftEnded: true,
+      }),
+    [evidence, current, shiftId, incidents],
+  );
+
   const hasUnresolved = useMemo(() => {
     const missingClockOut = evidence?.missingClockOut ?? 0;
     const noShow = num(noShows);
     const inc = num(incidents);
-    return missingClockOut > 0 || noShow > 0 || inc > 0;
-  }, [evidence?.missingClockOut, noShows, incidents]);
+    return (
+      !gate.canFullyReconcile || missingClockOut > 0 || noShow > 0 || inc > 0
+    );
+  }, [gate.canFullyReconcile, evidence?.missingClockOut, noShows, incidents]);
 
   // Dictation (Web Speech API only — optional, no storage)
   const SpeechRecognitionCtor = useMemo(() => getSpeechRecognitionCtor(), []);
@@ -186,7 +216,9 @@ export function CaptainCloseoutForm({
       });
       toast.success(
         status === "submitted"
-          ? "Cierre enviado a revisión de horas"
+          ? gate.canFullyReconcile
+            ? "Cierre enviado a revisión de horas"
+            : "Cierre enviado con pendientes: el turno no queda reconciliado"
           : "Borrador guardado",
       );
       setConfirmOpen(false);
@@ -338,6 +370,24 @@ export function CaptainCloseoutForm({
         <span>Listo para revisión de horas</span>
       </label>
 
+      {gate.blockers.length > 0 || gate.warnings.length > 0 ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 space-y-2">
+          <p className="text-[12px] font-semibold text-amber-900 dark:text-amber-200">
+            Pendientes reales · el turno quedará como “{RECONCILIATION_LABEL.CLOSEOUT_SUBMITTED}”
+          </p>
+          <ul className="space-y-1">
+            {[...gate.blockers, ...gate.warnings].map((p) => (
+              <li key={p.id} className="text-[11.5px] leading-snug text-amber-900/90 dark:text-amber-200/90">
+                <span className="font-medium">{p.label}</span> — {p.detail}
+              </li>
+            ))}
+          </ul>
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            Enviar el cierre no aprueba horas ni deja el turno listo para payroll.
+          </p>
+        </div>
+      ) : null}
+
       {hasUnresolved ? (
         <label className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 text-[12px]">
           <Checkbox
@@ -347,8 +397,8 @@ export function CaptainCloseoutForm({
             className="mt-0.5"
           />
           <span className="text-amber-900 dark:text-amber-200 leading-snug">
-            Acepto que los pendientes mostrados quedan registrados (faltas,
-            incidencias y/o salidas sin fichar).
+            Acepto que los pendientes mostrados quedan registrados y que el
+            turno NO queda reconciliado ni listo para payroll.
           </span>
         </label>
       ) : null}
