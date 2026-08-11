@@ -1038,6 +1038,38 @@ export default function PortalClock() {
               </div>
             )}
 
+            {/* ── P0-A · Estado explícito del envío del fichaje ── */}
+            {(clockRequest.state.status === "FAILED" || clockRequest.state.status === "UNKNOWN") && (
+              <div
+                className={cn(
+                  "mx-4 mb-3 rounded-lg px-3 py-2.5 border",
+                  clockRequest.state.status === "FAILED"
+                    ? "bg-destructive/[0.06] border-destructive/20"
+                    : "bg-warning/[0.06] border-warning/20",
+                )}
+                role="status"
+              >
+                <p className="text-[12px] font-semibold text-foreground">
+                  {clockRequest.state.status === "FAILED"
+                    ? "No se registró tu fichaje"
+                    : "No sabemos si tu fichaje quedó registrado"}
+                </p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
+                  {clockRequest.state.error ??
+                    "La conexión se interrumpió. Verificamos con el servidor antes de permitir otro intento."}
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 h-8 rounded-lg text-[12px]"
+                  disabled={clockRequest.state.verifying}
+                  onClick={() => { void clockRequest.retry(); }}
+                >
+                  {clockRequest.state.status === "UNKNOWN" ? "Verificar estado real" : "Reintentar"}
+                </Button>
+              </div>
+            )}
+
             {/* ── Primary CTA — single dominant action ── */}
             <div className="px-4 pb-4">
               {isClockedIn ? (
@@ -1047,9 +1079,12 @@ export default function PortalClock() {
                   className="w-full h-14 rounded-xl text-[15px] font-bold gap-2.5 transition-all active:scale-[0.98] bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-md shadow-destructive/15"
                 >
                   {acting ? (
-                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <>
+                      <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      {clockButtonLabel(clockRequest.state, t("portal.clock.mark_out"))}
+                    </>
                   ) : (
-                    <><LogOut className="h-4 w-4" /> {t("portal.clock.mark_out")}</>
+                    <><LogOut className="h-4 w-4" /> {clockButtonLabel(clockRequest.state, t("portal.clock.mark_out"))}</>
                   )}
                 </Button>
               ) : focusShift ? (
@@ -1059,9 +1094,12 @@ export default function PortalClock() {
                   className="w-full h-14 rounded-xl text-[15px] font-bold gap-2.5 transition-all active:scale-[0.98] bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/15 disabled:opacity-40 disabled:shadow-none"
                 >
                   {acting ? (
-                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <>
+                      <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      {clockButtonLabel(clockRequest.state, t("portal.clock.mark_in"))}
+                    </>
                   ) : (
-                    <><LogIn className="h-4 w-4" /> {t("portal.clock.mark_in")}</>
+                    <><LogIn className="h-4 w-4" /> {clockButtonLabel(clockRequest.state, t("portal.clock.mark_in"))}</>
                   )}
                 </Button>
               ) : (
