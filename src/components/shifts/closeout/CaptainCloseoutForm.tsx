@@ -368,6 +368,24 @@ export function CaptainCloseoutForm({
         <span>Listo para revisión de horas</span>
       </label>
 
+      {gate.blockers.length > 0 || gate.warnings.length > 0 ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 space-y-2">
+          <p className="text-[12px] font-semibold text-amber-900 dark:text-amber-200">
+            Pendientes reales · el turno quedará como “{RECONCILIATION_LABEL.CLOSEOUT_SUBMITTED}”
+          </p>
+          <ul className="space-y-1">
+            {[...gate.blockers, ...gate.warnings].map((p) => (
+              <li key={p.id} className="text-[11.5px] leading-snug text-amber-900/90 dark:text-amber-200/90">
+                <span className="font-medium">{p.label}</span> — {p.detail}
+              </li>
+            ))}
+          </ul>
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            Enviar el cierre no aprueba horas ni deja el turno listo para payroll.
+          </p>
+        </div>
+      ) : null}
+
       {hasUnresolved ? (
         <label className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 text-[12px]">
           <Checkbox
@@ -377,8 +395,8 @@ export function CaptainCloseoutForm({
             className="mt-0.5"
           />
           <span className="text-amber-900 dark:text-amber-200 leading-snug">
-            Acepto que los pendientes mostrados quedan registrados (faltas,
-            incidencias y/o salidas sin fichar).
+            Acepto que los pendientes mostrados quedan registrados y que el
+            turno NO queda reconciliado ni listo para payroll.
           </span>
         </label>
       ) : null}
