@@ -375,45 +375,47 @@ export function OperationalWorkspace({
 
             {tabs ? <div className="overflow-x-auto">{tabs}</div> : null}
             {filters ? (
-              <>
-                {/* Desktop: filtros inline. */}
-                <div className="hidden md:block py-2">{filters}</div>
-                {/* Móvil: mismas opciones, dentro de una hoja inferior. */}
-                <div className="md:hidden py-2">
-                  <button
-                    type="button"
-                    onClick={() => setFiltersOpen(true)}
-                    className="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-border/60 bg-card text-[13px] font-medium"
-                  >
-                    <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-                    {mobileFiltersTitle}
-                    {filtersActiveCount > 0 ? (
-                      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-[11px] font-bold tabular-nums text-primary">
-                        {filtersActiveCount}
-                      </span>
-                    ) : null}
-                  </button>
-                </div>
-              </>
+              /* Desktop: filtros inline. Móvil: mismas opciones en la fila de resumen. */
+              <div className="hidden md:block py-2">{filters}</div>
             ) : null}
           </div>
         )}
 
-        {/* 4 — resumen compacto */}
-        {metricChips.length > 0 && (
-          <div className="pt-3">
-            <WorkspaceMetricChips metrics={metricChips} />
+        {/* 4 — resumen compacto (móvil: filtros + métricas en una sola fila) */}
+        {(metricChips.length > 0 || filters) && (
+          <div className="pt-2 md:pt-3">
+            <WorkspaceMetricChips
+              metrics={metricChips}
+              leading={
+                filters ? (
+                  <button
+                    type="button"
+                    onClick={() => setFiltersOpen(true)}
+                    className="md:hidden inline-flex shrink-0 items-center gap-1.5 h-8 px-2.5 rounded-full border border-border/60 bg-card text-[11px] font-medium"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                    {mobileFiltersTitle}
+                    {filtersActiveCount > 0 ? (
+                      <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/10 px-1 text-[10px] font-bold tabular-nums text-primary">
+                        {filtersActiveCount}
+                      </span>
+                    ) : null}
+                  </button>
+                ) : null
+              }
+            />
           </div>
         )}
 
         {/* 5 — panel administrativo colapsable */}
         {admin ? (
-          <div className="pt-3">
+          <div className="pt-2 md:pt-3">
             <AdminSummaryPanel title={adminTitle} hint={adminHint}>
               {admin}
             </AdminSummaryPanel>
           </div>
         ) : null}
+
 
         {/* 6 — contenido operativo */}
         <div className="pt-3">{children}</div>
