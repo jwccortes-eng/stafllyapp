@@ -89,6 +89,10 @@ const CRITICAL_TABLES: Record<string, string[]> = {
     // Fichaje del propio trabajador: creación y cierre de su entrada activa
     // (Clase A/C). No es edición administrativa de horas.
     "src/pages/portal/PortalClock.tsx",
+    // Sync offline-first del reloj: cierra la propia entrada con
+    // compare-and-set (`.is("clock_out", null)`) e idempotencia por
+    // `client_event_id` (Clase A/C). No edita horas administrativas.
+    "src/lib/timeclock/supabase-clock-sync-adapter.ts",
   ],
   compensation_profiles: [],
   employee_financial_records: [
