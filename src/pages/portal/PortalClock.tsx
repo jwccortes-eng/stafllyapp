@@ -592,10 +592,7 @@ export default function PortalClock() {
       toast({ title: labels.inSuccess });
       setTimeout(() => setSuccessState(null), 4000);
       setSelectedShift(null);
-      await loadData();
-    } catch (err: any) {
-      toast({ title: t("portal.clock.could_not_register"), description: err.message ?? t("portal.clock.try_again"), variant: "destructive" });
-    } finally { setActing(false); }
+    });
   };
 
   const handleClockOut = async (photoUrl: string | null) => {
