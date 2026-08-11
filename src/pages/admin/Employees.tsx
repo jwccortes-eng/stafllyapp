@@ -1457,23 +1457,7 @@ export default function Employees() {
 
   return (
     <div className="space-y-3 overflow-x-clip max-w-full">
-      {isMobile && (
-        <MobileWorkersCommandView
-          employees={employees}
-          invitations={invitations}
-          documentSignals={documentSignals}
-          selectedCompany={selectedCompany ? { id: selectedCompany.id, name: selectedCompany.name } : null}
-          isPrivileged={isPrivileged}
-          onOpenProfile={(e) => { setViewEmployee(e); setProfileActiveTab("info"); }}
-          onInvite={(e) => { setViewEmployee(e); setInviteOpen(true); }}
-          onCopyInviteLink={copyInviteLink}
-          onOpenCampaign={() => setCampaignOpen(true)}
-          onOpenOnboardingSettings={() => setOnboardingSettingsOpen(true)}
-          onRefetch={() => { fetchEmployees(); refetchInvitations(); }}
-        />
-      )}
-      {!isMobile && (<>
-      {/* ─── P0 Operational First Layout — cabecera compacta + tabs sticky ─── */}
+      {/* ─── P1 Stafly Responsive Design System — un solo árbol para desktop y móvil ─── */}
       <OperationalWorkspace
         title="Equipo"
         metrics={workspaceMetrics}
