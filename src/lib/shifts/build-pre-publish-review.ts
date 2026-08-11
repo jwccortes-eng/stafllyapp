@@ -8,6 +8,7 @@ import { computeShiftPendingFlags } from "./pending-flags";
 import { buildShiftDisplayName } from "./display-name";
 import type { ReadinessBlocker } from "./service-publish-readiness";
 import type { PrePublishReviewData } from "@/components/shifts/workspace/PrePublishDialog";
+import { resolveServiceLocationTruth } from "./service-location";
 
 export interface BuildPrePublishInput {
   manualTitle: string;
@@ -55,14 +56,19 @@ export function buildPrePublishReview(v: BuildPrePublishInput): PrePublishReview
     startTime: v.startTime,
   });
 
-  const hasManualAddress = !!(v.jobSiteAddress && v.jobSiteAddress.trim());
   const clientMissing = !v.clientId;
   const timeMissing = !v.startTime || !v.endTime;
-  // For the worker preview: only treat job site as missing when there is
-  // neither a structured location nor a manual address to show.
-  const jobsiteMissing = !v.locationId && !v.jobSiteLocationId && !hasManualAddress;
-  const meetingMissing =
-    v.transportRequired && !v.meetingPoint.trim() && !v.meetingPointLocationId;
+  // P0 Service Location SSOT — misma verdad que el editor y las listas.
+  const loc = resolveServiceLocationTruth({
+    location_id: v.locationId,
+    job_site_location_id: v.jobSiteLocationId,
+    job_site_address: v.jobSiteAddress,
+    meeting_point: v.meetingPoint,
+    meeting_point_location_id: v.meetingPointLocationId,
+    transportation_required: v.transportRequired,
+  });
+  const jobsiteMissing = loc.destinationStatus === "MISSING_DESTINATION";
+  const meetingMissing = loc.meetingPointMissing;
 
   return {
     shiftName,

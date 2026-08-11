@@ -3,3 +3,4 @@
 - [ELDM — memoria del ecosistema](mem://features/eldm-learning-memory) — Capa única `src/lib/eldm/`: 6 tipos de conocimiento, scopes tenant-safe, confianza explicable, getDecisionContext, outcome loop
 - [Unified Entity Design System](mem://design/unified-entity-design-system) — EntityCard único para Workers/Clientes/Venues/Partners, prefijos ST/CL/VN/PT, bordes de estado y jerarquía de badges
 - [Estado de persona en 4 dimensiones](mem://features/person-status-truth) — resolvePersonStatus: identidad, portal, cumplimiento y asignabilidad separadas; prohibido inferir una desde otra
+- [Ubicación de Servicio](mem://features/service-location-truth) — Resolver canónico `service-location.ts`, destino vs geo vs punto de encuentro, regla de transporte

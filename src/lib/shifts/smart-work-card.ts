@@ -28,7 +28,7 @@ import {
   getShiftLocationStatus,
   type ShiftLocationInput,
   type ShiftLocationStatus,
-} from "./location-status";
+} from "./service-location";
 
 // ── Audience ────────────────────────────────────────────────────────────
 

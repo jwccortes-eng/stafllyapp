@@ -607,11 +607,10 @@ export default function ShiftOperations() {
         const phaseInfo = getShiftPhase(shift);
         const phase = phaseInfo.phase;
 
-        const hasLocation = !!(shift.location_id || (shift as any).job_site_location_id || (shift as any).job_site_address);
-        const hasLocationAddress = !!locationAddress || !!(shift as any).job_site_address || !!(shift as any).manual_address;
-        const hasMeetingPoint = !!shift.meeting_point || !!(shift as any).meeting_point_location_id;
-        const status = getShiftOperationalStatus(shift as any, assignments as any, { hasLocation, hasMeetingPoint });
-        const missing = getShiftMissingItems(shift as any, assignments as any, { hasLocation, hasMeetingPoint, hasLocationAddress });
+        // P0 Service Location SSOT: sin booleanos inline. El resolver canónico
+        // vive dentro de shift-operations-intelligence.
+        const status = getShiftOperationalStatus(shift as any, assignments as any);
+        const missing = getShiftMissingItems(shift as any, assignments as any);
         const risks = getShiftRisks(shift as any, assignments as any);
         const actions = getRecommendedNextActions(shift as any, assignments as any, missing, risks);
         const { recommended, pool } = buildCandidatePool(employees as any, assignments as any, locationName || null);

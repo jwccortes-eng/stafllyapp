@@ -16,6 +16,10 @@ import {
   type LocationStatusResult,
   type TargetSite,
 } from "@/lib/location-status";
+import {
+  resolveServiceLocationTruth,
+  type ServiceLocationTruth,
+} from "@/lib/shifts/service-location";
 
 export interface ShiftLiveWorker {
   employee_id: string;
@@ -104,8 +108,8 @@ export function useShiftLiveMap({ shiftId, companyId, enabled = true }: Options)
         snapshot?.meeting_point_location_id ? fetchLocationById(snapshot.meeting_point_location_id) : Promise.resolve(null),
       ]);
       if (!alive) return;
-      // Misma fuente de verdad que el portal: si no hay locations_v2, el venue
-      // legado (o la dirección libre) sigue siendo la ubicación del Servicio.
+      // P0 Service Location SSOT — el orden de resolución vive en el resolver
+      // canónico; aquí solo hidratamos las coordenadas del sitio.
       const legacy = snapshot?.locations ?? null;
       const jobSiteResolved: LocationV2 | null =
         js ??
@@ -118,16 +122,7 @@ export function useShiftLiveMap({ shiftId, companyId, enabled = true }: Options)
               longitude: legacy.longitude,
               geofence_radius_meters: null,
             } as unknown as LocationV2)
-          : snapshot?.job_site_address
-            ? ({
-                id: `free-text:${snapshot.id}`,
-                name: null,
-                formatted_address: snapshot.job_site_address,
-                latitude: null,
-                longitude: null,
-                geofence_radius_meters: null,
-              } as unknown as LocationV2)
-            : null);
+          : null);
       setJobSite(jobSiteResolved);
       // Sin transporte no existe punto de encuentro operativo.
       setMeetingPoint(snapshot?.transportation_required ? mp : null);
@@ -147,6 +142,20 @@ export function useShiftLiveMap({ shiftId, companyId, enabled = true }: Options)
     subjectIds,
     enabled: enabled && subjectIds.length > 0,
   });
+
+  /** Verdad única de ubicación del Servicio (destino, geo y encuentro). */
+  const locationTruth: ServiceLocationTruth | null = useMemo(() => {
+    if (!shift) return null;
+    return resolveServiceLocationTruth({
+      location_id: shift.location_id,
+      job_site_location_id: shift.job_site_location_id,
+      job_site_address: shift.job_site_address,
+      meeting_point_location_id: shift.meeting_point_location_id,
+      transportation_required: shift.transportation_required,
+      jobSiteV2: jobSite ?? undefined,
+      meetingV2: meetingPoint ?? undefined,
+    });
+  }, [shift, jobSite, meetingPoint]);
 
   const target: TargetSite | null = useMemo(() => {
     const site = jobSite ?? meetingPoint;
@@ -178,6 +187,7 @@ export function useShiftLiveMap({ shiftId, companyId, enabled = true }: Options)
     workers,
     jobSite,
     meetingPoint,
+    locationTruth,
     target,
     stats,
     lastUpdateAt,

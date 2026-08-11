@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
-import { hasAnyOperationalLocation } from "@/lib/shifts/location-status";
+import { resolveShiftLocationTruth } from "@/lib/shifts/service-location";
 import { formatShiftCode, type Shift, type Assignment, type Employee } from "@/components/shifts/types";
 import { FAMILY_CLASSES } from "@/lib/status/status-registry";
 import { MT } from "@/lib/mobile/mobile-scale";
@@ -295,13 +295,15 @@ export function MobileShiftOperationsSheet({
       meeting_point?: string | null;
       meeting_point_location_id?: string | null;
     };
-    const noLocation = !hasAnyOperationalLocation({
-      location_id: s.location_id,
-      job_site_location_id: s.job_site_location_id,
-      job_site_address: s.job_site_address,
-      meeting_point: s.meeting_point,
-      meeting_point_location_id: s.meeting_point_location_id,
-    });
+    // Resolver canónico único (P0 Service Location SSOT).
+    const noLocation =
+      resolveShiftLocationTruth({
+        location_id: s.location_id,
+        job_site_location_id: s.job_site_location_id,
+        job_site_address: s.job_site_address,
+        meeting_point: s.meeting_point,
+        meeting_point_location_id: s.meeting_point_location_id,
+      }).destinationStatus === "MISSING_DESTINATION";
     const hours = calcHours(shift.start_time, shift.end_time);
 
     let dateBucket: "today" | "tomorrow" | "past" | "future" = "future";

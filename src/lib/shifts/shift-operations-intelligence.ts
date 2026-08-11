@@ -14,6 +14,7 @@
  */
 
 import { isEmployeeDriver } from "@/components/shifts/types";
+import { resolveShiftLocationTruth } from "./service-location";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -97,11 +98,33 @@ function confirmedAssignments(a: AssignmentLike[]): AssignmentLike[] {
   return a.filter(x => x.status === "confirmed" || x.status === "accepted");
 }
 
+/**
+ * P0 Service Location SSOT — la ubicación se deriva SIEMPRE del resolver
+ * canónico a partir de la fila del turno. Los `ctx` heredados se ignoran:
+ * ya no existen booleanos inline en las pantallas.
+ */
+function locationTruthOf(shift: ShiftLike) {
+  return resolveShiftLocationTruth({
+    location_id: shift.location_id,
+    job_site_location_id: shift.job_site_location_id,
+    job_site_address: shift.job_site_address ?? shift.manual_address,
+    meeting_point: shift.meeting_point,
+    meeting_point_location_id: shift.meeting_point_location_id,
+    transportation_required: shift.transportation_required,
+  });
+}
+
 export function getShiftOperationalStatus(
   shift: ShiftLike,
   assignments: AssignmentLike[],
-  ctx: { hasLocation: boolean; hasMeetingPoint: boolean },
+  _ctx?: { hasLocation?: boolean; hasMeetingPoint?: boolean },
 ): OperationalStatus {
+  const loc = locationTruthOf(shift);
+  const ctx = {
+    hasLocation: loc.destinationStatus === "RESOLVED",
+    // Solo cuenta como pendiente si el transporte lo exige.
+    meetingPending: loc.meetingPointMissing,
+  };
   const slots = shift.slots ?? 0;
   const active = activeAssignments(assignments).length;
   const confirmed = confirmedAssignments(assignments).length;
@@ -157,7 +180,7 @@ export function getShiftOperationalStatus(
         message: `Este turno está en borrador y necesita ${missingWorkers} ${missingWorkers === 1 ? "worker confirmado" : "workers confirmados"} antes de publicarse.`,
       };
     }
-    if (!ctx.hasMeetingPoint) {
+    if (ctx.meetingPending) {
       return {
         code: "draft_missing_info",
         label: "Borrador · falta info",
@@ -190,7 +213,7 @@ export function getShiftOperationalStatus(
       message: "Publicado pero falta 1 worker confirmado para cubrir el turno.",
     };
   }
-  if (!ctx.hasMeetingPoint) {
+  if (ctx.meetingPending) {
     return {
       code: "published_needs_info",
       label: "Publicado · falta info",
@@ -219,8 +242,9 @@ export interface MissingItem {
 export function getShiftMissingItems(
   shift: ShiftLike,
   assignments: AssignmentLike[],
-  ctx: { hasLocation: boolean; hasMeetingPoint: boolean; hasLocationAddress: boolean },
+  _ctx?: { hasLocation?: boolean; hasMeetingPoint?: boolean; hasLocationAddress?: boolean },
 ): MissingItem[] {
+  const loc = locationTruthOf(shift);
   const items: MissingItem[] = [];
   const slots = shift.slots ?? 0;
   const confirmed = confirmedAssignments(assignments).length;
@@ -233,20 +257,28 @@ export function getShiftMissingItems(
       severity: isDraft(shift) ? "warn" : "block",
     });
   }
-  if (!ctx.hasLocation && !ctx.hasLocationAddress) {
+  if (loc.destinationStatus === "MISSING_DESTINATION") {
     items.push({
       key: "job_site",
       label: "Falta dirección del trabajo (Job Site)",
       severity: "block",
       hint: "Sin dirección el worker no puede llegar.",
     });
+  } else if (loc.geospatialStatus === "ADDRESS_ONLY") {
+    items.push({
+      key: "job_site_coordinates",
+      label: "Dirección sin coordenadas",
+      severity: "info",
+      hint: loc.geospatialHint ?? undefined,
+    });
   }
-  if (!ctx.hasMeetingPoint) {
+  // Punto de encuentro: solo si transportation_required === true.
+  if (loc.meetingPointMissing) {
     items.push({
       key: "meeting_point",
       label: "Falta punto de encuentro",
       severity: "warn",
-      hint: "Si no hay punto de encuentro, el worker usará la dirección del Job Site.",
+      hint: "El servicio requiere transporte: el worker necesita dónde encontrarse.",
     });
   }
   if (!shift.special_instructions || shift.special_instructions.trim() === "") {
