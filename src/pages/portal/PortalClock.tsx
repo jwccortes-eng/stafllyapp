@@ -413,7 +413,32 @@ export default function PortalClock() {
     verify: verifyClockIntent,
     onConfirmed: async () => { await loadData(); },
   });
+  // ── P0 · Cola offline durable (IndexedDB) ──────────────────────────────
+  // Sobrevive refresh, cierre del navegador y cambios de red. Al sincronizar
+  // recarga la verdad canónica desde el servidor.
+  const offlineQueue = useOfflineClockQueue(employeeId ?? null, async () => {
+    await loadData();
+  });
+
+  // Estado canónico único: servidor primero, evento local pendiente después.
+  const clockResolution = resolveClockStatus({
+    shiftId: null,
+    entries: [
+      ...(activeEntry ? [activeEntry] : []),
+      ...todayEntries,
+    ].map((e) => ({
+      id: e.id,
+      shift_id: e.shift_id,
+      clock_in: e.clock_in,
+      clock_out: e.clock_out,
+      requires_time_review: (e as unknown as { requires_time_review?: boolean }).requires_time_review ?? false,
+    })),
+    pending: offlineQueue.pending,
+  });
+  const pendingClockEvent = clockResolution.pending;
+
   const acting = clockRequest.locked;
+
 
 
   const proceedWithClockIn = () => {
