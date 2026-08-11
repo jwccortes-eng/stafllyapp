@@ -13,6 +13,7 @@
  *  - Spanish-first.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { deriveAttendanceTruth } from "@/lib/shifts/attendance-truth";
 import { differenceInMinutes, format, parseISO } from "date-fns";
 import {
   AlertTriangle,
