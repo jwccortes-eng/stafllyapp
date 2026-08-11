@@ -34,7 +34,7 @@ export default function ShiftLiveMapPanel({
   onSetJobSite,
 }: Props) {
   const { effectiveEmployeeId } = useEffectiveEmployee();
-  const { workers, target, jobSite, meetingPoint, lastUpdateAt, loading, stats } = useShiftLiveMap({
+  const { workers, target, jobSite, meetingPoint, locationTruth, lastUpdateAt, loading, stats } = useShiftLiveMap({
     shiftId,
     companyId,
   });
@@ -113,7 +113,10 @@ export default function ShiftLiveMapPanel({
         )}
         {!targetSite && (
           <Badge variant="outline" className="text-[10px] gap-1">
-            <MapPin className="h-2.5 w-2.5" /> No job site set
+            <MapPin className="h-2.5 w-2.5" />
+            {locationTruth?.destinationStatus === "RESOLVED"
+              ? "Dirección sin coordenadas"
+              : "Sin ubicación"}
           </Badge>
         )}
       </div>
@@ -127,21 +130,31 @@ export default function ShiftLiveMapPanel({
             <MapPinOff className="h-5 w-5 text-muted-foreground" />
           </div>
           <div className="space-y-1 max-w-sm">
-            <div className="text-sm font-semibold">No structured job site yet</div>
+            <div className="text-sm font-semibold">
+              {locationTruth?.destinationStatus === "RESOLVED"
+                ? "Dirección sin coordenadas"
+                : "Aún sin ubicación del servicio"}
+            </div>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              The live map needs a job site (or meeting point) with coordinates so workers can be
-              tracked relative to the venue. Set one to unlock real-time presence, geofencing and
-              arrival events.
+              {locationTruth?.destinationStatus === "RESOLVED" ? (
+                <>
+                  El servicio tiene destino
+                  {locationTruth.displayLine ? ` (${locationTruth.displayLine})` : ""}, pero sin
+                  coordenadas. {locationTruth.geospatialHint ?? "Convierte la dirección en un Job Site para activar mapa y geocerca."}
+                </>
+              ) : (
+                "El mapa en vivo necesita un Job Site o punto de encuentro con coordenadas para seguir a los workers respecto al sitio."
+              )}
             </p>
           </div>
           {canEdit && onSetJobSite ? (
             <Button size="sm" className="h-8 text-[11px] gap-1.5 mt-1" onClick={onSetJobSite}>
-              <MapPin className="h-3.5 w-3.5" /> Set job site
+              <MapPin className="h-3.5 w-3.5" /> Configurar Job Site
               <ArrowRight className="h-3 w-3" />
             </Button>
           ) : (
             <p className="text-[10px] text-muted-foreground italic">
-              Ask an admin to add a structured location.
+              Pide a un administrador que registre una ubicación estructurada.
             </p>
           )}
         </div>

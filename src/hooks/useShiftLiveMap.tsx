@@ -152,29 +152,9 @@ export function useShiftLiveMap({ shiftId, companyId, enabled = true }: Options)
       job_site_address: shift.job_site_address,
       meeting_point_location_id: shift.meeting_point_location_id,
       transportation_required: shift.transportation_required,
-      jobSite: jobSite
-        ? {
-            id: jobSite.id,
-            name: jobSite.name,
-            address: (jobSite as unknown as { formatted_address?: string | null }).formatted_address ?? null,
-            latitude: jobSite.latitude,
-            longitude: jobSite.longitude,
-            geofenceRadiusMeters: jobSite.geofence_radius_meters ?? null,
-            source: "job_site_v2",
-          }
-        : null,
-      meetingPoint: meetingPoint
-        ? {
-            id: meetingPoint.id,
-            name: meetingPoint.name,
-            address: (meetingPoint as unknown as { formatted_address?: string | null }).formatted_address ?? null,
-            latitude: meetingPoint.latitude,
-            longitude: meetingPoint.longitude,
-            geofenceRadiusMeters: meetingPoint.geofence_radius_meters ?? null,
-            source: "meeting_point",
-          }
-        : null,
-    } as Parameters<typeof resolveServiceLocationTruth>[0]);
+      jobSiteV2: jobSite ?? undefined,
+      meetingV2: meetingPoint ?? undefined,
+    });
   }, [shift, jobSite, meetingPoint]);
 
   const target: TargetSite | null = useMemo(() => {
