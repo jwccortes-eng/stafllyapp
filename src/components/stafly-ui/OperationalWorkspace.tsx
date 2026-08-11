@@ -75,11 +75,14 @@ const TONE_TEXT: Record<NonNullable<WorkspaceMetric["tone"]>, string> = {
 export function WorkspaceMetricChips({
   metrics,
   className,
+  leading,
 }: {
   metrics: WorkspaceMetric[];
   className?: string;
+  /** Control que viaja en la misma fila (p. ej. botón de filtros en móvil). */
+  leading?: ReactNode;
 }) {
-  if (!metrics.length) return null;
+  if (!metrics.length && !leading) return null;
   return (
     <div
       className={cn(
@@ -90,6 +93,7 @@ export function WorkspaceMetricChips({
         className,
       )}
     >
+      {leading}
       {metrics.map((m, i) => {
         const interactive = !!m.onClick;
         const Tag = (interactive ? "button" : "div") as "button";
