@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { OperationalWorkspace, type WorkspaceMetric } from "@/components/stafly-ui/OperationalWorkspace";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { ClientAvatar } from "@/components/ui/client-avatar";
