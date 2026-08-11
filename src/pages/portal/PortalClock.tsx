@@ -577,22 +577,71 @@ export default function PortalClock() {
         } as any);
         if (error) throw error;
       } else {
+        // ── P0 · Offline-first ──────────────────────────────────────────
+        // Sin conectividad no se bloquea al worker: el evento se guarda
+        // durable en el dispositivo y se sincroniza después. Nunca se crea
+        // un time_entry ficticio y payroll sigue leyendo sólo lo canónico.
+        const queueOffline = async () => {
+          await offlineQueue.enqueue({
+            client_event_id: clientEventId,
+            type: "CLOCK_IN",
+            employee_id: employeeId,
+            company_id: companyId,
+            shift_id: shiftForEvent.id,
+            assignment_id: null,
+            time_entry_id: null,
+            closes_client_event_id: null,
+            event_time_device: eventTimeDevice,
+            timezone: deviceTimezone(),
+            device_id: device,
+            gps: pos,
+            within_geofence: withinGeofence,
+            photo_url: photoUrl,
+            offline: true,
+          });
+        };
+
+        if (typeof navigator !== "undefined" && navigator.onLine === false) {
+          await queueOffline();
+          setSelectedShift(null);
+          return;
+        }
+
         // Fase A safe-write: persist GPS evidence onto the new time_entry.
         // Payroll math is unchanged — these columns are informational only.
-        const { data: insertedEntry, error } = await supabase.from("time_entries").insert({
-          employee_id: employeeId, company_id: companyId, clock_in: new Date().toISOString(), status: "pending", shift_id: selectedShift.id,
-          clock_in_lat: pos?.latitude ?? null,
-          clock_in_lng: pos?.longitude ?? null,
-          clock_in_within_geofence: withinGeofence,
-        } as any).select("id").single();
-        if (error) throw error;
-        if (insertedEntry) {
+        let insertedEntryId: string | null = null;
+        try {
+          const { data: insertedEntry, error } = await supabase.from("time_entries").insert({
+            employee_id: employeeId, company_id: companyId, clock_in: eventTimeDevice, status: "pending", shift_id: shiftForEvent.id,
+            clock_in_lat: pos?.latitude ?? null,
+            clock_in_lng: pos?.longitude ?? null,
+            clock_in_within_geofence: withinGeofence,
+            // Idempotencia: un reintento con la misma clave nunca duplica.
+            client_event_id: clientEventId,
+            captured_offline: false,
+            event_time_device: eventTimeDevice,
+            synced_at: new Date().toISOString(),
+            sync_delay_seconds: 0,
+          } as any).select("id").single();
+          if (error) throw error;
+          insertedEntryId = insertedEntry?.id ?? null;
+        } catch (err) {
+          // Entrega incierta (timeout, red caída, 5xx): el fichaje NO se pierde.
+          if (isAmbiguousFailure(err)) {
+            await queueOffline();
+            setSelectedShift(null);
+            return;
+          }
+          throw err;
+        }
+        if (insertedEntryId) {
           await supabase.from("clock_events").insert({
-            employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, time_entry_id: insertedEntry.id,
+            employee_id: employeeId, company_id: companyId, shift_id: shiftForEvent.id, time_entry_id: insertedEntryId,
             type: "clock_in", latitude: pos?.latitude ?? null, longitude: pos?.longitude ?? null, accuracy: pos?.accuracy ?? null, device, photo_url: photoUrl,
           } as any);
         }
       }
+
 
       setSuccessState({ type: "in", time: format(new Date(), "HH:mm"), shift: selectedShift.title });
       toast({ title: labels.inSuccess });
