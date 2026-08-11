@@ -372,6 +372,39 @@ export default function PortalClock() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // ── P0-A · Clock delivery integrity ───────────────────────────────────
+  // Verificación canónica contra el servidor. Nunca se asume éxito ni se crean
+  // time_entries locales: se relee la tabla real.
+  const verifyClockIntent = useCallback(async (): Promise<boolean> => {
+    const intent = clockIntentRef.current;
+    if (!intent || !employeeId) return false;
+    if (intent.type === "in") {
+      const { data, error } = await supabase
+        .from("time_entries")
+        .select("id")
+        .eq("employee_id", employeeId)
+        .eq("shift_id", intent.shiftId)
+        .gte("clock_in", startOfDay(new Date()).toISOString())
+        .limit(1);
+      if (error) throw error;
+      return (data?.length ?? 0) > 0;
+    }
+    const { data, error } = await supabase
+      .from("time_entries")
+      .select("id, clock_out")
+      .eq("id", intent.entryId)
+      .maybeSingle();
+    if (error) throw error;
+    return !!data?.clock_out;
+  }, [employeeId]);
+
+  const clockRequest = useClockRequest({
+    verify: verifyClockIntent,
+    onConfirmed: async () => { await loadData(); },
+  });
+  const acting = clockRequest.locked;
+
+
   const proceedWithClockIn = () => {
     if (clockPhotoRequired) { setPendingClockAction("in"); setPhotoDialogOpen(true); }
     else handleClockIn(null);
