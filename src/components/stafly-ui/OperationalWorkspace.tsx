@@ -331,6 +331,7 @@ export function OperationalWorkspace({
   const hasSticky = true;
 
   const metricChips = useMemo(() => metrics ?? [], [metrics]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   return (
     <WorkspaceModeContext.Provider value={mode}>
