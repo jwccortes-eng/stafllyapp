@@ -74,13 +74,13 @@ describe("estado canónico del reloj", () => {
 
 describe("integridad temporal", () => {
   it("no corrige en silencio: marca revisión si el drift es grande", () => {
-    const d = evaluateDrift("2026-01-10T08:00:00.000Z", "2026-01-10T09:00:00.000Z");
+    const d = evaluateDrift("2026-01-10T08:00:00.000Z", new Date("2026-01-10T09:00:00.000Z"));
     expect(d.requiresReview).toBe(true);
-    expect(d.delaySeconds).toBe(3600);
+    expect(d.syncDelaySeconds).toBe(3600);
   });
 
   it("un desfase pequeño no ensucia la operación", () => {
-    const d = evaluateDrift("2026-01-10T08:00:00.000Z", "2026-01-10T08:01:00.000Z");
+    const d = evaluateDrift("2026-01-10T08:00:00.000Z", new Date("2026-01-10T08:01:00.000Z"));
     expect(d.requiresReview).toBe(false);
   });
 });
