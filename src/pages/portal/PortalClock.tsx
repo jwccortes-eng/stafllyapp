@@ -134,7 +134,10 @@ export default function PortalClock() {
   const cached = getPageCache<ClockSnapshot>(PAGE_KEY, employeeId);
 
   const [loading, setLoading] = useState(!cached);
-  const [acting, setActing] = useState(false);
+  /** P0-A: intención en curso, para poder verificar el estado real del servidor. */
+  const clockIntentRef = useRef<
+    { type: "in"; shiftId: string } | { type: "out"; entryId: string } | null
+  >(null);
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(cached?.activeEntry ?? null);
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>(cached?.todayEntries ?? []);
   const [companyId, setCompanyId] = useState<string | null>(cached?.companyId ?? null);
