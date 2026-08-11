@@ -80,7 +80,15 @@ export function WorkspaceMetricChips({
 }) {
   if (!metrics.length) return null;
   return (
-    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+    <div
+      className={cn(
+        // Móvil: una sola fila deslizable (misma información, sin apilar).
+        // Desktop: envuelve con normalidad.
+        "flex items-center gap-1.5 flex-nowrap overflow-x-auto no-scrollbar -mx-4 px-4",
+        "md:flex-wrap md:overflow-visible md:mx-0 md:px-0",
+        className,
+      )}
+    >
       {metrics.map((m, i) => {
         const interactive = !!m.onClick;
         const Tag = (interactive ? "button" : "div") as "button";
@@ -91,7 +99,7 @@ export function WorkspaceMetricChips({
             onClick={m.onClick}
             title={m.hint}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/30 px-2.5 h-7",
+              "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/50 bg-muted/30 px-2.5 h-8 md:h-7",
               "text-[11px] leading-none transition-colors",
               interactive && "hover:border-primary/40 hover:bg-muted/60 cursor-pointer",
               m.active && "border-primary/50 bg-primary/[0.07]",
