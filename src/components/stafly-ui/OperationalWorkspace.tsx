@@ -17,7 +17,8 @@
  * de negocio: recibe todo por slots.
  */
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { ChevronDown, Search, X } from "lucide-react";
+import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useCompany } from "@/hooks/useCompany";
 import { CompanyLogo } from "@/components/ui/company-logo";
@@ -80,7 +81,15 @@ export function WorkspaceMetricChips({
 }) {
   if (!metrics.length) return null;
   return (
-    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+    <div
+      className={cn(
+        // Móvil: una sola fila deslizable (misma información, sin apilar).
+        // Desktop: envuelve con normalidad.
+        "flex items-center gap-1.5 flex-nowrap overflow-x-auto no-scrollbar -mx-4 px-4",
+        "md:flex-wrap md:overflow-visible md:mx-0 md:px-0",
+        className,
+      )}
+    >
       {metrics.map((m, i) => {
         const interactive = !!m.onClick;
         const Tag = (interactive ? "button" : "div") as "button";
@@ -91,7 +100,7 @@ export function WorkspaceMetricChips({
             onClick={m.onClick}
             title={m.hint}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/30 px-2.5 h-7",
+              "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/50 bg-muted/30 px-2.5 h-8 md:h-7",
               "text-[11px] leading-none transition-colors",
               interactive && "hover:border-primary/40 hover:bg-muted/60 cursor-pointer",
               m.active && "border-primary/50 bg-primary/[0.07]",
@@ -282,8 +291,12 @@ export interface OperationalWorkspaceProps {
   action?: ReactNode;
   /** Pestañas — permanecen visibles durante el scroll. */
   tabs?: ReactNode;
-  /** Filtros — permanecen visibles durante el scroll. */
+  /** Filtros — inline en desktop, hoja inferior en móvil (mismas opciones). */
   filters?: ReactNode;
+  /** Nº de filtros activos: se muestra sobre el botón "Filtros" en móvil. */
+  filtersActiveCount?: number;
+  /** Acciones secundarias en móvil (van dentro de "Más" del propio slot action). */
+  mobileFiltersTitle?: string;
   /** Resumen compacto de métricas (chips). */
   metrics?: WorkspaceMetric[];
   /** Contenido administrativo (calidad, duplicados, diagnóstico). Colapsado. */
@@ -303,6 +316,8 @@ export function OperationalWorkspace({
   action,
   tabs,
   filters,
+  filtersActiveCount = 0,
+  mobileFiltersTitle = "Filtros",
   metrics,
   admin,
   adminTitle,
@@ -316,6 +331,7 @@ export function OperationalWorkspace({
   const hasSticky = true;
 
   const metricChips = useMemo(() => metrics ?? [], [metrics]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   return (
     <WorkspaceModeContext.Provider value={mode}>
@@ -358,7 +374,28 @@ export function OperationalWorkspace({
             {search ? <div className="md:hidden pb-2">{search}</div> : null}
 
             {tabs ? <div className="overflow-x-auto">{tabs}</div> : null}
-            {filters ? <div className="py-2">{filters}</div> : null}
+            {filters ? (
+              <>
+                {/* Desktop: filtros inline. */}
+                <div className="hidden md:block py-2">{filters}</div>
+                {/* Móvil: mismas opciones, dentro de una hoja inferior. */}
+                <div className="md:hidden py-2">
+                  <button
+                    type="button"
+                    onClick={() => setFiltersOpen(true)}
+                    className="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-border/60 bg-card text-[13px] font-medium"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                    {mobileFiltersTitle}
+                    {filtersActiveCount > 0 ? (
+                      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-[11px] font-bold tabular-nums text-primary">
+                        {filtersActiveCount}
+                      </span>
+                    ) : null}
+                  </button>
+                </div>
+              </>
+            ) : null}
           </div>
         )}
 
@@ -380,6 +417,21 @@ export function OperationalWorkspace({
 
         {/* 6 — contenido operativo */}
         <div className="pt-3">{children}</div>
+
+        {/* Filtros en móvil — mismas opciones que en desktop, sin duplicar fuente */}
+        {filters ? (
+          <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <SheetContent
+              side="bottom"
+              className="md:hidden max-h-[85vh] overflow-y-auto rounded-t-3xl pb-[max(env(safe-area-inset-bottom,16px),16px)]"
+            >
+              <SheetHeader className="text-left">
+                <SheetTitle className="text-base">{mobileFiltersTitle}</SheetTitle>
+              </SheetHeader>
+              <div className="mt-3">{filters}</div>
+            </SheetContent>
+          </Sheet>
+        ) : null}
       </div>
     </WorkspaceModeContext.Provider>
   );

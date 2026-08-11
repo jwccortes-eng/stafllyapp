@@ -96,8 +96,6 @@ import DataQualityRiskPanel, { WorkerRiskTags } from "@/components/employee/Data
 import { analyzeEmployeeRisks, type RiskKey } from "@/lib/data-quality-risks";
 import { buildBulkRemindersText } from "@/lib/data-quality-actions";
 import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
-import MobileDataQualitySummary from "@/components/employee/MobileDataQualitySummary";
-import MobileWorkersCommandView from "@/components/employee/MobileWorkersCommandView";
 import { WorkerPhotoStatusChip } from "@/components/employee/WorkerPhotoStatusChip";
 import { PhotoReviewCriteriaCard } from "@/components/employee/PhotoReviewCriteriaCard";
 
@@ -320,7 +318,8 @@ export default function Employees() {
   const isMobile = useIsMobile();
   // On mobile we always render the premium card view to avoid horizontal overflow
   // and to hide noisy admin metadata (employer_identification etc.) from the list.
-  const effectiveViewMode: ViewMode = isMobile ? "cards" : viewMode;
+  // P1 responsive: móvil usa SIEMPRE el roster canónico (EntityCard), no una vista aparte.
+  const effectiveViewMode: ViewMode = isMobile ? "roster" : viewMode;
   const [updateDiffs, setUpdateDiffs] = useState<UpdateDiff[]>([]);
   const [updateStep, setUpdateStep] = useState<"upload" | "preview" | "done">("upload");
   const [updateResult, setUpdateResult] = useState<{ updated: number; skipped: number; created?: number } | null>(null);
@@ -1168,8 +1167,8 @@ export default function Employees() {
     { label: "Total", value: statusCounts.all, onClick: () => setStatusTab("all"), active: statusTab === "all" },
     { label: "Activos con portal", value: statusCounts.active, hint: "Workers activos con cuenta de portal vinculada.", accent: "success", onClick: () => setStatusTab("active"), active: statusTab === "active" },
     { label: "Pendientes de activar app", value: statusCounts.pending, hint: "Invitación enviada, portal aún sin acceder.", accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
-    { label: "Workers con docs pendientes", value: statusCounts["missing-docs"], hint: "Cuenta workers con onboarding/documentos pendientes, no requisitos totales.", accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
-    { label: "Drivers", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
+    { label: "Con documentos pendientes", value: statusCounts["missing-docs"], hint: "Cuenta workers con onboarding/documentos pendientes, no requisitos totales.", accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
+    { label: "Conductores", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
   ];
 
   // ── Strong duplicate signal count (lightweight, mirrors WorkerDuplicates filters) ──
@@ -1257,29 +1256,29 @@ export default function Employees() {
   const statusTabsNode = (
     <div className="flex items-center gap-0.5 overflow-x-auto">
       {([
-        { key: "active" as const, label: "Active", count: statusCounts.active },
-        { key: "pending" as const, label: "Pending App Activation", count: statusCounts.pending },
-        { key: "invited" as const, label: "Invited", count: statusCounts.invited },
+        { key: "active" as const, label: "Activos", count: statusCounts.active },
+        { key: "pending" as const, label: "Pendientes", count: statusCounts.pending },
+        { key: "invited" as const, label: "Invitados", count: statusCounts.invited },
         ...(statusCounts.failed > 0
-          ? [{ key: "failed" as const, label: "Invite Failed", count: statusCounts.failed, tone: "destructive" as const }]
+          ? [{ key: "failed" as const, label: "Invitación fallida", count: statusCounts.failed, tone: "destructive" as const }]
           : []),
         {
           key: "missing-docs" as const,
-          label: "Missing Documents",
+          label: "Documentos",
           count: statusCounts["missing-docs"],
           tone: statusCounts["missing-docs"] > 0 ? ("warning" as const) : undefined,
         },
         {
           key: "no-photo" as const,
-          label: "Photo Required",
+          label: "Foto requerida",
           count: statusCounts["no-photo"],
           tone: statusCounts["no-photo"] > 0 ? ("warning" as const) : undefined,
         },
-        { key: "new" as const, label: "New", count: statusCounts.new },
-        { key: "drivers" as const, label: "Drivers", count: statusCounts.drivers },
-        { key: "no-activity" as const, label: "No Recent Activity", count: statusCounts["no-activity"] },
-        { key: "inactive" as const, label: "Historical / Inactive", count: statusCounts.inactive },
-        { key: "all" as const, label: "All", count: statusCounts.all },
+        { key: "new" as const, label: "Nuevos", count: statusCounts.new },
+        { key: "drivers" as const, label: "Conductores", count: statusCounts.drivers },
+        { key: "no-activity" as const, label: "Sin actividad", count: statusCounts["no-activity"] },
+        { key: "inactive" as const, label: "Históricos", count: statusCounts.inactive },
+        { key: "all" as const, label: "Todos", count: statusCounts.all },
       ]).map(tab => {
         const isActive = statusTab === tab.key;
         const tone = (tab as any).tone as "destructive" | "warning" | undefined;
@@ -1329,19 +1328,19 @@ export default function Employees() {
     <PremiumFilterBar
       search={search}
       onSearchChange={setSearch}
-      searchPlaceholder="Search by name, phone, email, or Stafly ID…"
+      searchPlaceholder="Buscar por nombre, teléfono, email o ID Stafly…"
       quickFilters={
         <>
           {uniqueRoles.length > 0 && (
             <Select value={filterRole} onValueChange={setFilterRole}>
-              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All roles</SelectItem>{uniqueRoles.map(r => (<SelectItem key={r} value={r}>{formatDisplayText(r, "label")}</SelectItem>))}</SelectContent>
+              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Rol" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">Todos los roles</SelectItem>{uniqueRoles.map(r => (<SelectItem key={r} value={r}>{formatDisplayText(r, "label")}</SelectItem>))}</SelectContent>
             </Select>
           )}
           {uniqueGroups.length > 0 && (
             <Select value={filterGroup} onValueChange={setFilterGroup}>
-              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Group" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All groups</SelectItem>{uniqueGroups.map(g => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
+              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Grupo" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">Todos los grupos</SelectItem>{uniqueGroups.map(g => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
             </Select>
           )}
           <Select
@@ -1376,7 +1375,7 @@ export default function Employees() {
       onReset={clearFilters}
       rightSlot={
         <>
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setColPrefsOpen(true)} title="Column preferences">
+          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setColPrefsOpen(true)} title="Columnas visibles">
             <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
           </Button>
           <ViewSwitcher value={viewMode} onChange={setViewMode} modes={["roster", "table", "compact"]} />
@@ -1457,35 +1456,32 @@ export default function Employees() {
 
   return (
     <div className="space-y-3 overflow-x-clip max-w-full">
-      {isMobile && (
-        <MobileWorkersCommandView
-          employees={employees}
-          invitations={invitations}
-          documentSignals={documentSignals}
-          selectedCompany={selectedCompany ? { id: selectedCompany.id, name: selectedCompany.name } : null}
-          isPrivileged={isPrivileged}
-          onOpenProfile={(e) => { setViewEmployee(e); setProfileActiveTab("info"); }}
-          onInvite={(e) => { setViewEmployee(e); setInviteOpen(true); }}
-          onCopyInviteLink={copyInviteLink}
-          onOpenCampaign={() => setCampaignOpen(true)}
-          onOpenOnboardingSettings={() => setOnboardingSettingsOpen(true)}
-          onRefetch={() => { fetchEmployees(); refetchInvitations(); }}
-        />
-      )}
-      {!isMobile && (<>
-      {/* ─── P0 Operational First Layout — cabecera compacta + tabs sticky ─── */}
+      {/* ─── P1 Stafly Responsive Design System — un solo árbol para desktop y móvil ─── */}
       <OperationalWorkspace
         title="Equipo"
         metrics={workspaceMetrics}
         tabs={statusTabsNode}
+        search={
+          /* Móvil: el buscador sube a la cabecera; en desktop vive en la barra de filtros. */
+          <div className="md:hidden relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre, teléfono o ID Stafly…"
+              className="h-10 pl-9 text-[14px] rounded-xl"
+            />
+          </div>
+        }
         filters={filtersNode}
+        filtersActiveCount={activeChips.length}
         admin={adminPanelNode}
         adminHint="Calidad de datos, duplicados y riesgos"
         action={
 
           <>
-            {/* Mobile keeps only Quick add to avoid header overflow */}
-            <div className="hidden md:contents">
+            {/* Móvil y tablet: sólo la acción protagonista; el resto vive en el menú. */}
+            <div className="hidden lg:contents">
             {isPrivileged && (
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCampaignOpen(true)}>
                 <Rocket className="h-3.5 w-3.5 mr-1.5" />
@@ -1582,7 +1578,7 @@ export default function Employees() {
             </Dialog>
             {/* Import Dialog */}
             <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) resetImport(); }}>
-              <DialogTrigger asChild><Button variant="outline" size="sm" className="h-8 text-xs"><Upload className="h-3.5 w-3.5 mr-1.5" />Import</Button></DialogTrigger>
+              <DialogTrigger asChild><Button variant="outline" size="sm" className="h-8 text-xs"><Upload className="h-3.5 w-3.5 mr-1.5" />Importar</Button></DialogTrigger>
               <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader><DialogTitle>Import Workers</DialogTitle><DialogDescription>Only creates new records, does not update existing ones</DialogDescription></DialogHeader>
                 {importStep === "upload" && (
@@ -1603,18 +1599,18 @@ export default function Employees() {
               </DialogContent>
             </Dialog>
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(emptyForm()); }}>
-              <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />New (full form)</Button></DialogTrigger>
+              <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />Ficha completa</Button></DialogTrigger>
               <DialogContent className="max-w-md"><DialogHeader><DialogTitle>New Worker</DialogTitle><DialogDescription>Enter the new worker's information</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Limit of ${limits.maxEmployees} active workers`} /> : <EmployeeForm fields={CONNECTEAM_FIELDS} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Create" />}</DialogContent>
             </Dialog>
             </div>
             <Button size="sm" variant="default" className="h-8 text-xs" disabled={atEmployeeLimit} onClick={() => setQuickAddOpen(true)}>
-              <UserPlus className="h-3.5 w-3.5 mr-1.5" />Quick add
+              <UserPlus className="h-3.5 w-3.5 mr-1.5" />Nuevo trabajador
             </Button>
             <QuickAddInviteWizard open={quickAddOpen} onOpenChange={setQuickAddOpen} onEmployeeCreated={() => fetchEmployees()} />
             {/* Mobile-only: collapsed actions menu so users can still reach key actions */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 md:hidden" aria-label="More actions">
+                <Button variant="outline" size="icon" className="h-8 w-8 lg:hidden" aria-label="Más acciones">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -1626,7 +1622,7 @@ export default function Employees() {
                 )}
                 {isPrivileged && (
                   <DropdownMenuItem onClick={() => navigate("/app/workers/duplicates")} className="gap-2 text-sm">
-                    <UserSearch className="h-4 w-4" /> Detect duplicates
+                    <UserSearch className="h-4 w-4" /> Ver duplicados
                     {strongDuplicateCount > 0 && (
                       <Badge variant="outline" className="ml-auto h-5 px-1.5 bg-warning/10 text-warning border-warning/30 text-[10px]">
                         {strongDuplicateCount}
@@ -1635,33 +1631,33 @@ export default function Employees() {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={handleExport} disabled={filtered.length === 0} className="gap-2 text-sm">
-                  <Download className="h-4 w-4" /> Export
+                  <Download className="h-4 w-4" /> Exportar
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setOnboardingSettingsOpen(true)} className="gap-2 text-sm">
-                  <Settings2 className="h-4 w-4" /> Onboarding settings
+                  <Settings2 className="h-4 w-4" /> Ajustes de incorporación
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal">
-                  Desktop recommended
+                  Recomendado en escritorio
                 </DropdownMenuLabel>
                 <DropdownMenuItem
                   disabled
                   className="gap-2 text-sm opacity-70"
                 >
-                  <ArrowUpDown className="h-4 w-4" /> Update via file
-                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Desktop</Badge>
+                  <ArrowUpDown className="h-4 w-4" /> Actualizar por archivo
+                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Escritorio</Badge>
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled className="gap-2 text-sm opacity-70">
-                  <Upload className="h-4 w-4" /> Import workers
-                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Desktop</Badge>
+                  <Upload className="h-4 w-4" /> Importar trabajadores
+                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Escritorio</Badge>
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled className="gap-2 text-sm opacity-70">
-                  <Hash className="h-4 w-4" /> Bulk rates
-                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Desktop</Badge>
+                  <Hash className="h-4 w-4" /> Tarifas masivas
+                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Escritorio</Badge>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="icon" className="hidden md:inline-flex h-8 w-8" onClick={() => setOnboardingSettingsOpen(true)} title="Onboarding settings">
+            <Button variant="ghost" size="icon" className="hidden lg:inline-flex h-8 w-8" onClick={() => setOnboardingSettingsOpen(true)} title="Ajustes de incorporación">
               <Settings2 className="h-4 w-4" />
             </Button>
           </>
@@ -1891,28 +1887,28 @@ export default function Employees() {
             icon={CheckCircle2}
             title="No failed invitations 🎉"
             description="The activation backlog is clean. New failures will appear here automatically when an invitation bounces or hits DLQ."
-            actionLabel="View pending activation"
+            actionLabel="Ver pendientes de activar"
             onAction={() => setStatusTab("pending")}
           />
         ) : statusTab === "pending" && employees.length > 0 && !search ? (
           <EmptyState
             icon={CheckCircle2}
-            title="Nothing pending"
-            description="Every active worker has either accessed the portal or has an invitation in flight. Use 'Quick add' to onboard someone new."
-            actionLabel="Quick add"
+            title="Nada pendiente"
+            description="Todos los trabajadores activos ya entraron al portal o tienen invitación enviada. Usa Nuevo trabajador para dar de alta a alguien."
+            actionLabel="Nuevo trabajador"
             onAction={() => setQuickAddOpen(true)}
           />
         ) : statusTab === "inactive" && employees.length > 0 && !search ? (
           <EmptyState
             icon={UserCheck}
-            title="No archived workers"
-            description="Workers you archive will appear here. Archived workers can be reactivated at any time."
+            title="Sin trabajadores archivados"
+            description="Los trabajadores que archives aparecerán aquí. Puedes reactivarlos cuando quieras."
           />
         ) : statusTab === "missing-docs" && employees.length > 0 && !search ? (
           <EmptyState
             icon={CheckCircle2}
-            title="All workers have their documents 🎉"
-            description="Onboarding requirements are complete across the active roster."
+            title="Todos los trabajadores tienen sus documentos"
+            description="La incorporación está completa en toda la plantilla activa."
           />
         ) : (
           <EmptyState
@@ -1929,9 +1925,9 @@ export default function Employees() {
                 ? `Hay ${hiddenBySearch} trabajador${hiddenBySearch === 1 ? "" : "es"} que coincide${hiddenBySearch === 1 ? "" : "n"} con "${search}" fuera de esta vista.`
                 : search
                   ? "Prueba cambiar filtros o revisar Todos."
-                  : "Usa 'Quick add' para crear tu primer trabajador y opcionalmente enviarle una invitación."
+                  : "Usa Nuevo trabajador para crear tu primer trabajador y opcionalmente enviarle una invitación."
             }
-            actionLabel={hiddenBySearch > 0 ? "Ver en Todos" : (!search ? "Quick add" : undefined)}
+            actionLabel={hiddenBySearch > 0 ? "Ver en Todos" : (!search ? "Nuevo trabajador" : undefined)}
             onAction={
               hiddenBySearch > 0
                 ? () => setStatusTab("all")
@@ -1987,6 +1983,8 @@ export default function Employees() {
                   status={view.status}
                   statusLabel={view.statusLabel}
                   badges={[...riskBadges, ...view.badges]}
+                  /* Móvil: densidad media — 2 señales visibles, el resto en "+N". */
+                  maxBadges={isMobile ? 2 : 3}
                   onClick={() => navigate(`/app/employees/${e.id}`)}
                   actions={
                     <>
@@ -2422,7 +2420,7 @@ export default function Employees() {
         </div>
       )}
       </OperationalWorkspace>
-      </>)}
+
 
 
       {/* ─── Detail Sheet — Premium ─── */}

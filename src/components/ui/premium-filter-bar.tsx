@@ -122,7 +122,7 @@ export function PremiumFilterBar({
         <div className="ml-auto flex items-center gap-2">
           {typeof resultCount === "number" && (
             <span className="text-[10px] text-muted-foreground tabular-nums">
-              {resultCount} {resultCount === 1 ? "result" : "results"}
+              {resultCount} {resultCount === 1 ? "resultado" : "resultados"}
             </span>
           )}
           {showReset && (

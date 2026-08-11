@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { OperationalWorkspace, type WorkspaceMetric } from "@/components/stafly-ui/OperationalWorkspace";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { ClientAvatar } from "@/components/ui/client-avatar";
@@ -301,6 +302,10 @@ export default function Clients() {
     return { active, archived, withEmail, withPhone };
   }, [clients]);
 
+  /* P1 responsive: en móvil la tabla de 6 columnas no cabe → siempre tarjeta canónica. */
+  const isMobile = useIsMobile();
+  const effectiveViewMode = isMobile ? "grid" : viewMode;
+
   /* ── P0 Operational First Layout — piezas de la jerarquía canónica ── */
   const searchField = tab !== "duplicates" ? (
     <div className="relative w-full">
@@ -342,7 +347,7 @@ export default function Clients() {
           <X className="h-3 w-3 mr-1" /> Limpiar
         </Button>
       )}
-      <div className="flex items-center rounded-lg border border-border/30 overflow-hidden">
+      <div className="hidden md:flex items-center rounded-lg border border-border/30 overflow-hidden">
         <button
           className={cn("h-8 w-8 flex items-center justify-center transition-colors",
             viewMode === "grid" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50")}
@@ -559,9 +564,9 @@ export default function Clients() {
           canEdit={canEdit}
         />
       ) : directory.isLoading ? (
-        <div className={cn(viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-2")}>
+        <div className={cn(effectiveViewMode === "grid" ? "grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-2")}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className={cn("animate-pulse bg-muted rounded-2xl", viewMode === "grid" ? "h-40" : "h-16")} />
+            <div key={i} className={cn("animate-pulse bg-muted rounded-2xl", effectiveViewMode === "grid" ? "h-40" : "h-16")} />
           ))}
         </div>
       ) : visibleTruths.length === 0 ? (
@@ -570,8 +575,8 @@ export default function Clients() {
           title={tab === "active" ? "Sin clientes activos" : "Sin clientes inactivos"}
           description={search ? "Intenta con otro término, código o contacto" : "Crea el primer cliente sólo con su nombre"}
         />
-      ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      ) : effectiveViewMode === "grid" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
           {visibleTruths.map((t) => (
             <ClientDirectoryCard
               key={t.clientId}

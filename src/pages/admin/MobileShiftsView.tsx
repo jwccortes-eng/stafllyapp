@@ -30,6 +30,7 @@ import { BulkServiceCreationDialog } from "@/components/shifts/bulk/BulkServiceC
 
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { displayShiftRef } from "@/lib/shifts/shift-ref";
+import { clientAccentColor } from "@/lib/clients/client-accent";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -814,6 +815,8 @@ function ShiftCard({
   // surfaces under jobSiteName slot via clientName prop.
   const headerTitle = shift.title?.trim() || clientName;
 
+  const accent = shift.client_id ? clientAccentColor(shift.client_id) : null;
+
   return (
     <div
       role="button"
@@ -821,11 +824,16 @@ function ShiftCard({
       onClick={onOpen}
       onKeyDown={handleKey}
       className={cn(
-        "group relative w-full text-left rounded-3xl border border-border/40 bg-card p-4 cursor-pointer select-none",
+        "group relative w-full overflow-hidden text-left rounded-3xl border border-border/40 bg-card p-4 pl-5 cursor-pointer select-none",
         "active:scale-[0.99] transition-transform",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       )}
     >
+      {/* Identidad de cliente: mismo acento cromático que en desktop */}
+      {accent ? (
+        <span aria-hidden className="absolute inset-y-0 left-0 w-[4px]" style={{ backgroundColor: accent }} />
+      ) : null}
+
       {/* Stafly Work Route header (admin / compact) */}
       <ShiftRouteHeader
         variant="admin"
@@ -858,6 +866,16 @@ function ShiftCard({
             )}
           {noClient && <span className="text-muted-foreground/70"> · sin cliente</span>}
         </span>
+        {coverageLabel ? (
+          <span
+            className={cn(
+              "ml-auto shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums",
+              understaffed ? "bg-status-danger/10 text-status-danger" : "bg-status-success/10 text-status-success",
+            )}
+          >
+            {assignedEmployees.length}/{slots}
+          </span>
+        ) : null}
       </div>
     </div>
   );
