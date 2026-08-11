@@ -189,13 +189,21 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
         });
       }
 
-      // Update employer_identification / ssn if provided in truth and missing on employee
-      if (truthRow.employerIdentification || truthRow.verificationSsnEin) {
-        const updates: Record<string, any> = {};
-        if (truthRow.employerIdentification) updates.employer_identification = truthRow.employerIdentification;
-        if (truthRow.verificationSsnEin) updates.verification_ssn_ein = truthRow.verificationSsnEin;
-        await supabase.from("employees").update(updates).eq("id", selectedLinkId);
+      // SSN/EIN puede completarse; el Internal ID NO se escribe desde aquí.
+      // Política canónica: único escritor = `assign_internal_id`. Si la persona
+      // ya tiene número, se conserva; si no, la RPC entrega el que corresponde.
+      if (truthRow.verificationSsnEin) {
+        await supabase
+          .from("employees")
+          .update({ verification_ssn_ein: truthRow.verificationSsnEin } as any)
+          .eq("id", selectedLinkId);
       }
+      await assignInternalId({
+        employeeId: selectedLinkId,
+        source: "import_reconciliation",
+        reason: "import_reconciliation",
+      });
+
 
       // Audit
       await supabase.from("activity_log").insert({
