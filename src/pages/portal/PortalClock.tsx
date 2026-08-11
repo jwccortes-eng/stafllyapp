@@ -17,7 +17,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useClockRequest } from "@/hooks/useClockRequest";
-import { clockButtonLabel } from "@/lib/timeclock/clock-request-state";
+import { clockButtonLabel, isAmbiguousFailure } from "@/lib/timeclock/clock-request-state";
+import { useOfflineClockQueue } from "@/hooks/useOfflineClockQueue";
+import { createClientEventId, deviceTimezone } from "@/lib/timeclock/offline-clock-types";
+import {
+  resolveClockStatus,
+  elapsedSeconds,
+  formatElapsed,
+  CLOCK_STATUS_LABEL,
+} from "@/lib/timeclock/clock-status";
+
 import {
   Dialog,
   DialogContent,
