@@ -16,6 +16,8 @@
  * worker preview) deben consumir este helper para no contradecirse.
  */
 
+import { resolveServiceLocationTruth } from "./service-location";
+
 export const SERVICE_LOCATION_COPY = {
   jobSite: "Lugar del servicio",
   jobSiteHelp: "Dónde se realizará el trabajo.",
@@ -119,13 +121,21 @@ export function getServicePublishReadiness(
     requireTitle: v.requirements?.requireTitle ?? false,
   };
 
+  // P0 Service Location SSOT — el resolver canónico decide destino y encuentro.
+  const loc = resolveServiceLocationTruth({
+    location_id: v.locationId,
+    job_site_location_id: v.jobSiteLocationId,
+    job_site_address: v.jobSiteAddress,
+    meeting_point: v.meetingPoint,
+    meeting_point_location_id: v.meetingPointLocationId,
+    transportation_required: v.transportRequired,
+  });
   const manualAddress = (v.jobSiteAddress ?? "").trim();
-  const hasSavedJobSite = Boolean(v.locationId || v.jobSiteLocationId);
-  const hasManualJobSite = manualAddress.length > 0;
-  const hasJobSite = hasSavedJobSite || hasManualJobSite;
+  const hasSavedJobSite = loc.destinationSource === "job_site_v2" || loc.destinationSource === "legacy_venue";
+  const hasJobSite = loc.destinationStatus === "RESOLVED";
   const jobSiteKind: JobSiteKind = hasSavedJobSite
     ? "saved"
-    : hasManualJobSite
+    : hasJobSite
       ? "manual"
       : "none";
 

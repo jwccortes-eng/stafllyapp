@@ -10,6 +10,8 @@
  * Phase 2: schema-free. Nothing here writes to the DB.
  */
 
+import { resolveServiceLocationTruth } from "./service-location";
+
 export type PendingTone = "urgent" | "warn" | "info" | "ready";
 
 export interface PendingFlag {
@@ -50,18 +52,30 @@ export interface PendingResult {
   isReady: boolean;
 }
 
+/** Traduce el input del editor al contrato canónico de ubicación. */
+function locationTruthOfInput(v: PendingInput) {
+  return resolveServiceLocationTruth({
+    location_id: v.locationId,
+    job_site_location_id: v.jobSiteLocationId,
+    job_site_address: v.jobSiteAddress,
+    meeting_point: v.meetingPoint,
+    meeting_point_location_id: v.meetingPointLocationId,
+    transportation_required: v.transportRequired,
+  });
+}
+
 export function computeShiftPendingFlags(v: PendingInput): PendingResult {
   const flags: PendingFlag[] = [];
 
   const dateMissing = !v.date;
   const timeMissing = !v.startTime || !v.endTime;
   const clientMissing = !v.clientId;
-  const hasManualAddress = !!(v.jobSiteAddress && v.jobSiteAddress.trim());
-  const hasStructuredJobsite = !!v.locationId || !!v.jobSiteLocationId;
-  const jobsiteMissing = !hasStructuredJobsite && !hasManualAddress;
-  const jobsiteUnsaved = !hasStructuredJobsite && hasManualAddress;
-  const meetingMissing =
-    v.transportRequired && !v.meetingPoint.trim() && !v.meetingPointLocationId;
+  // P0 Service Location SSOT — un solo resolver para destino, geo y encuentro.
+  const loc = locationTruthOfInput(v);
+  const jobsiteMissing = loc.destinationStatus === "MISSING_DESTINATION";
+  const jobsiteUnsaved =
+    loc.destinationStatus === "RESOLVED" && loc.destinationSource === "free_text";
+  const meetingMissing = loc.meetingPointMissing;
   const teamMissing = !v.claimable && v.assignedCount === 0;
 
   if (dateMissing) {
