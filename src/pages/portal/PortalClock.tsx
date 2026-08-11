@@ -999,7 +999,41 @@ export default function PortalClock() {
         </div>
       )}
 
+      {/* ─── P0 · Fichaje pendiente de sincronizar (offline-first) ─── */}
+      {pendingClockEvent && (
+        <div className="mb-3 rounded-xl border border-warning/30 bg-warning/[0.06] p-3 flex items-start gap-3 relative overflow-hidden" role="status">
+          <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-warning" />
+          <div className="h-8 w-8 rounded-lg bg-warning/[0.1] flex items-center justify-center shrink-0 ml-1">
+            <Timer className="h-4 w-4 text-warning" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              {pendingClockEvent.type === "CLOCK_IN"
+                ? "Entrada guardada en este dispositivo"
+                : "Salida guardada en este dispositivo"}
+            </p>
+            <p className="text-[12px] text-muted-foreground mt-0.5 leading-relaxed">
+              Registrada a las {format(new Date(pendingClockEvent.event_time_device), "HH:mm")}.
+              Se sincronizará automáticamente cuando vuelva la conexión. No cierres la sesión.
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <StatusBadge variant="warning">{CLOCK_STATUS_LABEL[clockResolution.status]}</StatusBadge>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-[12px]"
+                disabled={offlineQueue.syncing || !offlineQueue.online}
+                onClick={() => { void offlineQueue.syncNow(); }}
+              >
+                {offlineQueue.syncing ? "Sincronizando…" : "Sincronizar ahora"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── Stale open entry banner — recovery for stuck shifts ─── */}
+
       {staleOpenEntry && !successState && (
         <div className="mb-3 rounded-xl border border-warning/30 bg-warning/[0.06] p-3 flex items-start gap-3 relative overflow-hidden">
           <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-warning" />
