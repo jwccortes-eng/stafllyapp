@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
-import { hasAnyOperationalLocation } from "@/lib/shifts/location-status";
+import { resolveShiftLocationTruth } from "@/lib/shifts/service-location";
 import { formatShiftCode, type Shift, type Assignment, type Employee } from "@/components/shifts/types";
 import { FAMILY_CLASSES } from "@/lib/status/status-registry";
 import { MT } from "@/lib/mobile/mobile-scale";

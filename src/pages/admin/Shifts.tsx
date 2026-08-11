@@ -104,7 +104,7 @@ import {
   focusServiceSection,
   type ServicePublishReadiness,
 } from "@/lib/shifts/service-publish-readiness";
-import { getShiftLocationStatus } from "@/lib/shifts/location-status";
+import { getShiftLocationStatus } from "@/lib/shifts/service-location";
 import { PrePublishDialog } from "@/components/shifts/workspace/PrePublishDialog";
 import { ExportConnecteamBulkDialog } from "@/components/shifts/integrations/ExportConnecteamBulkDialog";
 import type { Shift, Assignment, SelectOption, ClientOption, Employee, ViewMode } from "@/components/shifts/types";
