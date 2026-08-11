@@ -28,7 +28,7 @@ const pendingIn = (overrides: Record<string, unknown> = {}) =>
     within_geofence: null,
     photo_url: null,
     offline: true,
-    status: "PENDING",
+    status: "PENDING_SYNC",
     attempts: 0,
     created_at: "2026-01-10T08:00:00.000Z",
     ...overrides,
@@ -68,20 +68,21 @@ describe("estado canónico del reloj", () => {
       ],
       pending: [],
     });
-    expect(r.status).toBe("CLOCKED_OUT");
+    expect(r.status).toBe("COMPLETED");
   });
 });
 
 describe("integridad temporal", () => {
-  it("no corrige en silencio: marca revisión si el drift es grande", () => {
+  it("una sincronización tardía conserva la hora del dispositivo sin marcar revisión", () => {
     const d = evaluateDrift("2026-01-10T08:00:00.000Z", new Date("2026-01-10T09:00:00.000Z"));
-    expect(d.requiresReview).toBe(true);
     expect(d.syncDelaySeconds).toBe(3600);
+    expect(d.requiresReview).toBe(false);
   });
 
-  it("un desfase pequeño no ensucia la operación", () => {
-    const d = evaluateDrift("2026-01-10T08:00:00.000Z", new Date("2026-01-10T08:01:00.000Z"));
-    expect(d.requiresReview).toBe(false);
+  it("no corrige en silencio: marca revisión si el reloj del dispositivo va adelantado", () => {
+    const d = evaluateDrift("2026-01-10T09:00:00.000Z", new Date("2026-01-10T08:00:00.000Z"));
+    expect(d.requiresReview).toBe(true);
+    expect(d.reviewReason).toBeTruthy();
   });
 });
 
