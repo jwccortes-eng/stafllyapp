@@ -18,7 +18,7 @@ import {
 export interface StaflyStatusBadgeProps {
   children: ReactNode;
   tone?: StaflyTone;
-  icon?: LucideIcon | ComponentType<{ className?: string }>;
+  icon?: ComponentType<{ className?: string }>;
   /** Punto sólido en lugar de icono. */
   dot?: boolean;
   size?: "sm" | "md";
