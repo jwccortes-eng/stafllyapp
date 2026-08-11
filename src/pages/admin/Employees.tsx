@@ -1167,7 +1167,7 @@ export default function Employees() {
     { label: "Total", value: statusCounts.all, onClick: () => setStatusTab("all"), active: statusTab === "all" },
     { label: "Activos con portal", value: statusCounts.active, hint: "Workers activos con cuenta de portal vinculada.", accent: "success", onClick: () => setStatusTab("active"), active: statusTab === "active" },
     { label: "Pendientes de activar app", value: statusCounts.pending, hint: "Invitación enviada, portal aún sin acceder.", accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
-    { label: "Workers con docs pendientes", value: statusCounts["missing-docs"], hint: "Cuenta workers con onboarding/documentos pendientes, no requisitos totales.", accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
+    { label: "Con documentos pendientes", value: statusCounts["missing-docs"], hint: "Cuenta workers con onboarding/documentos pendientes, no requisitos totales.", accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
     { label: "Conductores", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
   ];
 
@@ -1334,13 +1334,13 @@ export default function Employees() {
           {uniqueRoles.length > 0 && (
             <Select value={filterRole} onValueChange={setFilterRole}>
               <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All roles</SelectItem>{uniqueRoles.map(r => (<SelectItem key={r} value={r}>{formatDisplayText(r, "label")}</SelectItem>))}</SelectContent>
+              <SelectContent><SelectItem value="all">Todos los roles</SelectItem>{uniqueRoles.map(r => (<SelectItem key={r} value={r}>{formatDisplayText(r, "label")}</SelectItem>))}</SelectContent>
             </Select>
           )}
           {uniqueGroups.length > 0 && (
             <Select value={filterGroup} onValueChange={setFilterGroup}>
               <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Group" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All groups</SelectItem>{uniqueGroups.map(g => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
+              <SelectContent><SelectItem value="all">Todos los grupos</SelectItem>{uniqueGroups.map(g => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
             </Select>
           )}
           <Select
@@ -1375,7 +1375,7 @@ export default function Employees() {
       onReset={clearFilters}
       rightSlot={
         <>
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setColPrefsOpen(true)} title="Column preferences">
+          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setColPrefsOpen(true)} title="Columnas visibles">
             <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
           </Button>
           <ViewSwitcher value={viewMode} onChange={setViewMode} modes={["roster", "table", "compact"]} />
