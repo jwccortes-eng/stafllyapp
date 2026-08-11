@@ -9,6 +9,8 @@ import { Loader2, UserPlus, Link2, FileText, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PayrollTruthRow } from "@/lib/payroll-truth-parser";
+import { assignInternalId, INTERNAL_ID_LABEL } from "@/lib/identity/internal-id";
+
 
 export type ResolutionMode = "create" | "link" | "truth_only";
 
