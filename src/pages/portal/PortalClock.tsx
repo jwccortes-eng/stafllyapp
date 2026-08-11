@@ -1017,7 +1017,10 @@ export default function PortalClock() {
               Se sincronizará automáticamente cuando vuelva la conexión. No cierres la sesión.
             </p>
             <div className="mt-2 flex items-center gap-2">
-              <StatusBadge variant="warning">{CLOCK_STATUS_LABEL[clockResolution.status]}</StatusBadge>
+              <span className="rounded-md bg-warning/[0.12] px-2 py-1 text-[11px] font-semibold text-warning">
+                {CLOCK_STATUS_LABEL[clockResolution.status]}
+              </span>
+
               <Button
                 size="sm"
                 variant="outline"
