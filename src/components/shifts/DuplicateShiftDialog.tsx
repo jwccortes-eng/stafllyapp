@@ -158,7 +158,7 @@ export function DuplicateShiftDialog({
     (async () => {
       const { data } = await supabase
         .from("employees")
-        .select("id, is_active, employee_role, added_via, user_id, approved_at, onboarding_status, worker_type, identity_status, requires_identity_resolution, payroll_approval_blocked")
+        .select("id, is_active, employee_role, added_via, user_id, onboarding_status, worker_type, identity_status, requires_identity_resolution, payroll_approval_blocked")
         .eq("company_id", companyId)
         .in("id", copiedIds);
       if (cancelled) return;
