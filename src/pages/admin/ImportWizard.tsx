@@ -23,6 +23,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import {
+  buildEmployeeIdentityIndex,
+  resolveIdentityFromIndex,
+  EMPLOYEE_IDENTITY_FIELDS,
+  type IdentityCandidateRecord,
+} from "@/lib/identity/employee-identity-resolver";
+import { buildEmployeeCreationTrace, logEmployeeCreation, newCorrelationId } from "@/lib/identity/creation-trace";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
@@ -571,13 +578,22 @@ export default function ImportWizard() {
       // ── Fetch master data ──
       setImportProgress("Cargando datos maestros...");
       const [{ data: employees }, { data: clients }, { data: concepts }] = await Promise.all([
-        supabase.from("employees").select("id, first_name, last_name").eq("company_id", selectedCompanyId),
+        supabase.from("employees").select(`id, first_name, last_name, ${EMPLOYEE_IDENTITY_FIELDS}`.replace("id, first_name, last_name, id,", "id,")).eq("company_id", selectedCompanyId),
         supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
         supabase.from("concepts").select("id, name, category").eq("company_id", selectedCompanyId).eq("is_active", true),
       ]);
 
       const empMap = new Map<string, string>();
       (employees ?? []).forEach(e => empMap.set(`${e.first_name} ${e.last_name}`.toLowerCase(), e.id));
+
+      // P0 Fase 1 · resolver canónico de identidad: prohibido crear personas
+      // por nombre suelto llegado desde un horario.
+      const identityIndex = buildEmployeeIdentityIndex(
+        (employees ?? []) as unknown as IdentityCandidateRecord[],
+      );
+      const importCorrelationId = newCorrelationId("import-wizard");
+      const createdEmployeeIds: string[] = [];
+      let identityBlocked = 0;
 
       const clientMap = new Map<string, string>();
       (clients ?? []).forEach(c => clientMap.set(c.name.toLowerCase(), c.id));
@@ -629,16 +645,57 @@ export default function ImportWizard() {
           if (empMap.has(empName.toLowerCase())) continue;
           const parsed = parseName(empName);
           if (!parsed || /^system\s/i.test(empName)) continue;
+
+          const identity = resolveIdentityFromIndex(identityIndex, {
+            firstName: parsed.first,
+            lastName: parsed.last,
+            fullName: empName,
+          });
+
+          if (identity.outcome === "EXACT_MATCH" && identity.employeeId) {
+            empMap.set(empName.toLowerCase(), identity.employeeId);
+            continue;
+          }
+          if (identity.outcome !== "NOT_FOUND") {
+            // PROBABLE / AMBIGUOUS → revisión humana. Nunca crear en silencio.
+            identityBlocked++;
+            allUnmatched.add(empName);
+            allWarnings.push(`${empName}: ${identity.reason}`);
+            continue;
+          }
+
           const { data: newEmp } = await supabase.from("employees").insert({
             company_id: selectedCompanyId,
             first_name: parsed.first,
             last_name: parsed.last,
             is_active: true,
+            ...buildEmployeeCreationTrace({
+              source: "import_wizard",
+              actorId: user?.id,
+              actorLabel: user?.email,
+              correlationId: importCorrelationId,
+            }),
           } as any).select("id").single();
           if (newEmp) {
             empMap.set(empName.toLowerCase(), newEmp.id);
+            createdEmployeeIds.push(newEmp.id);
             results.scheduleEmployeesCreated++;
           }
+        }
+
+        results.scheduleEmployeesBlockedByIdentity = identityBlocked;
+        if (createdEmployeeIds.length > 0) {
+          void logEmployeeCreation({
+            companyId: selectedCompanyId,
+            employeeIds: createdEmployeeIds,
+            trace: {
+              source: "import_wizard",
+              actorId: user?.id,
+              actorLabel: user?.email,
+              correlationId: importCorrelationId,
+            },
+            preventedDuplicates: identityBlocked,
+          });
         }
 
         // Fetch existing shifts for dedup using reconciliation_hash
