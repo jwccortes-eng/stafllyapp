@@ -295,13 +295,15 @@ export function MobileShiftOperationsSheet({
       meeting_point?: string | null;
       meeting_point_location_id?: string | null;
     };
-    const noLocation = !hasAnyOperationalLocation({
-      location_id: s.location_id,
-      job_site_location_id: s.job_site_location_id,
-      job_site_address: s.job_site_address,
-      meeting_point: s.meeting_point,
-      meeting_point_location_id: s.meeting_point_location_id,
-    });
+    // Resolver canónico único (P0 Service Location SSOT).
+    const noLocation =
+      resolveShiftLocationTruth({
+        location_id: s.location_id,
+        job_site_location_id: s.job_site_location_id,
+        job_site_address: s.job_site_address,
+        meeting_point: s.meeting_point,
+        meeting_point_location_id: s.meeting_point_location_id,
+      }).destinationStatus === "MISSING_DESTINATION";
     const hours = calcHours(shift.start_time, shift.end_time);
 
     let dateBucket: "today" | "tomorrow" | "past" | "future" = "future";
