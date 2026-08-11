@@ -1463,6 +1463,7 @@ export default function Employees() {
         metrics={workspaceMetrics}
         tabs={statusTabsNode}
         filters={filtersNode}
+        filtersActiveCount={activeChips.length}
         admin={adminPanelNode}
         adminHint="Calidad de datos, duplicados y riesgos"
         action={
