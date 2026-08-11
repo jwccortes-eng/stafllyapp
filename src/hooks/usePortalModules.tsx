@@ -1,34 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
+import {
+  PORTAL_MODULE_KEYS,
+  type PortalModuleKey,
+  buildPortalModuleOverrides,
+  resolveEnabledPortalModules,
+  resolvePortalModuleEnabled,
+} from "@/lib/portal/portal-modules";
 
-/**
- * Portal module keys that can be toggled by admins.
- * "home" and "profile" are always visible.
- */
-export const PORTAL_MODULE_KEYS = [
-  "my_shifts",
-  "my_clock",
-  "my_payments",
-  "my_chat",
-  "my_announcements",
-  "my_w9",
-  "my_profile",
-  "my_resources",
-  "my_availability",
-  "my_documents",
-  "my_reviews",
-] as const;
-
-export type PortalModuleKey = (typeof PORTAL_MODULE_KEYS)[number];
-
-/** Always-visible modules that cannot be disabled */
-const ALWAYS_VISIBLE: Set<string> = new Set(["home", "profile"]);
-
-/** Default modules shown when admin hasn't configured anything */
-const DEFAULT_ENABLED: Set<string> = new Set([
-  "my_shifts", "my_clock", "my_payments",
-]);
+export { PORTAL_MODULE_KEYS };
+export type { PortalModuleKey };
 
 interface UsePortalModulesReturn {
   isModuleEnabled: (key: string) => boolean;
@@ -37,11 +19,19 @@ interface UsePortalModulesReturn {
   refetch: () => Promise<void>;
 }
 
+/**
+ * Lee overrides de employee_portal_modules y los resuelve con la regla
+ * canónica: ausencia de fila = default, nunca "deshabilitado".
+ *
+ * El fetch depende SOLO de employeeId (sin dependencias derivadas como
+ * enabledModules.size / hasConfig) para no generar refetches ni estados
+ * transitorios que cambien permisos después del primer render.
+ */
 export function usePortalModules(): UsePortalModulesReturn {
   const { stableEmployeeId: employeeId } = useEffectiveEmployee();
-  const [enabledModules, setEnabledModules] = useState<Set<string>>(new Set());
-  const [hasConfig, setHasConfig] = useState(false);
+  const [overrides, setOverrides] = useState<Map<string, boolean>>(new Map());
   const [loading, setLoading] = useState(true);
+  const loadedForRef = useRef<string | null>(null);
 
   const fetchModules = useCallback(async () => {
     if (!employeeId) {
@@ -49,39 +39,30 @@ export function usePortalModules(): UsePortalModulesReturn {
       return;
     }
 
-    setLoading((prev) => prev && enabledModules.size === 0 && !hasConfig);
+    if (loadedForRef.current !== employeeId) setLoading(true);
 
     const { data } = await supabase
       .from("employee_portal_modules")
       .select("module, enabled")
       .eq("employee_id", employeeId);
 
-    if (data && data.length > 0) {
-      setHasConfig(true);
-      const enabled = new Set(
-        data.filter((d) => d.enabled).map((d) => d.module)
-      );
-      setEnabledModules(enabled);
-    } else {
-      setHasConfig(false);
-      setEnabledModules(new Set());
-    }
-
+    setOverrides(buildPortalModuleOverrides(data as any));
+    loadedForRef.current = employeeId;
     setLoading(false);
-  }, [employeeId, enabledModules.size, hasConfig]);
+  }, [employeeId]);
 
   useEffect(() => {
     fetchModules();
   }, [fetchModules]);
 
+  const enabledModules = useMemo(
+    () => resolveEnabledPortalModules(overrides),
+    [overrides],
+  );
+
   const isModuleEnabled = useCallback(
-    (key: string): boolean => {
-      if (ALWAYS_VISIBLE.has(key)) return true;
-      // If no config exists, use defaults
-      if (!hasConfig) return DEFAULT_ENABLED.has(key);
-      return enabledModules.has(key);
-    },
-    [hasConfig, enabledModules]
+    (key: string): boolean => resolvePortalModuleEnabled(key, overrides),
+    [overrides],
   );
 
   return { isModuleEnabled, enabledModules, loading, refetch: fetchModules };
