@@ -96,7 +96,6 @@ import DataQualityRiskPanel, { WorkerRiskTags } from "@/components/employee/Data
 import { analyzeEmployeeRisks, type RiskKey } from "@/lib/data-quality-risks";
 import { buildBulkRemindersText } from "@/lib/data-quality-actions";
 import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
-import MobileDataQualitySummary from "@/components/employee/MobileDataQualitySummary";
 import { WorkerPhotoStatusChip } from "@/components/employee/WorkerPhotoStatusChip";
 import { PhotoReviewCriteriaCard } from "@/components/employee/PhotoReviewCriteriaCard";
 
