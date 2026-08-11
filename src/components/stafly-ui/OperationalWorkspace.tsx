@@ -417,6 +417,21 @@ export function OperationalWorkspace({
 
         {/* 6 — contenido operativo */}
         <div className="pt-3">{children}</div>
+
+        {/* Filtros en móvil — mismas opciones que en desktop, sin duplicar fuente */}
+        {filters ? (
+          <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <SheetContent
+              side="bottom"
+              className="md:hidden max-h-[85vh] overflow-y-auto rounded-t-3xl pb-[max(env(safe-area-inset-bottom,16px),16px)]"
+            >
+              <SheetHeader className="text-left">
+                <SheetTitle className="text-base">{mobileFiltersTitle}</SheetTitle>
+              </SheetHeader>
+              <div className="mt-3 [&_.hidden]:!block">{filters}</div>
+            </SheetContent>
+          </Sheet>
+        ) : null}
       </div>
     </WorkspaceModeContext.Provider>
   );
