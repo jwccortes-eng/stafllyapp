@@ -20,6 +20,10 @@ import {
   type EvidencePacket,
   upsertShiftCloseoutDraft,
 } from "@/lib/shifts/closeout";
+import {
+  evaluateCloseoutGateFromEvidence,
+  RECONCILIATION_LABEL,
+} from "@/lib/shifts/closeout-gate";
 
 interface Props {
   companyId: string;
