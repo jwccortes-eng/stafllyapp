@@ -184,3 +184,160 @@ export function formatPlaceLine(place: ServicePlace | null): string | null {
   }
   return place.name ?? place.address;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// P0 — SERVICE LOCATION SINGLE SOURCE OF TRUTH
+//
+// Contrato canónico único. Separa tres preguntas que antes se mezclaban:
+//   A. DESTINO OPERATIVO   → ¿el worker sabe a dónde ir?      (destinationStatus)
+//   B. READINESS GEOESPACIAL → ¿hay coordenadas para mapa/geofence? (geospatialStatus)
+//   C. PUNTO DE ENCUENTRO  → solo si transportation_required === true
+//
+// Prohibido crear resolvers paralelos. Cualquier superficie (editor, command
+// center, operaciones, portal, live map, clock) deriva de `resolveServiceLocationTruth`.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** ¿El worker sabe a dónde ir? */
+export type DestinationStatus = "RESOLVED" | "MISSING_DESTINATION";
+
+/** De dónde salió el destino resuelto. */
+export type DestinationSource = "job_site_v2" | "legacy_venue" | "free_text" | null;
+
+/**
+ * Readiness geoespacial — NUNCA se convierte en MISSING_DESTINATION.
+ *  - COORDINATES : hay lat/lng → Live Map y geofence disponibles.
+ *  - ADDRESS_ONLY: hay dirección legible pero sin coordenadas.
+ *  - UNKNOWN     : hay FK estructurada pero la fila no fue hidratada por el llamador.
+ *  - NONE        : no hay destino.
+ */
+export type GeospatialStatus = "COORDINATES" | "ADDRESS_ONLY" | "UNKNOWN" | "NONE";
+
+/** Estado del punto de encuentro. NOT_REQUIRED cuando no hay transporte. */
+export type MeetingPointStatus = "NOT_REQUIRED" | "RESOLVED" | "MISSING";
+
+export interface ServiceLocationTruth {
+  // ── A. Destino operativo ──
+  destinationStatus: DestinationStatus;
+  destinationSource: DestinationSource;
+  /** Nombre del sitio, si existe. */
+  displayName: string | null;
+  /** Dirección legible que se muestra al worker y al admin. Misma en todas las pantallas. */
+  displayAddress: string | null;
+  /** Línea única lista para UI (nombre — dirección, sin duplicar). */
+  displayLine: string | null;
+  /** FK usada como destino (locations_v2 o locations). `null` si es texto libre. */
+  locationId: string | null;
+
+  // ── B. Readiness geoespacial ──
+  lat: number | null;
+  lng: number | null;
+  hasCoordinates: boolean;
+  geofenceRadiusMeters: number | null;
+  geospatialStatus: GeospatialStatus;
+  /** Copy único cuando mapa/geofence son relevantes y no hay coordenadas. */
+  geospatialHint: string | null;
+  /** El mapa en vivo y el geofence pueden operar. */
+  mapReady: boolean;
+
+  // ── C. Punto de encuentro / transporte ──
+  transportationRequired: boolean;
+  meetingPointRequired: boolean;
+  meetingPointStatus: MeetingPointStatus;
+  /** Solo true cuando es obligatorio y falta. Nunca con transporte desactivado. */
+  meetingPointMissing: boolean;
+  meetingPointLine: string | null;
+}
+
+export const GEOSPATIAL_HINT =
+  "Dirección disponible. Agrega una ubicación con coordenadas para habilitar mapa en vivo y geofence.";
+
+export const GEOFENCE_REQUIRED_BLOCK =
+  "Este servicio requiere ubicación geográfica configurada.";
+
+/**
+ * Resolver canónico único.
+ *
+ * Orden de destino (regla dura): `job_site_location_id` → `location_id` → `job_site_address`.
+ * Si cualquiera existe válidamente → `destinationStatus = "RESOLVED"`.
+ *
+ * Puro. No lee datos, no crea ubicaciones, no inventa coordenadas.
+ */
+export function resolveServiceLocationTruth(
+  input: ServiceLocationInput,
+): ServiceLocationTruth {
+  const resolved = resolveServiceLocation(input);
+  const dest = resolved.destination;
+
+  // Destino declarado por FK aunque el llamador no haya hidratado la fila.
+  const structuredId = clean(input.job_site_location_id) ?? clean(input.location_id);
+  const hydratedStructured =
+    dest?.source === "job_site_v2" || dest?.source === "legacy_venue";
+
+  const destinationStatus: DestinationStatus =
+    dest || structuredId ? "RESOLVED" : "MISSING_DESTINATION";
+
+  const destinationSource: DestinationSource = dest
+    ? (dest.source as DestinationSource)
+    : structuredId
+      ? clean(input.job_site_location_id)
+        ? "job_site_v2"
+        : "legacy_venue"
+      : null;
+
+  const displayAddress = dest?.address ?? clean(input.job_site_address);
+  const lat = dest?.latitude ?? null;
+  const lng = dest?.longitude ?? null;
+  const hasCoordinates = lat != null && lng != null;
+
+  let geospatialStatus: GeospatialStatus;
+  if (hasCoordinates) geospatialStatus = "COORDINATES";
+  else if (structuredId && !hydratedStructured) geospatialStatus = "UNKNOWN";
+  else if (displayAddress || dest?.name) geospatialStatus = "ADDRESS_ONLY";
+  else geospatialStatus = "NONE";
+
+  const transportationRequired = Boolean(input.transportation_required);
+  const meetingResolved = Boolean(resolved.meetingPoint);
+  const meetingPointStatus: MeetingPointStatus = !transportationRequired
+    ? "NOT_REQUIRED"
+    : meetingResolved
+      ? "RESOLVED"
+      : "MISSING";
+
+  return {
+    destinationStatus,
+    destinationSource,
+    displayName: dest?.name ?? null,
+    displayAddress,
+    displayLine: formatPlaceLine(dest) ?? displayAddress,
+    locationId: hydratedStructured || structuredId ? structuredId : null,
+
+    lat,
+    lng,
+    hasCoordinates,
+    geofenceRadiusMeters: dest?.geofenceRadiusMeters ?? null,
+    geospatialStatus,
+    geospatialHint: geospatialStatus === "ADDRESS_ONLY" ? GEOSPATIAL_HINT : null,
+    mapReady: hasCoordinates,
+
+    transportationRequired,
+    meetingPointRequired: transportationRequired,
+    meetingPointStatus,
+    meetingPointMissing: meetingPointStatus === "MISSING",
+    meetingPointLine: formatPlaceLine(resolved.meetingPoint),
+  };
+}
+
+/**
+ * Atajo para filas crudas de `scheduled_shifts` sin hidratación de FK.
+ * Útil en listas y colas donde solo se leyeron las 6 columnas.
+ */
+export function resolveShiftLocationTruth(row: {
+  location_id?: string | null;
+  job_site_location_id?: string | null;
+  job_site_address?: string | null;
+  meeting_point?: string | null;
+  meeting_point_location_id?: string | null;
+  transportation_required?: boolean | null;
+}): ServiceLocationTruth {
+  return resolveServiceLocationTruth(row);
+}
