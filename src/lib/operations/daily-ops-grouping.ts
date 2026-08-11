@@ -5,6 +5,7 @@
  * already-derived TodayOpsShift list. No DB, no payroll, no side effects.
  */
 import type { TodayOpsShift } from "@/hooks/useTodayOperations";
+import { resolveShiftLocationTruth } from "@/lib/shifts/service-location";
 
 export type ActionKind =
   | "missing_driver"
@@ -153,8 +154,10 @@ export function buildActionQueue(shifts: TodayOpsShift[]): ActionItem[] {
       });
     }
 
-    // Missing location / meeting point
-    if (!s.location_id && !s.meeting_point_location_id && !s.meeting_point?.trim()) {
+    // Destino operativo — resolver canónico único (P0 Service Location SSOT).
+    // Una dirección de texto libre ES un destino válido; no genera alerta.
+    const loc = resolveShiftLocationTruth(s as Parameters<typeof resolveShiftLocationTruth>[0]);
+    if (loc.destinationStatus === "MISSING_DESTINATION") {
       items.push({
         id: `${s.id}:missing_location`,
         shiftId: s.id,
@@ -163,7 +166,19 @@ export function buildActionQueue(shifts: TodayOpsShift[]): ActionItem[] {
         title: t,
         subtitle: c,
         count: 1,
-        message: "Sin ubicación ni punto de encuentro.",
+        message: "Sin destino: agrega una dirección o un Job Site.",
+        shift: s,
+      });
+    } else if (loc.meetingPointMissing) {
+      items.push({
+        id: `${s.id}:missing_location`,
+        shiftId: s.id,
+        kind: "missing_location",
+        urgency: "high",
+        title: t,
+        subtitle: c,
+        count: 1,
+        message: "Transporte requerido sin punto de encuentro.",
         shift: s,
       });
     }
