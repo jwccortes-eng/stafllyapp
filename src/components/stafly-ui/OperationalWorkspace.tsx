@@ -428,7 +428,7 @@ export function OperationalWorkspace({
               <SheetHeader className="text-left">
                 <SheetTitle className="text-base">{mobileFiltersTitle}</SheetTitle>
               </SheetHeader>
-              <div className="mt-3 [&_.hidden]:!block">{filters}</div>
+              <div className="mt-3">{filters}</div>
             </SheetContent>
           </Sheet>
         ) : null}
