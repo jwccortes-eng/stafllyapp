@@ -292,7 +292,7 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
           ) : null}
           {truthRow.employerIdentification && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Employer ID:</span>
+              <span className="text-muted-foreground">Internal ID:</span>
               <span className="font-mono">{truthRow.employerIdentification}</span>
             </div>
           )}
@@ -353,8 +353,8 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
                 <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className="h-8 text-sm" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Employer ID</Label>
-                <Input value={employerId} onChange={e => setEmployerId(e.target.value)} placeholder="Employer ID" className="h-8 text-sm" />
+                <Label className="text-xs">Internal ID</Label>
+                <Input value={employerId} onChange={e => setEmployerId(e.target.value)} placeholder="Internal ID" className="h-8 text-sm" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">SSN/EIN</Label>
