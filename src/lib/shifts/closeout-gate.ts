@@ -126,10 +126,36 @@ export function evaluateCloseoutGate(input: CloseoutGateInput): CloseoutGateResu
     warnings.push({
       id: "no-clock-in",
       kind: "warning",
-      label: `${counts.noClockIn} persona(s) sin fichaje`,
-      detail: "Puede ser ausencia real. Se registra tal cual: no se inventan horas.",
+      label: `${counts.noClockIn} persona(s) sin fichaje recibido`,
+      detail:
+        "Puede ser ausencia real o un fichaje aún sin sincronizar en el dispositivo. Se registra tal cual: no se inventan horas.",
       employeeIds: explain.noClockIn,
       action: { label: "Ver asistencia", to: tc },
+    });
+  }
+
+  if (counts.reviewRequired > 0) {
+    // Un fichaje capturado sin conexión con drift sospechoso no se corrige en
+    // silencio: bloquea la reconciliación hasta que alguien lo revise.
+    blockers.push({
+      id: "time-review-required",
+      kind: "blocker",
+      label: `${counts.reviewRequired} fichaje(s) requieren revisión horaria`,
+      detail:
+        "Fueron capturados sin conexión y la hora del dispositivo no coincide con la de sincronización.",
+      employeeIds: explain.reviewRequired,
+      action: { label: "Abrir Time Clock", to: tc },
+    });
+  }
+
+  if (counts.offlineCaptured > 0) {
+    warnings.push({
+      id: "offline-captured",
+      kind: "warning",
+      label: `${counts.offlineCaptured} fichaje(s) capturados sin conexión`,
+      detail: "Ya sincronizados. Se conserva la hora del dispositivo tal como se registró.",
+      employeeIds: explain.offlineCaptured,
+      action: { label: "Abrir Time Clock", to: tc },
     });
   }
 
@@ -218,6 +244,8 @@ export function evaluateCloseoutGateFromEvidence(args: {
     missingClockOut: e?.missingClockOut ?? 0,
     noClockIn: Math.max(0, (e?.assigned ?? 0) - (e?.clockIns ?? 0)),
     extras: 0,
+    offlineCaptured: 0,
+    reviewRequired: 0,
     incidents: e?.incidents ?? 0,
   };
   const emptyExplain = Object.fromEntries(

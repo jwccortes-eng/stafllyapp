@@ -16649,6 +16649,8 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           break_minutes: number | null
+          captured_offline: boolean
+          client_event_id: string | null
           clock_in: string
           clock_in_lat: number | null
           clock_in_lng: number | null
@@ -16661,10 +16663,15 @@ export type Database = {
           created_at: string
           employee_id: string
           entry_source: string
+          event_time_device: string | null
           id: string
           notes: string | null
+          requires_time_review: boolean
           shift_id: string | null
           status: string
+          sync_delay_seconds: number | null
+          synced_at: string | null
+          time_review_reason: string | null
           updated_at: string
           updated_by: string | null
           version: number
@@ -16673,6 +16680,8 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           break_minutes?: number | null
+          captured_offline?: boolean
+          client_event_id?: string | null
           clock_in: string
           clock_in_lat?: number | null
           clock_in_lng?: number | null
@@ -16685,10 +16694,15 @@ export type Database = {
           created_at?: string
           employee_id: string
           entry_source?: string
+          event_time_device?: string | null
           id?: string
           notes?: string | null
+          requires_time_review?: boolean
           shift_id?: string | null
           status?: string
+          sync_delay_seconds?: number | null
+          synced_at?: string | null
+          time_review_reason?: string | null
           updated_at?: string
           updated_by?: string | null
           version?: number
@@ -16697,6 +16711,8 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           break_minutes?: number | null
+          captured_offline?: boolean
+          client_event_id?: string | null
           clock_in?: string
           clock_in_lat?: number | null
           clock_in_lng?: number | null
@@ -16709,10 +16725,15 @@ export type Database = {
           created_at?: string
           employee_id?: string
           entry_source?: string
+          event_time_device?: string | null
           id?: string
           notes?: string | null
+          requires_time_review?: boolean
           shift_id?: string | null
           status?: string
+          sync_delay_seconds?: number | null
+          synced_at?: string | null
+          time_review_reason?: string | null
           updated_at?: string
           updated_by?: string | null
           version?: number

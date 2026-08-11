@@ -17,7 +17,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useClockRequest } from "@/hooks/useClockRequest";
-import { clockButtonLabel } from "@/lib/timeclock/clock-request-state";
+import { clockButtonLabel, isAmbiguousFailure } from "@/lib/timeclock/clock-request-state";
+import { useOfflineClockQueue } from "@/hooks/useOfflineClockQueue";
+import { createClientEventId, deviceTimezone } from "@/lib/timeclock/offline-clock-types";
+import {
+  resolveClockStatus,
+  elapsedSeconds,
+  formatElapsed,
+  CLOCK_STATUS_LABEL,
+} from "@/lib/timeclock/clock-status";
+
 import {
   Dialog,
   DialogContent,
@@ -404,7 +413,32 @@ export default function PortalClock() {
     verify: verifyClockIntent,
     onConfirmed: async () => { await loadData(); },
   });
+  // ── P0 · Cola offline durable (IndexedDB) ──────────────────────────────
+  // Sobrevive refresh, cierre del navegador y cambios de red. Al sincronizar
+  // recarga la verdad canónica desde el servidor.
+  const offlineQueue = useOfflineClockQueue(employeeId ?? null, async () => {
+    await loadData();
+  });
+
+  // Estado canónico único: servidor primero, evento local pendiente después.
+  const clockResolution = resolveClockStatus({
+    shiftId: null,
+    entries: [
+      ...(activeEntry ? [activeEntry] : []),
+      ...todayEntries,
+    ].map((e) => ({
+      id: e.id,
+      shift_id: e.shift_id,
+      clock_in: e.clock_in,
+      clock_out: e.clock_out,
+      requires_time_review: (e as unknown as { requires_time_review?: boolean }).requires_time_review ?? false,
+    })),
+    pending: offlineQueue.pending,
+  });
+  const pendingClockEvent = clockResolution.pending;
+
   const acting = clockRequest.locked;
+
 
 
   const proceedWithClockIn = () => {
@@ -495,7 +529,11 @@ export default function PortalClock() {
   const handleClockIn = async (photoUrl: string | null) => {
     if (!employeeId || !companyId || !selectedShift) return;
     clockIntentRef.current = { type: "in", shiftId: selectedShift.id };
+    const clientEventId = createClientEventId();
+    const eventTimeDevice = new Date().toISOString();
+    const shiftForEvent = selectedShift;
     await clockRequest.submit(async () => {
+
       let pos: { latitude: number; longitude: number; accuracy: number } | null = null;
       try { pos = await capturePosition(); } catch { /* GPS unavailable */ }
       const device = getDeviceId();
@@ -573,22 +611,71 @@ export default function PortalClock() {
         } as any);
         if (error) throw error;
       } else {
+        // ── P0 · Offline-first ──────────────────────────────────────────
+        // Sin conectividad no se bloquea al worker: el evento se guarda
+        // durable en el dispositivo y se sincroniza después. Nunca se crea
+        // un time_entry ficticio y payroll sigue leyendo sólo lo canónico.
+        const queueOffline = async () => {
+          await offlineQueue.enqueue({
+            client_event_id: clientEventId,
+            type: "CLOCK_IN",
+            employee_id: employeeId,
+            company_id: companyId,
+            shift_id: shiftForEvent.id,
+            assignment_id: null,
+            time_entry_id: null,
+            closes_client_event_id: null,
+            event_time_device: eventTimeDevice,
+            timezone: deviceTimezone(),
+            device_id: device,
+            gps: pos,
+            within_geofence: withinGeofence,
+            photo_url: photoUrl,
+            offline: true,
+          });
+        };
+
+        if (typeof navigator !== "undefined" && navigator.onLine === false) {
+          await queueOffline();
+          setSelectedShift(null);
+          return;
+        }
+
         // Fase A safe-write: persist GPS evidence onto the new time_entry.
         // Payroll math is unchanged — these columns are informational only.
-        const { data: insertedEntry, error } = await supabase.from("time_entries").insert({
-          employee_id: employeeId, company_id: companyId, clock_in: new Date().toISOString(), status: "pending", shift_id: selectedShift.id,
-          clock_in_lat: pos?.latitude ?? null,
-          clock_in_lng: pos?.longitude ?? null,
-          clock_in_within_geofence: withinGeofence,
-        } as any).select("id").single();
-        if (error) throw error;
-        if (insertedEntry) {
+        let insertedEntryId: string | null = null;
+        try {
+          const { data: insertedEntry, error } = await supabase.from("time_entries").insert({
+            employee_id: employeeId, company_id: companyId, clock_in: eventTimeDevice, status: "pending", shift_id: shiftForEvent.id,
+            clock_in_lat: pos?.latitude ?? null,
+            clock_in_lng: pos?.longitude ?? null,
+            clock_in_within_geofence: withinGeofence,
+            // Idempotencia: un reintento con la misma clave nunca duplica.
+            client_event_id: clientEventId,
+            captured_offline: false,
+            event_time_device: eventTimeDevice,
+            synced_at: new Date().toISOString(),
+            sync_delay_seconds: 0,
+          } as any).select("id").single();
+          if (error) throw error;
+          insertedEntryId = insertedEntry?.id ?? null;
+        } catch (err) {
+          // Entrega incierta (timeout, red caída, 5xx): el fichaje NO se pierde.
+          if (isAmbiguousFailure(err)) {
+            await queueOffline();
+            setSelectedShift(null);
+            return;
+          }
+          throw err;
+        }
+        if (insertedEntryId) {
           await supabase.from("clock_events").insert({
-            employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, time_entry_id: insertedEntry.id,
+            employee_id: employeeId, company_id: companyId, shift_id: shiftForEvent.id, time_entry_id: insertedEntryId,
             type: "clock_in", latitude: pos?.latitude ?? null, longitude: pos?.longitude ?? null, accuracy: pos?.accuracy ?? null, device, photo_url: photoUrl,
           } as any);
         }
       }
+
 
       setSuccessState({ type: "in", time: format(new Date(), "HH:mm"), shift: selectedShift.title });
       toast({ title: labels.inSuccess });
@@ -598,12 +685,22 @@ export default function PortalClock() {
   };
 
   const handleClockOut = async (photoUrl: string | null) => {
-    if (!activeEntry || !companyId || !employeeId) return;
-    const activeShift = todayShifts.find(s => s.id === activeEntry.shift_id) ?? null;
+    if (!companyId || !employeeId) return;
+    // La salida también es posible sobre una entrada aún pendiente de
+    // sincronizar en este dispositivo (offline-first).
+    const pendingClockIn =
+      offlineQueue.pending.find((p) => p.type === "CLOCK_IN" && p.status !== "SYNCED") ?? null;
+    if (!activeEntry && !pendingClockIn) return;
+    const activeShift = activeEntry
+      ? todayShifts.find(s => s.id === activeEntry.shift_id) ?? null
+      : todayShifts.find(s => s.id === pendingClockIn?.shift_id) ?? null;
     const scheduleCheck = isClockOutWithinSchedule(activeShift);
-    clockIntentRef.current = { type: "out", entryId: activeEntry.id };
+    const clientEventId = createClientEventId();
+    const eventTimeDevice = new Date().toISOString();
+    if (activeEntry) clockIntentRef.current = { type: "out", entryId: activeEntry.id };
     await clockRequest.submit(async () => {
-      const clockOutTime = new Date().toISOString();
+      const clockOutTime = eventTimeDevice;
+
       let pos: { latitude: number; longitude: number; accuracy: number } | null = null;
       try { pos = await capturePosition(); } catch { /* GPS unavailable */ }
       const device = getDeviceId();
@@ -616,9 +713,10 @@ export default function PortalClock() {
       //   • true  → GPS valid AND inside radius at clock-out
       //   • false → GPS valid AND outside radius at clock-out
       let withinGeofence: boolean | null = null;
-      if (activeEntry.shift_id && pos) {
+      const shiftIdForOut = activeEntry?.shift_id ?? pendingClockIn?.shift_id ?? null;
+      if (shiftIdForOut && pos) {
         const { data: shiftData } = await supabase.from("scheduled_shifts")
-          .select("locations(latitude, longitude, geofence_radius)").eq("id", activeEntry.shift_id).maybeSingle();
+          .select("locations(latitude, longitude, geofence_radius)").eq("id", shiftIdForOut).maybeSingle();
         const loc = (shiftData as any)?.locations;
         if (loc?.latitude && loc?.longitude) {
           const { data: clockCfgRow } = await supabase.from("company_settings")
@@ -629,47 +727,90 @@ export default function PortalClock() {
           const dist = distanceMeters(pos.latitude, pos.longitude, loc.latitude, loc.longitude);
           withinGeofence = dist <= radius;
         }
-      } else if (activeEntry.shift_id && !pos) {
+      } else if (shiftIdForOut && !pos) {
         // Distinct, low-severity signal: GPS unavailable at clock-out.
         // Never treated as fraud, never alters payroll.
         try {
           await supabase.from("clock_alerts").insert({
-            employee_id: employeeId, company_id: companyId, shift_id: activeEntry.shift_id,
+            employee_id: employeeId, company_id: companyId, shift_id: shiftIdForOut,
             type: "GPS_UNAVAILABLE", severity: "low",
             description: "Clock-out without GPS (permission denied, timeout or unsupported).",
           } as any);
         } catch { /* alert is non-critical */ }
       }
 
-      await supabase.from("clock_events").insert({
-        employee_id: employeeId, company_id: companyId, shift_id: activeEntry.shift_id, time_entry_id: activeEntry.id,
-        type: "clock_out", latitude: pos?.latitude ?? null, longitude: pos?.longitude ?? null, accuracy: pos?.accuracy ?? null, device, photo_url: photoUrl,
-      } as any);
-      if (!scheduleCheck.withinSchedule) {
-        await supabase.from("time_entries").update({
-          clock_out: clockOutTime, status: "pending", notes: `⚠️ Clock-out outside scheduled hours.`,
-          clock_out_lat: pos?.latitude ?? null,
-          clock_out_lng: pos?.longitude ?? null,
-          clock_out_within_geofence: withinGeofence,
-        } as any).eq("id", activeEntry.id);
-        // Log out-of-schedule clock-out as alert instead of ticket (more reliable)
-        try {
-          await supabase.from("clock_alerts").insert({
-            employee_id: employeeId, company_id: companyId,
-            shift_id: activeEntry.shift_id,
-            type: "OUT_OF_SCHEDULE_CLOCKOUT", severity: "medium",
-            description: `Clock-out at ${format(new Date(), "HH:mm")} outside scheduled hours.`,
-          } as any);
-        } catch { /* non-critical */ }
-      } else {
-        const { error } = await supabase.from("time_entries").update({
-          clock_out: clockOutTime,
-          clock_out_lat: pos?.latitude ?? null,
-          clock_out_lng: pos?.longitude ?? null,
-          clock_out_within_geofence: withinGeofence,
-        } as any).eq("id", activeEntry.id);
-        if (error) throw error;
+      // ── P0 · Offline-first · salida ────────────────────────────────────
+      const queueOfflineOut = async () => {
+        await offlineQueue.enqueue({
+          client_event_id: clientEventId,
+          type: "CLOCK_OUT",
+          employee_id: employeeId,
+          company_id: companyId,
+          shift_id: shiftIdForOut,
+          assignment_id: null,
+          time_entry_id: activeEntry?.id ?? null,
+          closes_client_event_id: activeEntry ? null : pendingClockIn?.client_event_id ?? null,
+          event_time_device: eventTimeDevice,
+          timezone: deviceTimezone(),
+          device_id: device,
+          gps: pos,
+          within_geofence: withinGeofence,
+          photo_url: photoUrl,
+          offline: true,
+        });
+      };
+
+      const offlineNow = typeof navigator !== "undefined" && navigator.onLine === false;
+      if (!activeEntry || offlineNow) {
+        // Entrada aún no canónica, o sin red: la salida queda pendiente y se
+        // reconcilia sin duplicar time_entries al sincronizar.
+        await queueOfflineOut();
+        return;
       }
+
+      try {
+        await supabase.from("clock_events").insert({
+          employee_id: employeeId, company_id: companyId, shift_id: activeEntry.shift_id, time_entry_id: activeEntry.id,
+          type: "clock_out", latitude: pos?.latitude ?? null, longitude: pos?.longitude ?? null, accuracy: pos?.accuracy ?? null, device, photo_url: photoUrl,
+        } as any);
+        if (!scheduleCheck.withinSchedule) {
+          const { error } = await supabase.from("time_entries").update({
+            clock_out: clockOutTime, status: "pending", notes: `⚠️ Clock-out outside scheduled hours.`,
+            clock_out_lat: pos?.latitude ?? null,
+            clock_out_lng: pos?.longitude ?? null,
+            clock_out_within_geofence: withinGeofence,
+            synced_at: new Date().toISOString(),
+            sync_delay_seconds: 0,
+          } as any).eq("id", activeEntry.id).is("clock_out", null);
+          if (error) throw error;
+          // Log out-of-schedule clock-out as alert instead of ticket (more reliable)
+          try {
+            await supabase.from("clock_alerts").insert({
+              employee_id: employeeId, company_id: companyId,
+              shift_id: activeEntry.shift_id,
+              type: "OUT_OF_SCHEDULE_CLOCKOUT", severity: "medium",
+              description: `Clock-out at ${format(new Date(), "HH:mm")} outside scheduled hours.`,
+            } as any);
+          } catch { /* non-critical */ }
+        } else {
+          const { error } = await supabase.from("time_entries").update({
+            clock_out: clockOutTime,
+            clock_out_lat: pos?.latitude ?? null,
+            clock_out_lng: pos?.longitude ?? null,
+            clock_out_within_geofence: withinGeofence,
+            synced_at: new Date().toISOString(),
+            sync_delay_seconds: 0,
+          } as any).eq("id", activeEntry.id).is("clock_out", null);
+          if (error) throw error;
+        }
+      } catch (err) {
+        if (isAmbiguousFailure(err)) {
+          await queueOfflineOut();
+          return;
+        }
+        throw err;
+      }
+
       setSuccessState({ type: "out", time: format(new Date(), "HH:mm"), shift: activeShift?.title ?? "Shift" });
       setTimeout(() => setSuccessState(null), 4000);
     });
@@ -692,16 +833,17 @@ export default function PortalClock() {
   };
 
   const getElapsed = () => {
-    if (!activeEntry) return null;
-    const diff = Math.floor((now.getTime() - new Date(activeEntry.clock_in).getTime()) / 1000);
+    // El contador vive en el estado canónico (servidor o evento local
+    // durable), nunca en el ciclo de vida del componente: un remount, un
+    // refresh o reabrir el navegador no lo reinician.
+    const seconds = elapsedSeconds(clockResolution, now);
+    if (seconds == null) return null;
     // Stale recovery: if entry was opened >24h ago, show a sober "—:—:—"
     // to avoid a misleading 73:42:11 timer. The banner above already explains.
-    if (diff > 24 * 3600) return "—:—:—";
-    const h = Math.floor(diff / 3600);
-    const m = Math.floor((diff % 3600) / 60);
-    const s = diff % 60;
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    if (seconds > 24 * 3600) return "—:—:—";
+    return formatElapsed(seconds);
   };
+
 
   const getDuration = (entry: TimeEntry) => {
     if (!entry.clock_out) return "In progress";
@@ -739,7 +881,14 @@ export default function PortalClock() {
     );
   }
 
-  const isClockedIn = !!activeEntry;
+  // Fichado = entrada confirmada en servidor O entrada pendiente de sincronizar
+  // en este dispositivo. Nunca se vuelve a ofrecer "Marcar entrada" si hay un
+  // fichaje vivo sin resolver.
+  const isClockedIn =
+    !!activeEntry ||
+    clockResolution.status === "CLOCK_IN_PENDING_SYNC" ||
+    clockResolution.status === "CLOCK_OUT_PENDING_SYNC";
+
   const activeEntryAgeHours = getEntryAgeHours(activeEntry, now);
   const isStaleActiveEntry = activeEntryAgeHours != null && activeEntryAgeHours > STALE_OPEN_ENTRY_HOURS;
   const hasQrShifts = allowedMethods.includes("qr") && Object.values(shiftQrModes).some(m => m !== "disabled" && m !== "");
@@ -850,7 +999,44 @@ export default function PortalClock() {
         </div>
       )}
 
+      {/* ─── P0 · Fichaje pendiente de sincronizar (offline-first) ─── */}
+      {pendingClockEvent && (
+        <div className="mb-3 rounded-xl border border-warning/30 bg-warning/[0.06] p-3 flex items-start gap-3 relative overflow-hidden" role="status">
+          <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-warning" />
+          <div className="h-8 w-8 rounded-lg bg-warning/[0.1] flex items-center justify-center shrink-0 ml-1">
+            <Timer className="h-4 w-4 text-warning" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              {pendingClockEvent.type === "CLOCK_IN"
+                ? "Entrada guardada en este dispositivo"
+                : "Salida guardada en este dispositivo"}
+            </p>
+            <p className="text-[12px] text-muted-foreground mt-0.5 leading-relaxed">
+              Registrada a las {format(new Date(pendingClockEvent.event_time_device), "HH:mm")}.
+              Se sincronizará automáticamente cuando vuelva la conexión. No cierres la sesión.
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="rounded-md bg-warning/[0.12] px-2 py-1 text-[11px] font-semibold text-warning">
+                {CLOCK_STATUS_LABEL[clockResolution.status]}
+              </span>
+
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-[12px]"
+                disabled={offlineQueue.syncing || !offlineQueue.online}
+                onClick={() => { void offlineQueue.syncNow(); }}
+              >
+                {offlineQueue.syncing ? "Sincronizando…" : "Sincronizar ahora"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── Stale open entry banner — recovery for stuck shifts ─── */}
+
       {staleOpenEntry && !successState && (
         <div className="mb-3 rounded-xl border border-warning/30 bg-warning/[0.06] p-3 flex items-start gap-3 relative overflow-hidden">
           <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-warning" />

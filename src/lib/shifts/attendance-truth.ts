@@ -16,7 +16,8 @@ export type AttendanceRowState =
   | "clocked_out"        // clock_in + clock_out reales
   | "active"             // clock_in real, sin salida, dentro de ventana
   | "missing_clock_out"  // clock_in real, sin salida, ventana vencida
-  | "no_clock_in"        // asignación esperada sin fichaje real
+  | "no_clock_in"        // asignación esperada sin fichaje real recibido
+  | "review_required"    // fichaje sincronizado con evidencia que exige revisión
   | "not_expected_yet"   // asignado pero el turno aún no empieza
   | "extra"              // fichaje real de alguien no asignado
   | "excluded";          // asignación removida/rechazada
@@ -37,6 +38,11 @@ export interface AttendanceEntryInput {
   clock_out: string | null;
   /** pending | approved | rejected | voided */
   status?: string | null;
+  /** Fichaje capturado sin conexión y sincronizado después. */
+  captured_offline?: boolean | null;
+  /** Marcado por drift de reloj u otra evidencia dudosa. */
+  requires_time_review?: boolean | null;
+  synced_at?: string | null;
 }
 
 export interface AttendanceTruthRow {
@@ -47,6 +53,8 @@ export interface AttendanceTruthRow {
   clock_in: string | null;
   clock_out: string | null;
   entry_status: string | null;
+  captured_offline: boolean;
+  requires_time_review: boolean;
   state: AttendanceRowState;
   /** Frase corta que explica por qué esta fila cuenta donde cuenta. */
   explanation: string;
@@ -65,8 +73,12 @@ export interface AttendanceCounts {
   active: number;
   /** Fichaje abierto con la ventana esperada ya vencida. */
   missingClockOut: number;
-  /** Asignación esperada sin ningún fichaje válido. */
+  /** Asignación esperada sin ningún fichaje recibido en el servidor. */
   noClockIn: number;
+  /** Fichajes capturados sin conexión y ya sincronizados. */
+  offlineCaptured: number;
+  /** Fichajes que exigen revisión humana antes de reconciliar. */
+  reviewRequired: number;
   /** Fichajes de personas sin asignación vigente. */
   extras: number;
   /** Suma de situaciones que requieren decisión humana. */
@@ -144,6 +156,8 @@ export function deriveAttendanceTruth(input: AttendanceTruthInput): AttendanceTr
         clock_in: entry?.clock_in ?? null,
         clock_out: entry?.clock_out ?? null,
         entry_status: entry?.status ?? null,
+        captured_offline: entry?.captured_offline === true,
+        requires_time_review: entry?.requires_time_review === true,
         state: "excluded",
         explanation: `Asignación ${status}: no cuenta como esperada.`,
       });
@@ -154,7 +168,10 @@ export function deriveAttendanceTruth(input: AttendanceTruthInput): AttendanceTr
 
     let state: AttendanceRowState;
     let explanation: string;
-    if (entry && entry.clock_out) {
+    if (entry?.requires_time_review) {
+      state = "review_required";
+      explanation = "Fichaje sincronizado con diferencia horaria sospechosa: requiere revisión.";
+    } else if (entry && entry.clock_out) {
       state = "clocked_out";
       explanation = "Fichaje real con entrada y salida.";
     } else if (entry) {
@@ -167,7 +184,9 @@ export function deriveAttendanceTruth(input: AttendanceTruthInput): AttendanceTr
       }
     } else if (started) {
       state = "no_clock_in";
-      explanation = "Asignación vigente sin ningún fichaje real.";
+      // Ojo: "no recibido" ≠ "no-show". El fichaje puede seguir pendiente de
+      // sincronizar en el dispositivo del worker.
+      explanation = "Asignación vigente sin fichaje recibido en el servidor.";
     } else {
       state = "not_expected_yet";
       explanation = "El turno todavía no empieza.";
@@ -181,6 +200,8 @@ export function deriveAttendanceTruth(input: AttendanceTruthInput): AttendanceTr
       clock_in: entry?.clock_in ?? null,
       clock_out: entry?.clock_out ?? null,
       entry_status: entry?.status ?? null,
+      captured_offline: entry?.captured_offline === true,
+      requires_time_review: entry?.requires_time_review === true,
       state,
       explanation,
     });
@@ -197,6 +218,8 @@ export function deriveAttendanceTruth(input: AttendanceTruthInput): AttendanceTr
       clock_in: entry.clock_in,
       clock_out: entry.clock_out,
       entry_status: entry.status ?? null,
+      captured_offline: entry.captured_offline === true,
+      requires_time_review: entry.requires_time_review === true,
       state: "extra",
       explanation: "Fichaje real sin asignación vigente en este turno.",
     });
@@ -216,6 +239,8 @@ export function deriveAttendanceTruth(input: AttendanceTruthInput): AttendanceTr
   const missingClockOut = ofState("missing_clock_out");
   const noClockIn = ofState("no_clock_in");
   const extras = ofState("extra");
+  const reviewRequired = rows.filter(r => r.requires_time_review && r.state !== "excluded");
+  const offlineCaptured = rows.filter(r => r.captured_offline && r.state !== "excluded");
 
   const counts: AttendanceCounts = {
     expected: expectedRows.length,
@@ -226,7 +251,10 @@ export function deriveAttendanceTruth(input: AttendanceTruthInput): AttendanceTr
     missingClockOut: missingClockOut.length,
     noClockIn: noClockIn.length,
     extras: extras.length,
-    incidents: missingClockOut.length + noClockIn.length + extras.length,
+    offlineCaptured: offlineCaptured.length,
+    reviewRequired: reviewRequired.length,
+    incidents:
+      missingClockOut.length + noClockIn.length + extras.length + reviewRequired.length,
   };
 
   const ids = (list: AttendanceTruthRow[]) => list.map(r => r.employee_id);
@@ -239,7 +267,9 @@ export function deriveAttendanceTruth(input: AttendanceTruthInput): AttendanceTr
     missingClockOut: ids(missingClockOut),
     noClockIn: ids(noClockIn),
     extras: ids(extras),
-    incidents: [...ids(missingClockOut), ...ids(noClockIn), ...ids(extras)],
+    offlineCaptured: ids(offlineCaptured),
+    reviewRequired: ids(reviewRequired),
+    incidents: [...ids(missingClockOut), ...ids(noClockIn), ...ids(extras), ...ids(reviewRequired)],
   };
 
   return { rows, counts, explain };
@@ -253,7 +283,9 @@ export const ATTENDANCE_COUNT_LABEL: Record<keyof AttendanceCounts, string> = {
   clockOuts: "Salidas",
   active: "Activos ahora",
   missingClockOut: "Falta salida",
-  noClockIn: "No fichó",
+  noClockIn: "Sin fichaje recibido",
+  offlineCaptured: "Capturados sin conexión",
+  reviewRequired: "Requieren revisión",
   extras: "Extras",
   incidents: "Incidencias",
 };
