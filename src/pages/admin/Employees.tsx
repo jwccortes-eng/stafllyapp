@@ -1887,28 +1887,28 @@ export default function Employees() {
             icon={CheckCircle2}
             title="No failed invitations 🎉"
             description="The activation backlog is clean. New failures will appear here automatically when an invitation bounces or hits DLQ."
-            actionLabel="View pending activation"
+            actionLabel="Ver pendientes de activar"
             onAction={() => setStatusTab("pending")}
           />
         ) : statusTab === "pending" && employees.length > 0 && !search ? (
           <EmptyState
             icon={CheckCircle2}
-            title="Nothing pending"
-            description="Every active worker has either accessed the portal or has an invitation in flight. Use 'Quick add' to onboard someone new."
-            actionLabel="Quick add"
+            title="Nada pendiente"
+            description="Todos los trabajadores activos ya entraron al portal o tienen invitación enviada. Usa Nuevo trabajador para dar de alta a alguien."
+            actionLabel="Nuevo trabajador"
             onAction={() => setQuickAddOpen(true)}
           />
         ) : statusTab === "inactive" && employees.length > 0 && !search ? (
           <EmptyState
             icon={UserCheck}
-            title="No archived workers"
-            description="Workers you archive will appear here. Archived workers can be reactivated at any time."
+            title="Sin trabajadores archivados"
+            description="Los trabajadores que archives aparecerán aquí. Puedes reactivarlos cuando quieras."
           />
         ) : statusTab === "missing-docs" && employees.length > 0 && !search ? (
           <EmptyState
             icon={CheckCircle2}
-            title="All workers have their documents 🎉"
-            description="Onboarding requirements are complete across the active roster."
+            title="Todos los trabajadores tienen sus documentos"
+            description="La incorporación está completa en toda la plantilla activa."
           />
         ) : (
           <EmptyState
@@ -1925,9 +1925,9 @@ export default function Employees() {
                 ? `Hay ${hiddenBySearch} trabajador${hiddenBySearch === 1 ? "" : "es"} que coincide${hiddenBySearch === 1 ? "" : "n"} con "${search}" fuera de esta vista.`
                 : search
                   ? "Prueba cambiar filtros o revisar Todos."
-                  : "Usa 'Quick add' para crear tu primer trabajador y opcionalmente enviarle una invitación."
+                  : "Usa Nuevo trabajador para crear tu primer trabajador y opcionalmente enviarle una invitación."
             }
-            actionLabel={hiddenBySearch > 0 ? "Ver en Todos" : (!search ? "Quick add" : undefined)}
+            actionLabel={hiddenBySearch > 0 ? "Ver en Todos" : (!search ? "Nuevo trabajador" : undefined)}
             onAction={
               hiddenBySearch > 0
                 ? () => setStatusTab("all")
