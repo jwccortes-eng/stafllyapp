@@ -276,13 +276,15 @@ export function resolveServiceLocationTruth(
   const destinationStatus: DestinationStatus =
     dest || structuredId ? "RESOLVED" : "MISSING_DESTINATION";
 
-  const destinationSource: DestinationSource = dest
-    ? (dest.source as DestinationSource)
-    : structuredId
-      ? clean(input.job_site_location_id)
-        ? "job_site_v2"
-        : "legacy_venue"
-      : null;
+  // Prioridad dura: FK estructurada > venue legado > texto libre. Una FK
+  // declarada manda aunque la fila no esté hidratada en esta pantalla.
+  const destinationSource: DestinationSource = clean(input.job_site_location_id)
+    ? "job_site_v2"
+    : clean(input.location_id)
+      ? "legacy_venue"
+      : dest
+        ? (dest.source as DestinationSource)
+        : null;
 
   const displayAddress = dest?.address ?? clean(input.job_site_address);
   const lat = dest?.latitude ?? null;
