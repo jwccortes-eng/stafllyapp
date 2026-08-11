@@ -2283,6 +2283,24 @@ export type Database = {
           },
         ]
       }
+      company_internal_id_counters: {
+        Row: {
+          company_id: string
+          last_number: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          last_number?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          last_number?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       company_lifecycle_events: {
         Row: {
           actor_id: string | null
@@ -6718,6 +6736,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      internal_id_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          assignment_reason: string
+          company_id: string
+          employee_id: string
+          id: string
+          internal_id: string
+          notes: string | null
+          previous_internal_id: string | null
+          source: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          assignment_reason: string
+          company_id: string
+          employee_id: string
+          id?: string
+          internal_id: string
+          notes?: string | null
+          previous_internal_id?: string | null
+          source?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          assignment_reason?: string
+          company_id?: string
+          employee_id?: string
+          id?: string
+          internal_id?: string
+          notes?: string | null
+          previous_internal_id?: string | null
+          source?: string
+        }
+        Relationships: []
       }
       internal_messages: {
         Row: {
@@ -18201,6 +18258,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      assign_internal_id: {
+        Args: {
+          p_employee_id: string
+          p_notes?: string
+          p_reason?: string
+          p_source?: string
+        }
+        Returns: Json
+      }
       assign_worker_to_shift: {
         Args: {
           p_assignment_role?: string
@@ -18314,6 +18380,14 @@ export type Database = {
       }
       consolidate_period_base_pay: {
         Args: { _company_id: string; _period_id: string }
+        Returns: Json
+      }
+      correct_internal_id: {
+        Args: {
+          p_employee_id: string
+          p_new_internal_id: string
+          p_reason: string
+        }
         Returns: Json
       }
       create_shift_worker_notification: {
@@ -18582,6 +18656,10 @@ export type Database = {
         Args: { _employee_id: string; _pin: string }
         Returns: undefined
       }
+      internal_id_numeric: {
+        Args: { p_prefix: string; p_value: string }
+        Returns: number
+      }
       internal_verify_pin_hash: {
         Args: { _employee_id: string; _pin: string }
         Returns: boolean
@@ -18686,6 +18764,7 @@ export type Database = {
         Args: { _company_id: string }
         Returns: number
       }
+      next_internal_id: { Args: { p_company_id: string }; Returns: string }
       oai_can_read_observations: { Args: never; Returns: boolean }
       oai_delete_company_observations: {
         Args: { _company_id: string }
