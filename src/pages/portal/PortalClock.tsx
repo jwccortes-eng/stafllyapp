@@ -651,12 +651,22 @@ export default function PortalClock() {
   };
 
   const handleClockOut = async (photoUrl: string | null) => {
-    if (!activeEntry || !companyId || !employeeId) return;
-    const activeShift = todayShifts.find(s => s.id === activeEntry.shift_id) ?? null;
+    if (!companyId || !employeeId) return;
+    // La salida también es posible sobre una entrada aún pendiente de
+    // sincronizar en este dispositivo (offline-first).
+    const pendingClockIn =
+      offlineQueue.pending.find((p) => p.type === "CLOCK_IN" && p.status !== "SYNCED") ?? null;
+    if (!activeEntry && !pendingClockIn) return;
+    const activeShift = activeEntry
+      ? todayShifts.find(s => s.id === activeEntry.shift_id) ?? null
+      : todayShifts.find(s => s.id === pendingClockIn?.shift_id) ?? null;
     const scheduleCheck = isClockOutWithinSchedule(activeShift);
-    clockIntentRef.current = { type: "out", entryId: activeEntry.id };
+    const clientEventId = createClientEventId();
+    const eventTimeDevice = new Date().toISOString();
+    if (activeEntry) clockIntentRef.current = { type: "out", entryId: activeEntry.id };
     await clockRequest.submit(async () => {
-      const clockOutTime = new Date().toISOString();
+      const clockOutTime = eventTimeDevice;
+
       let pos: { latitude: number; longitude: number; accuracy: number } | null = null;
       try { pos = await capturePosition(); } catch { /* GPS unavailable */ }
       const device = getDeviceId();
