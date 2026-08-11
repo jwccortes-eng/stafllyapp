@@ -564,7 +564,7 @@ export default function Clients() {
           canEdit={canEdit}
         />
       ) : directory.isLoading ? (
-        <div className={cn(effectiveViewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-2")}>
+        <div className={cn(effectiveViewMode === "grid" ? "grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-2")}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className={cn("animate-pulse bg-muted rounded-2xl", effectiveViewMode === "grid" ? "h-40" : "h-16")} />
           ))}
@@ -576,7 +576,7 @@ export default function Clients() {
           description={search ? "Intenta con otro término, código o contacto" : "Crea el primer cliente sólo con su nombre"}
         />
       ) : effectiveViewMode === "grid" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
           {visibleTruths.map((t) => (
             <ClientDirectoryCard
               key={t.clientId}
