@@ -11,11 +11,18 @@
  *              + NO placeholder/system (worker_type / identity_status /
  *                payroll_safe / person_type_guess → isPlaceholderWorker)
  *              + employee_role !== 'historical'
- *              + added_via !== 'Pending approval'
+ *              + NO "pendiente de aprobación real"
+ *
+ * P0 · Fase 2 (remediación de identidad): `added_via` describe ORIGEN /
+ * HISTORIA DE ALTA y NO puede por sí solo decidir asignabilidad. Un canónico
+ * activo, con portal real (`user_id`) y sin bloqueo operativo real debe
+ * aparecer en staffing aunque su `added_via` histórico diga "Pending approval".
+ * No se cambia el valor de `added_via`: se corrige su interpretación.
  *
  * No borra, no muta, no toca payroll/time_entries/historial. Solo decide
  * visibilidad en las superficies de asignación.
  */
+
 import { isPlaceholderWorker } from "@/lib/employee-identity";
 
 export type AssignabilityBucket =
