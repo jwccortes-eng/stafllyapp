@@ -1983,6 +1983,8 @@ export default function Employees() {
                   status={view.status}
                   statusLabel={view.statusLabel}
                   badges={[...riskBadges, ...view.badges]}
+                  /* Móvil: densidad media — 2 señales visibles, el resto en "+N". */
+                  maxBadges={isMobile ? 2 : 3}
                   onClick={() => navigate(`/app/employees/${e.id}`)}
                   actions={
                     <>
