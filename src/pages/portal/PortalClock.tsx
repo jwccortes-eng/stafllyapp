@@ -833,16 +833,17 @@ export default function PortalClock() {
   };
 
   const getElapsed = () => {
-    if (!activeEntry) return null;
-    const diff = Math.floor((now.getTime() - new Date(activeEntry.clock_in).getTime()) / 1000);
+    // El contador vive en el estado canónico (servidor o evento local
+    // durable), nunca en el ciclo de vida del componente: un remount, un
+    // refresh o reabrir el navegador no lo reinician.
+    const seconds = elapsedSeconds(clockResolution, now);
+    if (seconds == null) return null;
     // Stale recovery: if entry was opened >24h ago, show a sober "—:—:—"
     // to avoid a misleading 73:42:11 timer. The banner above already explains.
-    if (diff > 24 * 3600) return "—:—:—";
-    const h = Math.floor(diff / 3600);
-    const m = Math.floor((diff % 3600) / 60);
-    const s = diff % 60;
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    if (seconds > 24 * 3600) return "—:—:—";
+    return formatElapsed(seconds);
   };
+
 
   const getDuration = (entry: TimeEntry) => {
     if (!entry.clock_out) return "In progress";
