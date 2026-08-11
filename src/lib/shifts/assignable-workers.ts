@@ -39,8 +39,6 @@ export interface AssignableCandidate {
   added_via?: string | null;
   /** Portal real: presencia de cuenta vinculada. Evidencia de persona operativa. */
   user_id?: string | null;
-  /** Fecha de aprobación explícita, si la superficie la conoce. */
-  approved_at?: string | null;
   onboarding_status?: string | null;
   worker_type?: string | null;
   identity_status?: string | null;
@@ -95,7 +93,6 @@ function isHistorical(e: AssignableCandidate): boolean {
  */
 function hasRealOperationalEvidence(e: AssignableCandidate): boolean {
   if (e.user_id) return true;
-  if (e.approved_at) return true;
   const onboarding = (e.onboarding_status ?? "").toLowerCase().trim();
   return onboarding === "completed" || onboarding === "complete" || onboarding === "active";
 }
