@@ -881,7 +881,14 @@ export default function PortalClock() {
     );
   }
 
-  const isClockedIn = !!activeEntry;
+  // Fichado = entrada confirmada en servidor O entrada pendiente de sincronizar
+  // en este dispositivo. Nunca se vuelve a ofrecer "Marcar entrada" si hay un
+  // fichaje vivo sin resolver.
+  const isClockedIn =
+    !!activeEntry ||
+    clockResolution.status === "CLOCK_IN_PENDING_SYNC" ||
+    clockResolution.status === "CLOCK_OUT_PENDING_SYNC";
+
   const activeEntryAgeHours = getEntryAgeHours(activeEntry, now);
   const isStaleActiveEntry = activeEntryAgeHours != null && activeEntryAgeHours > STALE_OPEN_ENTRY_HOURS;
   const hasQrShifts = allowedMethods.includes("qr") && Object.values(shiftQrModes).some(m => m !== "disabled" && m !== "");
