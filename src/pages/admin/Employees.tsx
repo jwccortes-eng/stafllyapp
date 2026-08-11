@@ -1462,6 +1462,18 @@ export default function Employees() {
         title="Equipo"
         metrics={workspaceMetrics}
         tabs={statusTabsNode}
+        search={
+          /* Móvil: el buscador sube a la cabecera; en desktop vive en la barra de filtros. */
+          <div className="md:hidden relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre, teléfono o ID Stafly…"
+              className="h-10 pl-9 text-[14px] rounded-xl"
+            />
+          </div>
+        }
         filters={filtersNode}
         filtersActiveCount={activeChips.length}
         admin={adminPanelNode}
