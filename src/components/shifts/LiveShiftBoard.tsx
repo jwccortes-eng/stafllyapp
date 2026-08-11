@@ -267,24 +267,49 @@ export function LiveShiftBoard({
     return g;
   }, [rows]);
 
+  // P0-C · TRUTHFUL COUNTERS — todos los números salen del derivador canónico
+  // (`attendance-truth`), nunca de conteos auto-declarados ni de agrupaciones
+  // visuales. "Fichados" = personas con clock_in real, incluidas las que ya
+  // salieron; por eso nunca puede verse "0 fichados / 2 salidas".
+  const truth = useMemo(
+    () =>
+      deriveAttendanceTruth({
+        assignments: shiftAsgns.map((a) => ({
+          id: (a as any).id ?? a.employee_id,
+          employee_id: a.employee_id,
+          status: a.status,
+          response_status: (a as any).response_status ?? null,
+          attendance_status: (a as any).attendance_status ?? null,
+        })),
+        entries: entries.map((e) => ({
+          id: (e as any).id ?? `${e.employee_id}-${e.clock_in}`,
+          employee_id: e.employee_id,
+          clock_in: e.clock_in,
+          clock_out: e.clock_out,
+          status: (e as any).status ?? null,
+        })),
+        windowStartsAt: `${shiftDate}T${startTime}`,
+        windowEndsAt: shiftEnd,
+        graceMinutes: CLOSEOUT_GRACE_MIN,
+        now,
+      }),
+    [shiftAsgns, entries, shiftDate, startTime, shiftEnd, now],
+  );
+
   const counts = useMemo(() => {
-    const required = slots ?? 0;
-    const active = rows.filter((r) => r.bucket !== "rejected" && r.bucket !== "extra");
-    const confirmed = active.filter((r) =>
-      ["confirmed", "accepted"].includes(r.assignmentStatus),
-    ).length;
-    const clockedNow = groups.active.length;
-    const completed = groups.completed.length;
-    const missing = groups.missing_clockout.length;
-    const noClockIn = groups.no_clockin.length;
-    const extras = groups.extra.length;
-    const incidents = missing + noClockIn + extras;
+    const c = truth.counts;
     return {
-      required, asignados: active.length, confirmados: confirmed,
-      fichados: clockedNow, salidas: completed, faltaSalida: missing,
-      noLlegaron: noClockIn, extras, incidencias: incidents,
+      required: slots ?? 0,
+      asignados: c.expected,
+      confirmados: c.confirmed,
+      fichados: c.clockedIn,
+      salidas: c.clockOuts,
+      faltaSalida: c.missingClockOut,
+      noLlegaron: c.noClockIn,
+      extras: c.extras,
+      incidencias: c.incidents,
     };
-  }, [rows, groups, slots]);
+  }, [truth, slots]);
 
   const nextAction = useMemo(() => {
     if (counts.noLlegaron > 0) {
