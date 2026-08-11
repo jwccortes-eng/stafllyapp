@@ -315,6 +315,8 @@ export function OperationalWorkspace({
   action,
   tabs,
   filters,
+  filtersActiveCount = 0,
+  mobileFiltersTitle = "Filtros",
   metrics,
   admin,
   adminTitle,
