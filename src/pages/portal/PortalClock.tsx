@@ -670,10 +670,7 @@ export default function PortalClock() {
       }
       setSuccessState({ type: "out", time: format(new Date(), "HH:mm"), shift: activeShift?.title ?? "Shift" });
       setTimeout(() => setSuccessState(null), 4000);
-      await loadData();
-    } catch (err: any) {
-      toast({ title: t("portal.clock.could_not_register"), description: err.message ?? t("portal.clock.try_again"), variant: "destructive" });
-    } finally { setActing(false); }
+    });
   };
 
   const handleSendTimeRequest = async () => {
