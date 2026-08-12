@@ -147,15 +147,31 @@ var list_my_shifts_default = defineTool3({
     const supabase = mcpSupabase(ctx);
     const from = /* @__PURE__ */ new Date();
     const to = new Date(Date.now() + days_ahead * 24 * 60 * 60 * 1e3);
+    const { data: mine } = await supabase.from("employees").select("id,company_id").eq("user_id", ctx.getUserId()).eq("is_active", true);
+    const canonicalIds = (mine ?? []).map((e) => e.id);
+    if (canonicalIds.length === 0) {
+      return {
+        content: [
+          { type: "text", text: "No upcoming shifts found in the requested window." }
+        ]
+      };
+    }
+    const { data: shadows } = await supabase.from("employees").select("id,company_id,merged_into_employee_id").in("merged_into_employee_id", canonicalIds);
+    const companyById = new Map(
+      (mine ?? []).map((e) => [e.id, e.company_id])
+    );
+    const shadowIds = (shadows ?? []).filter(
+      (s) => s.merged_into_employee_id != null && s.company_id != null && companyById.get(s.merged_into_employee_id) === s.company_id
+    ).map((s) => s.id);
+    const identityIds = [...canonicalIds, ...shadowIds];
     const { data, error } = await supabase.from("shift_assignments").select(
       `id,
            status,
-           employees!inner(is_active,user_id),
            scheduled_shifts!inner(
              id,start_at,end_at,title,meeting_point,publication_status,company_id,
              companies(name)
            )`
-    ).eq("employees.is_active", true).eq("employees.user_id", ctx.getUserId()).gte("scheduled_shifts.start_at", from.toISOString()).lte("scheduled_shifts.start_at", to.toISOString()).order("scheduled_shifts(start_at)", { ascending: true }).limit(limit);
+    ).in("employee_id", identityIds).gte("scheduled_shifts.start_at", from.toISOString()).lte("scheduled_shifts.start_at", to.toISOString()).order("scheduled_shifts(start_at)", { ascending: true }).limit(limit);
     if (error) {
       return {
         content: [{ type: "text", text: "Could not load shifts." }],
@@ -163,7 +179,7 @@ var list_my_shifts_default = defineTool3({
       };
     }
     const rows = data ?? [];
-    const assignments = rows.filter((r) => r.scheduled_shifts && r.employees?.is_active).map((r) => ({
+    const assignments = rows.filter((r) => r.scheduled_shifts).map((r) => ({
       assignment_id: r.id,
       assignment_status: r.status,
       shift_id: r.scheduled_shifts.id,

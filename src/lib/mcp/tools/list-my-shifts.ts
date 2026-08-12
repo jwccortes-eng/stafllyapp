@@ -46,19 +46,50 @@ export default defineTool({
       const from = new Date();
       const to = new Date(Date.now() + days_ahead * 24 * 60 * 60 * 1000);
 
+      // Identidad canónica del llamante + sus fichas fusionadas (mismo tenant).
+      // Mismo contrato que src/lib/identity/identity-set.ts, resuelto con el
+      // cliente MCP para no saltarse RLS.
+      const { data: mine } = await supabase
+        .from("employees")
+        .select("id,company_id")
+        .eq("user_id", ctx.getUserId())
+        .eq("is_active", true);
+      const canonicalIds = (mine ?? []).map((e: { id: string }) => e.id);
+      if (canonicalIds.length === 0) {
+        return {
+          content: [
+            { type: "text" as const, text: "No upcoming shifts found in the requested window." },
+          ],
+        };
+      }
+      const { data: shadows } = await supabase
+        .from("employees")
+        .select("id,company_id,merged_into_employee_id")
+        .in("merged_into_employee_id", canonicalIds);
+      const companyById = new Map(
+        (mine ?? []).map((e: { id: string; company_id: string | null }) => [e.id, e.company_id]),
+      );
+      const shadowIds = (shadows ?? [])
+        .filter(
+          (s: { company_id: string | null; merged_into_employee_id: string | null }) =>
+            s.merged_into_employee_id != null &&
+            s.company_id != null &&
+            companyById.get(s.merged_into_employee_id) === s.company_id,
+        )
+        .map((s: { id: string }) => s.id);
+      const identityIds = [...canonicalIds, ...shadowIds];
+
       const { data, error } = await supabase
         .from("shift_assignments")
         .select(
           `id,
            status,
-           employees!inner(is_active,user_id),
            scheduled_shifts!inner(
              id,start_at,end_at,title,meeting_point,publication_status,company_id,
              companies(name)
            )`,
         )
-        .eq("employees.is_active", true)
-        .eq("employees.user_id", ctx.getUserId())
+        .in("employee_id", identityIds)
         .gte("scheduled_shifts.start_at", from.toISOString())
         .lte("scheduled_shifts.start_at", to.toISOString())
         .order("scheduled_shifts(start_at)", { ascending: true })
@@ -73,7 +104,7 @@ export default defineTool({
 
       const rows = (data ?? []) as unknown as ShiftRow[];
       const assignments = rows
-        .filter((r) => r.scheduled_shifts && r.employees?.is_active)
+        .filter((r) => r.scheduled_shifts)
         .map((r) => ({
           assignment_id: r.id,
           assignment_status: r.status,
