@@ -75,3 +75,21 @@ Escenario crítico: Jorge trabaja en Quality Staff → cierra la app → la reab
 - ✓ Se recuerda el último contexto operativo válido.
 - ✓ No se solicita el PIN salvo evento explícito de seguridad.
 - ✓ Experiencia idéntica para trabajadores y administradores.
+
+## Anexo — Regla del ecosistema (reapertura exacta)
+
+Además de la restauración al entrar por `/app` o `/portal`, se cubren los dos
+puntos de entrada que quedaban fuera:
+
+1. **Post-login (`/auth`)** — si no hay ruta intencionada guardada por los
+   guards, se usa `resolveRestoreTarget()` (memoria del dispositivo) antes de
+   caer al default `/app` o `/portal`. Jorge vuelve a Quality Staff →
+   Servicios → el servicio donde estaba, no al primer membership.
+2. **Arranque de la app instalada (PWA / TestFlight)** — el arranque en frío
+   aterriza en `/`; `WorkspaceRouteMemory` detecta `display-mode: standalone`
+   y restaura la última ruta válida. `MobileAppEntry` también apunta su acción
+   principal al último contexto recordado.
+
+La validación de acceso sigue en manos de los guards: si la ruta ya no existe
+o el usuario perdió permisos, se le lleva al Dashboard de la última compañía
+utilizada. Nunca queda en una pantalla inválida.
