@@ -135,8 +135,9 @@ export async function resolveEmployeeIdentitySet(
 
   const candidates: EmployeeRow[] = [
     ...(canonical ? [canonical as EmployeeRow] : []),
-    ...(((shadows ?? []) as EmployeeRow[]) ?? []),
+    ...((shadows ?? []) as EmployeeRow[]),
   ];
+
 
   const value = buildEmployeeIdentitySet(
     (canonical as EmployeeRow) ?? seedRow,
