@@ -10,6 +10,7 @@
  */
 
 import { safeLocalStorage, safeSessionStorage } from "@/lib/safe-storage";
+import { readWorkspaceMemory, rememberCompany } from "@/lib/session/workspace-memory";
 
 const SESSION_EXPIRED_KEY = "stafly:auth:session-expired:v1";
 const INTENDED_ROUTE_KEY = "stafly:auth:intended-route:v1";
