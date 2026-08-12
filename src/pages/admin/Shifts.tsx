@@ -58,6 +58,7 @@ import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
 import { DuplicateShiftDialog } from "@/components/shifts/DuplicateShiftDialog";
 import { ShiftFilters, EMPTY_FILTERS, type ShiftFilterState } from "@/components/shifts/ShiftFilters";
 import { matchesShiftQuery } from "@/lib/shifts/shift-ref";
+import { buildShiftPeopleIndex, shiftMatchesPersonQuery, normalizeSearchText } from "@/lib/shifts/shift-people-search";
 import { CrossCompanyShiftHint } from "@/components/shifts/CrossCompanyShiftHint";
 import { WeeklySummaryBar } from "@/components/shifts/WeeklySummaryBar";
 import { EmployeeCombobox } from "@/components/shifts/EmployeeCombobox";
