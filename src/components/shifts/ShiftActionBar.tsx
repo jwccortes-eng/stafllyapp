@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { DuplicateShiftDialog } from "./DuplicateShiftDialog";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
+import { resolveShiftPublicationTruth } from "@/lib/shifts/publication-truth";
 
 /**
  * ShiftActionBar — Phase 1 Quick Win #1.
