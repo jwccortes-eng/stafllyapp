@@ -19,6 +19,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { PortalShiftDetailDrawer } from "@/components/portal/PortalShiftDetailDrawer";
 import { PortalShiftCard, type PortalShiftData } from "@/components/portal/PortalShiftCard";
 import { CLAIMABLE_VISIBLE_STATUSES, isShiftClaimableForEmployee } from "@/lib/shifts/visibility";
+import { canAnnounceOpenShift } from "@/lib/shifts/publication-truth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
 import { formatDisplayName } from "@/lib/format-helpers";
