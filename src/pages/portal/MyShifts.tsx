@@ -182,6 +182,12 @@ export default function MyShifts() {
     const activeCount = (s: any) =>
       (s.shift_assignments ?? []).filter((a: any) => a.status !== "removed" && a.status !== "rejected").length;
     const claimableFiltered: ClaimableShift[] = (claimData ?? [])
+      // Verdad canónica de publicación/cupo: nunca ofrecer un turno en
+      // borrador, cancelado o con el cupo lleno.
+      .filter((s: any) => canAnnounceOpenShift({
+        shift: s,
+        assignments: s.shift_assignments ?? [],
+      }))
       .filter((s: any) => isShiftClaimableForEmployee({
         shiftId: s.id,
         slots: s.slots,
