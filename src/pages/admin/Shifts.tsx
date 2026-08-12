@@ -664,7 +664,7 @@ function DesktopShifts() {
       });
     }
     return result;
-  }, [shifts, assignments, filters, incompleteOnly]);
+  }, [shifts, assignments, filters, incompleteOnly, shiftPeopleIndex]);
 
   // ── KPI metrics ──
   const kpiMetrics = useMemo(() => {
