@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { Clock, CalendarDays, MapPin, ArrowLeftRight, LogIn, LogOut, Timer, ChevronRight } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
+import { resolveWorkerAssignmentEmployeeIds } from "@/lib/shifts/worker-visible-shifts";
 
 export function MyShiftCard() {
   const { canAccessPortal, canAccessAdmin, setActiveMode } = useAuth();

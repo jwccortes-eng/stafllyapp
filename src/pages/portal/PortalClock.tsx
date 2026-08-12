@@ -57,6 +57,7 @@ import { getPageCache, setPageCache, hasPageCache } from "@/lib/portal/page-cach
 import { ErrorBlock } from "@/components/ui/error-block";
 import { MT, FOCUS_RING, TAP } from "@/lib/mobile/mobile-scale";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { resolveWorkerAssignmentEmployeeIds } from "@/lib/shifts/worker-visible-shifts";
 
 const STALE_OPEN_ENTRY_HOURS = 24;
 

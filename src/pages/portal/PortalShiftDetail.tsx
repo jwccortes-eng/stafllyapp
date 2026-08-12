@@ -21,6 +21,7 @@ import { enUS, es } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { resolveServiceLocation, formatPlaceLine } from "@/lib/shifts/service-location";
+import { resolveIdentityEmployeeIds } from "@/lib/identity/identity-set";
 
 type AvailabilityState =
   | "loading"

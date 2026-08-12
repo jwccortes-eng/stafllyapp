@@ -70,6 +70,7 @@ import { EmployeeAddressSection } from "@/components/employee/EmployeeAddressSec
 import { PortalOnboardingPanel } from "@/components/employee/PortalOnboardingPanel";
 import { WorkerPreferenceList } from "@/components/preferences/WorkerPreferenceList";
 import { useToast } from "@/hooks/use-toast";
+import { resolveIdentityEmployeeIds } from "@/lib/identity/identity-set";
 
 const EmployeeCompensationTab = lazy(() => import("@/components/compensation/EmployeeCompensationTab"));
 

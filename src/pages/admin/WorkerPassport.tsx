@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LegacyDeprecationBanner } from "@/components/transition/LegacyDeprecationBanner";
+import { resolveIdentityEmployeeIds } from "@/lib/identity/identity-set";
 
 /* ─── Types ─── */
 interface Employee {
