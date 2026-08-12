@@ -597,15 +597,27 @@ function DesktopShifts() {
   } | null>(null);
   const [seriesPreviewSubmitting, setSeriesPreviewSubmitting] = useState(false);
 
+  // Búsqueda por persona: el buscador opera sobre el MISMO dataset que la
+  // grilla (shifts + assignments + roster), así que "william" encuentra sus
+  // servicios aunque la asignación cuelgue de una ficha fusionada.
+  // Ver src/lib/shifts/shift-people-search.ts
+  const shiftPeopleIndex = useMemo(
+    () => buildShiftPeopleIndex(assignments as any, employees as any),
+    [assignments, employees],
+  );
+
   // Filtered shifts
   const filteredShifts = useMemo(() => {
     let result = shifts;
     if (filters.search) {
-      const q = filters.search.toLowerCase();
+      const q = normalizeSearchText(filters.search);
       result = result.filter(s =>
-        s.title.toLowerCase().includes(q) || matchesShiftQuery(s, filters.search),
+        normalizeSearchText(s.title).includes(q) ||
+        matchesShiftQuery(s, filters.search) ||
+        shiftMatchesPersonQuery(shiftPeopleIndex, s.id, filters.search),
       );
     }
+
     if (filters.clientId) {
       result = result.filter(s => s.client_id === filters.clientId);
     }
