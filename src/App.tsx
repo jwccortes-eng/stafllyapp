@@ -270,6 +270,7 @@ function App() {
           <SignOutConfirmRoot />
           <ErrorBoundary>
           <BrowserRouter>
+            <WorkspaceRouteMemory />
             <Suspense fallback={<PageFallback />}>
             <Routes>
               <Route path="/" element={<RootRoute />} />
