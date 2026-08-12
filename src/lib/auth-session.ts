@@ -10,6 +10,7 @@
  */
 
 import { safeLocalStorage, safeSessionStorage } from "@/lib/safe-storage";
+import { readWorkspaceMemory, rememberCompany } from "@/lib/session/workspace-memory";
 
 const SESSION_EXPIRED_KEY = "stafly:auth:session-expired:v1";
 const INTENDED_ROUTE_KEY = "stafly:auth:intended-route:v1";
@@ -151,20 +152,28 @@ function selectedCompanyKey(userId: string): string {
 /** Read the tab-scoped selected company id for this user. */
 export function readSelectedCompanyForTab(userId: string | null | undefined): string | null {
   if (!userId) return null;
-  return safeSessionStorage.getItem(selectedCompanyKey(userId));
+  const tabValue = safeSessionStorage.getItem(selectedCompanyKey(userId));
+  if (tabValue) return tabValue;
+  // P0 — Persistent workspace: a brand-new tab (or a cold app start after the
+  // browser/phone was closed) inherits the last company this user actually
+  // worked in on THIS device. Tab-scoped value still wins while it exists.
+  return readWorkspaceMemory(userId).companyId;
 }
 
 /** Write the tab-scoped selected company id for this user. */
 export function writeSelectedCompanyForTab(userId: string | null | undefined, companyId: string): void {
   if (!userId) return;
   safeSessionStorage.setItem(selectedCompanyKey(userId), companyId);
+  rememberCompany(userId, companyId);
 }
 
 /** Clear the tab-scoped selected company id for this user. */
 export function clearSelectedCompanyForTab(userId: string | null | undefined): void {
   if (!userId) return;
   safeSessionStorage.removeItem(selectedCompanyKey(userId));
+  rememberCompany(userId, null);
 }
+
 
 /**
  * One-shot migration from the legacy global localStorage key. Returns the

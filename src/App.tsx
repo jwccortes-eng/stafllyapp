@@ -248,6 +248,7 @@ function RootRoute() {
 
 import { useEffect } from "react";
 import { logMount, logUnmount } from "@/lib/ctx001-forensics";
+import { WorkspaceRouteMemory } from "@/components/session/WorkspaceRouteMemory";
 
 function App() {
   useEffect(() => {
@@ -270,6 +271,7 @@ function App() {
           <SignOutConfirmRoot />
           <ErrorBoundary>
           <BrowserRouter>
+            <WorkspaceRouteMemory />
             <Suspense fallback={<PageFallback />}>
             <Routes>
               <Route path="/" element={<RootRoute />} />
