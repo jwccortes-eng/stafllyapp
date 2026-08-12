@@ -42,6 +42,7 @@ import { MobileShiftEditSheet } from "@/components/shifts/mobile/MobileShiftEdit
 import { BulkServiceCreationDialog } from "@/components/shifts/bulk/BulkServiceCreationDialog";
 
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
+import { buildShiftPeopleIndex, shiftMatchesPersonQuery, normalizeSearchText } from "@/lib/shifts/shift-people-search";
 import { displayShiftRef } from "@/lib/shifts/shift-ref";
 import { clientAccentColor } from "@/lib/clients/client-accent";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
