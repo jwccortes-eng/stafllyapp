@@ -141,8 +141,9 @@ export function ShiftActionBar({
         <Badge
           variant={isDraft ? "outline" : "default"}
           className={cn("text-[10px]", isDraft && "border-amber-500/40 text-amber-600 dark:text-amber-400")}
+          title={truth.admin_blocking_reason ?? undefined}
         >
-          {isDraft ? "Borrador" : shift.status}
+          {truth.admin_label}
         </Badge>
         {hasOverlap && (
           <Badge variant="destructive" className="text-[10px] gap-1">
