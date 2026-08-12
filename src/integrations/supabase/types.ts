@@ -19030,6 +19030,12 @@ export type Database = {
         Returns: boolean
       }
       user_company_ids: { Args: { _user_id: string }; Returns: string[] }
+      user_identity_employee_ids: {
+        Args: { _user_id: string }
+        Returns: {
+          employee_id: string
+        }[]
+      }
       user_is_assigned_to_shift: {
         Args: { _shift_id: string; _user_id: string }
         Returns: boolean

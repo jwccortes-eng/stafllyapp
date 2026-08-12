@@ -42,6 +42,7 @@ import { MobileShiftEditSheet } from "@/components/shifts/mobile/MobileShiftEdit
 import { BulkServiceCreationDialog } from "@/components/shifts/bulk/BulkServiceCreationDialog";
 
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
+import { buildShiftPeopleIndex, shiftMatchesPersonQuery, normalizeSearchText } from "@/lib/shifts/shift-people-search";
 import { displayShiftRef } from "@/lib/shifts/shift-ref";
 import { clientAccentColor } from "@/lib/clients/client-accent";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
@@ -352,9 +353,23 @@ export default function MobileShiftsView() {
   const locationById = useMemo(() => new Map(locations.map(l => [l.id, l.name])), [locations]);
   const employeeById = useMemo(() => new Map(employees.map(e => [e.id, e])), [employees]);
 
+  // Mismo índice de personas que el escritorio: buscar por nombre, teléfono o
+  // identificación devuelve los servicios de esa persona.
+  // Ver src/lib/shifts/shift-people-search.ts
+  const peopleIndex = useMemo(
+    () =>
+      buildShiftPeopleIndex(
+        [...assignmentsByShift.entries()].flatMap(([shiftId, list]) =>
+          list.map((a: any) => ({ shift_id: shiftId, employee_id: a.employee_id, status: a.status })),
+        ),
+        employees as any,
+      ),
+    [assignmentsByShift, employees],
+  );
+
   // Counts per tab (computed from fully-filtered-by-search dataset minus tab filter)
   const baseFiltered = useMemo(() => {
-    const search = filters.search.trim().toLowerCase();
+    const search = normalizeSearchText(filters.search);
     return shifts.filter(s => {
       if (filters.clientId && s.client_id !== filters.clientId) return false;
       if (filters.locationId && s.location_id !== filters.locationId) return false;
@@ -368,12 +383,14 @@ export default function MobileShiftsView() {
       if (search) {
         const clientName = (s.client_id ? clientById.get(s.client_id) : "") ?? "";
         const locName = (s.location_id ? locationById.get(s.location_id) : "") ?? "";
-        const hay = `${s.title} ${clientName} ${locName} ${s.shift_code ?? ""} ${s.shift_ref ?? ""}`.toLowerCase();
-        if (!hay.includes(search)) return false;
+        const hay = normalizeSearchText(
+          `${s.title} ${clientName} ${locName} ${s.shift_code ?? ""} ${s.shift_ref ?? ""}`,
+        );
+        if (!hay.includes(search) && !shiftMatchesPersonQuery(peopleIndex, s.id, filters.search)) return false;
       }
       return true;
     });
-  }, [shifts, filters, assignmentsByShift, clientById, locationById]);
+  }, [shifts, filters, assignmentsByShift, clientById, locationById, peopleIndex]);
 
   const tabCounts = useMemo(() => {
     const counts = { today: 0, upcoming: 0, needs: 0, requests: pendingRequests.length };
