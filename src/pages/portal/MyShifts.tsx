@@ -19,6 +19,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { PortalShiftDetailDrawer } from "@/components/portal/PortalShiftDetailDrawer";
 import { PortalShiftCard, type PortalShiftData } from "@/components/portal/PortalShiftCard";
 import { CLAIMABLE_VISIBLE_STATUSES, isShiftClaimableForEmployee } from "@/lib/shifts/visibility";
+import { canAnnounceOpenShift } from "@/lib/shifts/publication-truth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
 import { formatDisplayName } from "@/lib/format-helpers";
@@ -165,7 +166,7 @@ export default function MyShifts() {
     const today = new Date().toISOString().split("T")[0];
     const { data: claimData } = await supabase
       .from("scheduled_shifts")
-      .select(`id, title, date, start_time, end_time, notes, slots, locations (name), clients (name), shift_assignments (id, status)`)
+      .select(`id, title, date, start_time, end_time, notes, slots, claimable, publication_status, status, deleted_at, locations (name), clients (name), shift_assignments (id, status, response_status, is_draft_reservation)`)
       .eq("company_id", emp.company_id).eq("claimable", true)
       .in("status", [...CLAIMABLE_VISIBLE_STATUSES])
       .is("deleted_at", null).gte("date", today).order("date", { ascending: true });
@@ -181,6 +182,12 @@ export default function MyShifts() {
     const activeCount = (s: any) =>
       (s.shift_assignments ?? []).filter((a: any) => a.status !== "removed" && a.status !== "rejected").length;
     const claimableFiltered: ClaimableShift[] = (claimData ?? [])
+      // Verdad canónica de publicación/cupo: nunca ofrecer un turno en
+      // borrador, cancelado o con el cupo lleno.
+      .filter((s: any) => canAnnounceOpenShift({
+        shift: s,
+        assignments: s.shift_assignments ?? [],
+      }))
       .filter((s: any) => isShiftClaimableForEmployee({
         shiftId: s.id,
         slots: s.slots,

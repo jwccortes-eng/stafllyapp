@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { DuplicateShiftDialog } from "./DuplicateShiftDialog";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
+import { resolveShiftPublicationTruth } from "@/lib/shifts/publication-truth";
 
 /**
  * ShiftActionBar — Phase 1 Quick Win #1.
@@ -86,6 +87,18 @@ export function ShiftActionBar({
   const [dupSessionKey, setDupSessionKey] = useState(0);
 
   const isDraft = shift.status === "draft" || shift.publication_status === "draft";
+  // Verdad canónica de publicación (nunca inferir "Asignado" en local).
+  const truth = useMemo(
+    () => resolveShiftPublicationTruth({
+      shift: {
+        ...shift,
+        publication_status: shift.publication_status ?? (shift.status === "draft" ? "draft" : "published"),
+      },
+      assignment: assignments[0] ? { status: assignments[0].status } : null,
+      assignments,
+    }),
+    [shift, assignments],
+  );
   const isLocked = ["locked", "archived", "cancelled"].includes(shift.status);
   const slots = shift.slots ?? 0;
   const assigned = assignments.filter(a => a.status !== "rejected").length;
@@ -128,8 +141,9 @@ export function ShiftActionBar({
         <Badge
           variant={isDraft ? "outline" : "default"}
           className={cn("text-[10px]", isDraft && "border-amber-500/40 text-amber-600 dark:text-amber-400")}
+          title={truth.admin_blocking_reason ?? undefined}
         >
-          {isDraft ? "Borrador" : shift.status}
+          {truth.admin_label}
         </Badge>
         {hasOverlap && (
           <Badge variant="destructive" className="text-[10px] gap-1">
