@@ -131,10 +131,14 @@ export default function MyShifts() {
     // See src/lib/shifts/visibility.ts for the canonical rule.
     // Defense in depth: scope to the employee's own company so a stale
     // selection or upstream bug can never leak cross-tenant assignments.
+    // IDENTIDAD: la persona incluye su ficha canónica y sus fichas fusionadas
+    // del mismo tenant (historia que no se mueve).
+    // Ver src/lib/shifts/worker-visible-shifts.ts
+    const identityIds = await resolveWorkerAssignmentEmployeeIds(employeeId);
     const { data: assignData } = await supabase
       .from("shift_assignments")
-      .select(`id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, shift_ref, meeting_point, meeting_time, special_instructions, company_id, operational_version, locations (name), clients (name))`)
-      .eq("employee_id", employeeId)
+      .select(`id, employee_id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, shift_ref, meeting_point, meeting_time, special_instructions, company_id, operational_version, locations (name), clients (name))`)
+      .in("employee_id", identityIds)
       .eq("company_id", emp.company_id)
       .eq("is_draft_reservation", false)
       .is("scheduled_shifts.deleted_at", null)
