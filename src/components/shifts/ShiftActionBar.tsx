@@ -86,6 +86,18 @@ export function ShiftActionBar({
   const [dupSessionKey, setDupSessionKey] = useState(0);
 
   const isDraft = shift.status === "draft" || shift.publication_status === "draft";
+  // Verdad canónica de publicación (nunca inferir "Asignado" en local).
+  const truth = useMemo(
+    () => resolveShiftPublicationTruth({
+      shift: {
+        ...shift,
+        publication_status: shift.publication_status ?? (shift.status === "draft" ? "draft" : "published"),
+      },
+      assignment: assignments[0] ? { status: assignments[0].status } : null,
+      assignments,
+    }),
+    [shift, assignments],
+  );
   const isLocked = ["locked", "archived", "cancelled"].includes(shift.status);
   const slots = shift.slots ?? 0;
   const assigned = assignments.filter(a => a.status !== "rejected").length;
