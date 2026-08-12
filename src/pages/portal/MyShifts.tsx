@@ -20,6 +20,7 @@ import { PortalShiftDetailDrawer } from "@/components/portal/PortalShiftDetailDr
 import { PortalShiftCard, type PortalShiftData } from "@/components/portal/PortalShiftCard";
 import { CLAIMABLE_VISIBLE_STATUSES, isShiftClaimableForEmployee } from "@/lib/shifts/visibility";
 import { canAnnounceOpenShift } from "@/lib/shifts/publication-truth";
+import { resolveWorkerAssignmentEmployeeIds } from "@/lib/shifts/worker-visible-shifts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
 import { formatDisplayName } from "@/lib/format-helpers";
