@@ -5,6 +5,7 @@ import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { useEmployeeReadiness } from "@/hooks/useEmployeeReadiness";
 import { Link } from "react-router-dom";
 import { usePortalModules } from "@/hooks/usePortalModules";
+import { canAnnounceOpenShift } from "@/lib/shifts/publication-truth";
 import {
   Wallet, Clock, CalendarDays, ArrowRight,
   ChevronRight,
