@@ -128,6 +128,8 @@ export default function EmployeeDashboard() {
     const windowStartDate = operationalWindowStart.toISOString().split("T")[0];
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
     const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
+    // Identidad completa de la persona (canónica + fichas fusionadas).
+    const identityIds = await resolveWorkerAssignmentEmployeeIds(employeeId);
 
       const [companyRes, periodRes, assignRes, clockRes, weekRes] = await Promise.all([
       supabase.from("companies").select("name").eq("id", emp.company_id).maybeSingle(),
@@ -136,7 +138,7 @@ export default function EmployeeDashboard() {
       // Hide soft-deleted shifts (see src/lib/shifts/visibility.ts)
       supabase.from("shift_assignments")
         .select("status, scheduled_shifts!inner (id, title, date, start_time, end_time, status, meeting_point, locations (name), clients (name))")
-        .eq("employee_id", employeeId)
+        .in("employee_id", identityIds)
         .eq("company_id", emp.company_id)
         .eq("is_draft_reservation", false)
         .not("status", "in", "(removed,rejected)")
