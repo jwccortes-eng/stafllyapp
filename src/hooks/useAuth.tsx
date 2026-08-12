@@ -610,6 +610,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // el usuario es redirigido de inmediato. La sesión no queda ambigua.
       console.error("[feedback:info] auth-signout-remote", err);
     }
+    // P0 — explicit sign-out is a security event: drop the remembered
+    // workspace/company/route for this device.
+    try {
+      const { clearAllWorkspaceMemory } = await import("@/lib/session/workspace-memory");
+      clearAllWorkspaceMemory();
+    } catch { /* noop */ }
     setUser(null);
     setSession(null);
     setRole(null);
