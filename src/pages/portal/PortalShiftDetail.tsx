@@ -97,7 +97,9 @@ export default function PortalShiftDetail() {
     const activeAssignments = assignments.filter(
       a => a.status !== "removed" && a.status !== "rejected" && a.is_draft_reservation !== true
     );
-    const myAssignment = activeAssignments.find(a => a.employee_id === employeeId);
+    // "Mía" incluye la asignación histórica colgada de una ficha fusionada.
+    const identityIds = new Set(await resolveIdentityEmployeeIds(employeeId));
+    const myAssignment = activeAssignments.find(a => identityIds.has(a.employee_id));
 
     const detail: ShiftDetail = {
       id: s.id,
