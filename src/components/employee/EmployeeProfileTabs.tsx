@@ -424,7 +424,8 @@ function PayTab({ employee, companyId }: { employee: EmployeeRecord; companyId: 
 function ShiftsTab({ employee, companyId }: { employee: EmployeeRecord; companyId: string }) {
   const [shifts, setShifts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => { async function fetch() { const { data } = await supabase.from("shift_assignments").select("id, status, shift_id, scheduled_shifts(title, date, start_time, end_time, status)").eq("employee_id", employee.id).eq("company_id", companyId).order("created_at", { ascending: false }).limit(20); setShifts(data ?? []); setLoading(false); } fetch(); }, [employee.id, companyId]);
+  // Historial por persona: incluye las fichas fusionadas del mismo tenant.
+  useEffect(() => { async function fetch() { const identityIds = await resolveIdentityEmployeeIds(employee.id); const { data } = await supabase.from("shift_assignments").select("id, status, shift_id, scheduled_shifts(title, date, start_time, end_time, status)").in("employee_id", identityIds).eq("company_id", companyId).order("created_at", { ascending: false }).limit(20); setShifts(data ?? []); setLoading(false); } fetch(); }, [employee.id, companyId]);
   if (loading) return <div className="py-6 text-center text-[11px] text-muted-foreground">Cargando...</div>;
   if (shifts.length === 0) return <EmptyState icon={CalendarDays} title="Sin turnos" description="No tiene turnos recientes" compact />;
   const statusColors: Record<string, string> = { confirmed: "bg-earning/10 text-earning", pending: "bg-warning/10 text-warning", rejected: "bg-destructive/10 text-destructive" };
