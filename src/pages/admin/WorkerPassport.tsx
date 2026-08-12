@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LegacyDeprecationBanner } from "@/components/transition/LegacyDeprecationBanner";
+import { resolveIdentityEmployeeIds } from "@/lib/identity/identity-set";
 
 /* ─── Types ─── */
 interface Employee {
@@ -122,11 +123,12 @@ export default function WorkerPassport() {
         .single();
       if (emp) setEmployee(emp as unknown as Employee);
 
-      // Shift metrics
+      // Shift metrics — identidad completa (canónica + fichas fusionadas).
+      const identityIds = await resolveIdentityEmployeeIds(employeeId);
       const { data: assignments } = await supabase
         .from("shift_assignments")
         .select("shift_id, scheduled_shifts!inner(date, start_time, end_time, company_id, title, deleted_at)")
-        .eq("employee_id", employeeId)
+        .in("employee_id", identityIds)
         .eq("status", "confirmed");
 
       const valid = (assignments || []).filter((a: any) => !a.scheduled_shifts?.deleted_at);

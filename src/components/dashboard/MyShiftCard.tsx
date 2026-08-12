@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { Clock, CalendarDays, MapPin, ArrowLeftRight, LogIn, LogOut, Timer, ChevronRight } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
+import { resolveWorkerAssignmentEmployeeIds } from "@/lib/shifts/worker-visible-shifts";
 
 export function MyShiftCard() {
   const { canAccessPortal, canAccessAdmin, setActiveMode } = useAuth();
@@ -37,12 +38,13 @@ export function MyShiftCard() {
     const today = new Date().toISOString().split("T")[0];
     const ws = startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
     const we = endOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
+    const identityIds = await resolveWorkerAssignmentEmployeeIds(employeeId);
 
     const [assignRes, clockRes, weekRes] = await Promise.all([
       // Hide soft-deleted shifts (see src/lib/shifts/visibility.ts)
       supabase.from("shift_assignments")
         .select("status, scheduled_shifts!inner (id, title, date, start_time, end_time, status, locations (name))")
-        .eq("employee_id", employeeId).neq("status", "rejected")
+        .in("employee_id", identityIds).neq("status", "rejected")
         .is("scheduled_shifts.deleted_at", null)
         .gte("scheduled_shifts.date", today).order("created_at", { ascending: true }).limit(1),
       supabase.from("time_entries").select("id").eq("employee_id", employeeId).is("clock_out", null).limit(1),

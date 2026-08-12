@@ -57,6 +57,7 @@ import { getPageCache, setPageCache, hasPageCache } from "@/lib/portal/page-cach
 import { ErrorBlock } from "@/components/ui/error-block";
 import { MT, FOCUS_RING, TAP } from "@/lib/mobile/mobile-scale";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { resolveWorkerAssignmentEmployeeIds } from "@/lib/shifts/worker-visible-shifts";
 
 const STALE_OPEN_ENTRY_HOURS = 24;
 
@@ -246,6 +247,8 @@ export default function PortalClock() {
       const dayStart = startOfDay(today).toISOString();
       const dayEnd = endOfDay(today).toISOString();
       const todayStr = format(today, "yyyy-MM-dd");
+      // Identidad completa para LEER turnos; los time_entries siguen intactos.
+      const identityIds = await resolveWorkerAssignmentEmployeeIds(employeeId);
 
       const [entriesRes, openEntriesRes, shiftsRes] = await Promise.all([
       supabase.from("time_entries")
@@ -264,7 +267,7 @@ export default function PortalClock() {
       // a draft must NEVER allow clock-in or generate time_entries.
       supabase.from("shift_assignments")
         .select("shift_id, status, scheduled_shifts!inner(id, title, start_time, end_time, shift_code, shift_ref, date, pay_type, attendance_mode, qr_attendance_mode, qr_token, locations(name), clients(name))")
-        .eq("employee_id", employeeId).eq("scheduled_shifts.date", todayStr)
+        .in("employee_id", identityIds).eq("scheduled_shifts.date", todayStr)
         .eq("is_draft_reservation", false)
         .is("scheduled_shifts.deleted_at", null)
         .eq("scheduled_shifts.publication_status", "published")
