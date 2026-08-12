@@ -14,6 +14,7 @@ import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { EmployeeAuthFlow } from "@/components/auth/EmployeeAuthFlow";
 import { IS_PARCEROS_FLAVOR } from "@/lib/app-flavor";
 import { consumeSessionExpired, consumeIntendedRoute, watchTabPresence } from "@/lib/auth-session";
+import { resolveRestoreTarget } from "@/lib/session/workspace-memory";
 
 type LoginMethod = "email" | "phone";
 
@@ -138,6 +139,11 @@ export default function Auth() {
       return null;
     };
 
+    // P0 — Last workspace restoration: when there is no intended route, send
+    // the user back to the last valid operational context of this device.
+    const pickRemembered = (): string | null =>
+      resolveRestoreTarget({ userId: user.id, canAccessAdmin, canAccessPortal });
+
     if (phoneRedirectPendingRef.current) {
       console.info("[phone-login]", {
         step: "post-session-redirect",
@@ -147,7 +153,7 @@ export default function Auth() {
         activeMode,
       });
 
-      const intended = pickIntended();
+      const intended = pickIntended() ?? pickRemembered();
       if (intended) {
         phoneRedirectPendingRef.current = false;
         navigate(intended, { replace: true });
@@ -170,7 +176,7 @@ export default function Auth() {
     const autoSetup = async () => {
       // [SECURITY 2026-05-01] Self-service company creation is DISABLED platform-wide.
       // Stafly is invite-only pre-launch. Only developers can provision tenants.
-      const intended = pickIntended();
+      const intended = pickIntended() ?? pickRemembered();
       if (intended) {
         navigate(intended, { replace: true });
         return;

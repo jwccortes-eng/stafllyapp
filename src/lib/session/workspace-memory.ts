@@ -78,6 +78,27 @@ export function rememberRoute(userId: string | null | undefined, route: string |
   write(userId, { ...current, route });
 }
 
+/**
+ * Resolve where a returning user should land, given the surfaces they can
+ * access. Returns null when there is nothing valid to restore, so callers
+ * fall back to their normal defaults (dashboard of the active company).
+ */
+export function resolveRestoreTarget(args: {
+  userId: string | null | undefined;
+  canAccessAdmin?: boolean;
+  canAccessPortal?: boolean;
+}): string | null {
+  const { userId, canAccessAdmin = false, canAccessPortal = false } = args;
+  if (!userId) return null;
+  const route = readWorkspaceMemory(userId).route;
+  if (!route || !isRestorableRoute(route)) return null;
+  if (route.startsWith("/app")) return canAccessAdmin ? route : null;
+  if (route.startsWith("/portal")) return canAccessPortal ? route : null;
+  if (route.startsWith("/parceros")) return route;
+  return null;
+}
+
+
 export function rememberMode(userId: string | null | undefined, mode: string | null): void {
   if (!userId) return;
   const current = readWorkspaceMemory(userId);
