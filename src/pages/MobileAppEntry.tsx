@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { StaflyMark } from "@/components/brand/StaflyBrand";
 import { ArrowRight, LogIn, ShieldCheck, ClipboardCheck } from "lucide-react";
+import { resolveRestoreTarget } from "@/lib/session/workspace-memory";
 
 /**
  * MobileAppEntry — Spanish-first operational entry screen for the
@@ -30,8 +31,12 @@ export default function MobileAppEntry() {
     }
   }, [navigate]);
 
+  // P0 — reopen exactly where the user left off on this device.
+  const rememberedHref = resolveRestoreTarget({ userId: user?.id, canAccessAdmin, canAccessPortal });
+
   const portalHref =
-    canAccessPortal && canAccessAdmin
+    rememberedHref ??
+    (canAccessPortal && canAccessAdmin
       ? activeMode === "employee"
         ? "/portal"
         : "/app"
@@ -39,7 +44,7 @@ export default function MobileAppEntry() {
         ? "/portal"
         : canAccessAdmin
           ? "/app"
-          : "/portal";
+          : "/portal");
 
   const adminHref = canAccessAdmin ? "/app" : null;
 
