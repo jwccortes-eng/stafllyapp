@@ -205,7 +205,7 @@ export default function EmployeeDashboard() {
       const pendingRequestShiftIds = new Set((myPendingReqs ?? []).map((r: any) => r.shift_id as string));
       const { data: claimRows } = await supabase
       .from("scheduled_shifts")
-      .select("id, slots, shift_assignments(id, status)")
+      .select("id, slots, claimable, publication_status, status, deleted_at, shift_assignments(id, status, response_status, is_draft_reservation)")
       .eq("company_id", emp.company_id)
       .eq("claimable", true)
       .in("status", ["open", "published"])
@@ -214,8 +214,8 @@ export default function EmployeeDashboard() {
       const cCount = (claimRows ?? []).filter((s: any) => {
       if (myShiftIds.has(s.id)) return false;
       if (pendingRequestShiftIds.has(s.id)) return false;
-      const active = (s.shift_assignments ?? []).filter((a: any) => a.status !== "removed" && a.status !== "rejected").length;
-      return !s.slots || active < s.slots;
+      // Verdad canónica: publicado, no cancelado y con cupo real disponible.
+      return canAnnounceOpenShift({ shift: s, assignments: s.shift_assignments ?? [] });
       }).length;
       setClaimableCount(cCount);
 
