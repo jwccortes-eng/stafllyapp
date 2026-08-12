@@ -24,6 +24,19 @@ import {
 
 const INDEX_ROUTES = new Set(["/app", "/app/", "/portal", "/portal/"]);
 
+/** Installed app (PWA / Capacitor) cold start lands on "/". */
+function isStandaloneLaunch(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return (
+      window.matchMedia?.("(display-mode: standalone)").matches === true ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function WorkspaceRouteMemory() {
   const { user, loading: authLoading } = useAuth();
   const { loading: companyLoading, selectedCompanyId } = useCompany();
@@ -37,7 +50,8 @@ export function WorkspaceRouteMemory() {
   useEffect(() => {
     if (restoredRef.current) return;
     if (authLoading || companyLoading || !user) return;
-    if (!INDEX_ROUTES.has(location.pathname)) {
+    const isRootLaunch = location.pathname === "/" && isStandaloneLaunch();
+    if (!INDEX_ROUTES.has(location.pathname) && !isRootLaunch) {
       // The user navigated somewhere concrete already: nothing to restore.
       restoredRef.current = true;
       return;
@@ -47,8 +61,11 @@ export function WorkspaceRouteMemory() {
     if (!memory.route || !isRestorableRoute(memory.route)) return;
     if (memory.route === path) return;
     // Only restore inside the same workspace family the user opened.
-    const family = location.pathname.startsWith("/portal") ? "/portal" : "/app";
-    if (!memory.route.startsWith(family)) return;
+    if (!isRootLaunch) {
+      const family = location.pathname.startsWith("/portal") ? "/portal" : "/app";
+      if (!memory.route.startsWith(family)) return;
+    }
+    const family = memory.route.startsWith("/portal") ? "/portal" : "/app";
     // Company context must be resolved before restoring a tenant-scoped screen.
     if (family === "/app" && !selectedCompanyId && memory.companyId) return;
     navigate(memory.route, { replace: true });
