@@ -175,26 +175,19 @@ Deno.serve(async (req) => {
 
     for (const emp of employees) {
       try {
-        // ─── SAFETY: Determine employee state and act accordingly ───
-        const hasActivePortal = !!emp.user_id;
-        const hasPin = !!emp.access_pin;
+        // ─── P0 AUTH PIN CANONICALIZATION ───
+        // El PIN vive en la credencial del Auth User. Aquí solo se crea/vincula
+        // la identidad y, si la persona aún no tiene credencial, se establece
+        // un PIN inicial (últimos 4 del teléfono) mediante el escritor único.
+        const cleanPhone = emp.phone_number.replace(/[^\d+]/g, "");
+        const empEmail = `emp_${cleanPhone}@employee.internal`;
 
-        // Determine the PIN to use/send
-        let pin: string;
+        let authUserId: string | null = emp.user_id ?? null;
+        const initialPin = extractLast4Digits(emp.phone_number);
 
-        if (hasActivePortal) {
-          // CASE 3: Already active portal — DO NOT touch auth or PIN
-          // Only resend the email with their existing PIN
-          pin = emp.access_pin || extractLast4Digits(emp.phone_number) || "0000";
-          // Do NOT update employee record or auth user
-          console.log(`[RESEND] ${emp.first_name} ${emp.last_name} — already active, email-only resend`);
-        } else if (hasPin) {
-          // CASE 2: Previously invited (has PIN) but no user_id — create auth user with existing PIN
-          pin = emp.access_pin;
-          const cleanPhone = emp.phone_number.replace(/[^\d+]/g, "");
-          const empEmail = `emp_${cleanPhone}@employee.internal`;
-          const pwd = AUTH_PWD_PREFIX + pin;
-
+        if (!authUserId) {
+          if (!initialPin) { skipped++; continue; }
+          const pwd = AUTH_PWD_PREFIX + initialPin;
           const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
             email: empEmail,
             password: pwd,
@@ -203,79 +196,63 @@ Deno.serve(async (req) => {
           });
 
           if (createErr) {
-            // User may already exist — find and link
             const { data: { users } } = await adminClient.auth.admin.listUsers();
             const existing = users?.find((u: any) => u.email === empEmail);
             if (existing) {
               await adminClient.auth.admin.updateUserById(existing.id, { password: pwd });
-              await adminClient.from("employees").update({ user_id: existing.id }).eq("id", emp.id);
-              const { data: roles } = await adminClient.from("user_roles").select("role").eq("user_id", existing.id).limit(1);
-              if (!roles || roles.length === 0) {
-                await adminClient.from("user_roles").insert({ user_id: existing.id, role: "employee" });
-              }
+              authUserId = existing.id;
             }
           } else if (newUser?.user) {
-            await adminClient.from("employees").update({ user_id: newUser.user.id }).eq("id", emp.id);
-            const { data: roles } = await adminClient.from("user_roles").select("role").eq("user_id", newUser.user.id).limit(1);
-            if (!roles || roles.length === 0) {
-              await adminClient.from("user_roles").insert({ user_id: newUser.user.id, role: "employee" });
-            }
+            authUserId = newUser.user.id;
           }
-          console.log(`[ACTIVATE-EXISTING-PIN] ${emp.first_name} ${emp.last_name}`);
-        } else {
-          // CASE 1: New employee — generate PIN and create auth user
-          const newPin = extractLast4Digits(emp.phone_number);
-          if (!newPin) { skipped++; continue; }
-          pin = newPin;
 
-          // Set PIN on employee record
-          const { error: updateErr } = await adminClient
-            .from("employees")
-            .update({
-              access_pin: pin,
-              must_change_pin: true,
-              portal_access_enabled: true,
-            })
-            .eq("id", emp.id);
-
-          if (updateErr) {
-            errors.push(`${emp.first_name} ${emp.last_name}: ${updateErr.message}`);
+          if (!authUserId) {
+            errors.push(`${emp.first_name} ${emp.last_name}: no se pudo crear identidad de acceso`);
             skipped++;
             continue;
           }
 
-          // Create auth user
-          const cleanPhone = emp.phone_number.replace(/[^\d+]/g, "");
-          const empEmail = `emp_${cleanPhone}@employee.internal`;
-          const pwd = AUTH_PWD_PREFIX + pin;
-
-          const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
-            email: empEmail,
-            password: pwd,
-            email_confirm: true,
-            user_metadata: { full_name: `${emp.first_name} ${emp.last_name}` },
-          });
-
-          if (createErr) {
-            const { data: { users } } = await adminClient.auth.admin.listUsers();
-            const existing = users?.find((u: any) => u.email === empEmail);
-            if (existing) {
-              await adminClient.auth.admin.updateUserById(existing.id, { password: pwd });
-              await adminClient.from("employees").update({ user_id: existing.id }).eq("id", emp.id);
-              const { data: roles } = await adminClient.from("user_roles").select("role").eq("user_id", existing.id).limit(1);
-              if (!roles || roles.length === 0) {
-                await adminClient.from("user_roles").insert({ user_id: existing.id, role: "employee" });
-              }
-            }
-          } else if (newUser?.user) {
-            await adminClient.from("employees").update({ user_id: newUser.user.id }).eq("id", emp.id);
-            const { data: roles } = await adminClient.from("user_roles").select("role").eq("user_id", newUser.user.id).limit(1);
-            if (!roles || roles.length === 0) {
-              await adminClient.from("user_roles").insert({ user_id: newUser.user.id, role: "employee" });
-            }
+          await adminClient.from("employees")
+            .update({ user_id: authUserId, must_change_pin: true, portal_access_enabled: true })
+            .eq("id", emp.id);
+          const { data: roles } = await adminClient.from("user_roles").select("role").eq("user_id", authUserId).limit(1);
+          if (!roles || roles.length === 0) {
+            await adminClient.from("user_roles").insert({ user_id: authUserId, role: "employee" });
           }
-          console.log(`[NEW-ACTIVATION] ${emp.first_name} ${emp.last_name}`);
         }
+
+        // ¿Ya tiene credencial canónica?
+        const { data: credRow } = await adminClient
+          .from("auth_pin_credentials")
+          .select("user_id")
+          .eq("user_id", authUserId)
+          .maybeSingle();
+
+        // PIN a comunicar: solo cuando lo establecemos nosotros. Si ya existe
+        // credencial, no se revela ni se sobreescribe.
+        let pin: string | null = null;
+
+        if (!credRow) {
+          if (!initialPin) { skipped++; continue; }
+          const { error: pinErr } = await adminClient.rpc("internal_set_auth_pin", {
+            _user_id: authUserId,
+            _pin: initialPin,
+            _source: "bulk_portal_invite",
+          });
+          if (pinErr) {
+            errors.push(`${emp.first_name} ${emp.last_name}: ${pinErr.message}`);
+            skipped++;
+            continue;
+          }
+          await adminClient.auth.admin.updateUserById(authUserId, {
+            password: AUTH_PWD_PREFIX + initialPin,
+          });
+          pin = initialPin;
+          console.log(`[NEW-ACTIVATION] ${emp.first_name} ${emp.last_name}`);
+        } else {
+          console.log(`[RESEND] ${emp.first_name} ${emp.last_name} — credencial existente, sin cambios de PIN`);
+        }
+
 
         processed++;
 
