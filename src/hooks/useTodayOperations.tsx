@@ -58,7 +58,14 @@ export interface TodayOpsShift {
   client_id: string | null;
   client_name: string | null;
   location_id: string | null;
+  /** Job Site V2 — destino canónico prioritario. */
+  job_site_location_id: string | null;
+  job_site_address: string | null;
+  job_site_location_name: string | null;
+  claimable: boolean | null;
+  transportation_required: boolean;
   job_site_name: string | null;
+
   meeting_point: string | null;
   meeting_point_location_id: string | null;
   meeting_point_location_name: string | null;
