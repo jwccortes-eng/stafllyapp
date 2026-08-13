@@ -90,6 +90,9 @@ interface AuthContextType {
   loading: boolean;
   permissions: ModulePermission[];
   actionPermissions: ActionPermission[];
+  /** FASE 2 — estado explícito de autorización. Nunca asumir defaults. */
+  authorizationStatus: "loading" | "ready" | "error";
+
   signOut: () => Promise<void>;
   hasModuleAccess: (module: string, permission: 'view' | 'edit' | 'delete') => boolean;
   hasActionPermission: (action: string) => boolean;
@@ -124,6 +127,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   permissions: [],
   actionPermissions: [],
+  authorizationStatus: "loading",
+
   signOut: async () => {},
   hasModuleAccess: () => false,
   hasActionPermission: () => false,
@@ -158,6 +163,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
   const [actionPermissions, setActionPermissions] = useState<ActionPermission[]>([]);
+  const [authorizationStatus, setAuthorizationStatus] = useState<"loading" | "ready" | "error">("loading");
+
   const [fullName, setFullName] = useState<string | null>(null);
   const hydratedUserIdRef = useRef<string | null>(null);
   const activeModeRef = useRef<ActiveMode>(activeMode);
@@ -723,7 +730,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       activeMode, setActiveMode,
       canAccessAdmin, canAccessPortal,
       employeeId, allEmployeeIds, employeeActive, fullName, loading,
-      permissions, actionPermissions, signOut, hasModuleAccess, hasActionPermission,
+      permissions, actionPermissions, authorizationStatus, signOut, hasModuleAccess, hasActionPermission,
       resolveEmployeeForCompany,
     }}>
       {children}
