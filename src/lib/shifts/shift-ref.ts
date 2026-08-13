@@ -57,15 +57,26 @@ export function normalizeShiftQuery(raw: string | null | undefined): string {
   return (raw ?? "").trim().replace(/^#/, "").toUpperCase();
 }
 
-/** Coincidencia local (dentro de la empresa activa) por referencia o código. */
-export function matchesShiftQuery(s: ShiftRefSource, raw: string): boolean {
+/**
+ * Coincidencia local (dentro de la empresa activa) por referencia o código.
+ *
+ * P0 · SERVICE ROOT QK: buscar el QK del servicio raíz devuelve TODOS sus
+ * horarios, aunque cada hijo conserve su propio `shift_ref` técnico.
+ */
+export function matchesShiftQuery(
+  s: ShiftRefSource & { parent_shift_id?: string | null },
+  raw: string,
+): boolean {
   const q = normalizeShiftQuery(raw);
   if (!q) return false;
   if ((s.shift_ref ?? "").toUpperCase() === q) return true;
   if ((s.shift_code ?? "").trim().toUpperCase() === q) return true;
+  const serviceRef = lookupShiftRef(s.parent_shift_id ?? null);
+  if (serviceRef && serviceRef.toUpperCase() === q) return true;
   if (/^\d+$/.test(q) && s.shift_number != null && String(s.shift_number) === String(Number(q))) return true;
   return false;
 }
+
 
 // ── Confirmación de creación ────────────────────────────────────────────────
 
