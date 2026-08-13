@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,10 +66,11 @@ type ViewMode = "grid" | "list";
 
 export default function Clients() {
   const { role, hasModuleAccess } = useAuth();
+  const { can } = usePermissions();
   const { selectedCompanyId } = useCompany();
   const navigate = useNavigate();
-  const canEdit = role === "owner" || role === "admin" || hasModuleAccess("clients", "edit");
-  const canDelete = role === "owner" || role === "admin" || hasModuleAccess("clients", "delete");
+  const canEdit = can("clients.edit");
+  const canDelete = can("clients.edit") && hasModuleAccess("clients", "delete");
 
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);

@@ -6,6 +6,7 @@ import type { ReconciliationRowResult, BatchSummary, TopIssue, MatchBreakdown } 
 import { usePageView } from "@/hooks/useAuditLog";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { PayrollSourceGuardrailBanner } from "@/components/payroll/PayrollSourceGuardrailBanner";
 import { Button } from "@/components/ui/button";
@@ -792,6 +793,7 @@ export default function PayrollReconciliationPage() {
   usePageView("Payroll Reconciliation");
   const { selectedCompanyId } = useCompany();
   const { role } = useAuth();
+  const { can } = usePermissions();
   const {
     batches, activeBatch, setActiveBatch,
     truthParseResult, reconciliationRows, systemOnlyEmployees, batchSummary,
@@ -822,7 +824,7 @@ export default function PayrollReconciliationPage() {
   const [selectedPeriodId, setSelectedPeriodId] = useState("");
   const [periodSearch, setPeriodSearch] = useState("");
   const [debugInfo, setDebugInfo] = useState<{ basePay: number; movements: number; truthRows: number; periodId: string } | null>(null);
-  const isDev = role === "developer" || role === "owner" || role === "admin";
+  const isDev = can("payroll.manage");
 
   // Load periods for the create dialog
   useEffect(() => {

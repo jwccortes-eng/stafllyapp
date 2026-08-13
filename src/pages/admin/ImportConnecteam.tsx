@@ -14,6 +14,7 @@ import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile } fr
 import type { SafeWorkbook } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   buildEmployeeIdentityIndex,
   resolveIdentityFromIndex,
@@ -100,7 +101,8 @@ interface Period { id: string; start_date: string; end_date: string; status: str
 export default function ImportConnecteam() {
   const { selectedCompanyId } = useCompany();
   const { role, user } = useAuth();
-  const canSeeSsn = role === "owner" || role === "admin";
+  const { can } = usePermissions();
+  const canSeeSsn = can("workers.edit");
   const isSsnHeader = (h: string) => /ssn|ein|social.?security/i.test(h);
   const [periods, setPeriods] = useState<Period[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState("");

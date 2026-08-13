@@ -29,6 +29,7 @@ import {
   Users, Clock, ChevronRight, Inbox, CheckCircle2, XCircle, Activity,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -281,8 +282,9 @@ function ShiftCard({
 export default function StaffingCenter() {
   const navigate = useNavigate();
   const { role, hasModuleAccess } = useAuth();
+  const { canAny } = usePermissions();
   const { selectedCompanyId, selectedCompany } = useCompany();
-  const canManageShifts = role === "owner" || role === "admin" || role === "company_owner" || role === "developer" || hasModuleAccess("shifts", "edit");
+  const canManageShifts = canAny(["staffing.assign", "service.edit"]);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const opsWhen = searchParams.get("when");

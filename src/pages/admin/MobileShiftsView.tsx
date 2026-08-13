@@ -9,6 +9,7 @@ import { format, parseISO, isToday, isTomorrow, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { useShiftsConfig } from "@/hooks/useShiftsConfig";
 import { Button } from "@/components/ui/button";
@@ -114,12 +115,13 @@ export default function MobileShiftsView() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { role, hasModuleAccess, user } = useAuth();
+  const { can } = usePermissions();
   const { selectedCompanyId, selectedCompany } = useCompany();
   const queryClient = useQueryClient();
   const { config: shiftsConfig } = useShiftsConfig();
 
   // Permissions — same rule as desktop Shifts
-  const canEdit = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
+  const canEdit = can("service.edit");
   const [reloadKey, setReloadKey] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
   const [bulkCreateOpen, setBulkCreateOpen] = useState(false);

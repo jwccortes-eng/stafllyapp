@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,11 +35,12 @@ interface Announcement {
 
 export default function Announcements() {
   const { user, role, hasModuleAccess, hasActionPermission } = useAuth();
+  const { can } = usePermissions();
   const { selectedCompanyId } = useCompany();
-  const isAdmin = role === "owner" || role === "admin" || hasModuleAccess("announcements", "edit") || hasActionPermission("publicar_anuncio");
-  const canEdit = role === "owner" || role === "admin" || hasModuleAccess("announcements", "edit") || hasActionPermission("editar_anuncio");
-  const canDelete = role === "owner" || role === "admin" || hasModuleAccess("announcements", "delete") || hasActionPermission("eliminar_anuncio");
-  const canPin = role === "owner" || role === "admin" || hasActionPermission("fijar_anuncio");
+  const isAdmin = can("announcements.publish");
+  const canEdit = can("announcements.edit");
+  const canDelete = can("announcements.delete");
+  const canPin = can("announcements.pin");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);

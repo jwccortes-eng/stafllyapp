@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import AuditPanel from "@/components/audit/AuditPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,9 +45,10 @@ interface ClientOption {
 
 export default function Locations() {
   const { role, hasModuleAccess } = useAuth();
+  const { can } = usePermissions();
   const { selectedCompanyId } = useCompany();
-  const canEdit = role === "owner" || role === "admin" || hasModuleAccess("locations", "edit");
-  const canDelete = role === "owner" || role === "admin" || hasModuleAccess("locations", "delete");
+  const canEdit = can("locations.edit");
+  const canDelete = can("locations.edit") && hasModuleAccess("locations", "delete");
 
   const [locations, setLocations] = useState<Location[]>([]);
   const [clients, setClients] = useState<ClientOption[]>([]);

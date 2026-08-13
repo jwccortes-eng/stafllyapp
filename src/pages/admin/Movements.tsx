@@ -18,6 +18,7 @@ import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, C
 import { PageHeader } from "@/components/ui/page-header";
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
@@ -56,7 +57,8 @@ const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u03
 export default function Movements() {
   const { selectedCompanyId } = useCompany();
   const { role, hasActionPermission } = useAuth();
-  const canApprove = role === "owner" || role === "admin" || hasActionPermission("aprobar_novedades");
+  const { can } = usePermissions();
+  const canApprove = can("payroll.approve") || hasActionPermission("aprobar_novedades");
   const [movements, setMovements] = useState<Movement[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [periods, setPeriods] = useState<Period[]>([]);

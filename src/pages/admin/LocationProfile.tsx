@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,10 +79,11 @@ export default function LocationProfile() {
   const { locationId } = useParams<{ locationId: string }>();
   const navigate = useNavigate();
   const { canAccessAdminForCompany, hasModuleAccess, role } = useAuth();
+  const { can } = usePermissions();
   const { selectedCompanyId } = useCompany();
   const isPrivileged = canAccessAdminForCompany(selectedCompanyId);
   const canEdit =
-    role === "owner" || role === "admin" || hasModuleAccess("locations", "edit");
+    can("locations.edit");
 
   const [loc, setLoc] = useState<LocationRow | null>(null);
   const [loading, setLoading] = useState(true);

@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompensationMutations } from "@/hooks/useCompensation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -41,6 +42,7 @@ interface AnalysisRow {
 export default function CompensationAnalysisTab() {
   const { selectedCompanyId } = useCompany();
   const { user, role, hasActionPermission } = useAuth();
+  const { can } = usePermissions();
   const { upsertProfile } = useCompensationMutations();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
@@ -50,7 +52,7 @@ export default function CompensationAnalysisTab() {
   const [correctionDialog, setCorrectionDialog] = useState<AnalysisRow | null>(null);
   const [correctionForm, setCorrectionForm] = useState<Record<string, any>>({});
 
-  const canEdit = role === "owner" || role === "admin" || role === "developer" || hasActionPermission("edit_compensation_analysis");
+  const canEdit = can("payroll.manage") || hasActionPermission("edit_compensation_analysis");
 
   const { data: rows, isLoading, refetch } = useQuery({
     queryKey: ["compensation-analysis", selectedCompanyId],

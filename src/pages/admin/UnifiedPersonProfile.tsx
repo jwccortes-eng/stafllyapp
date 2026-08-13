@@ -18,6 +18,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { EMPLOYEE_COLUMNS_NO_FISCAL } from "@/lib/employee-columns";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { useEmployeeReadiness } from "@/hooks/useEmployeeReadiness";
 import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
@@ -120,11 +121,12 @@ export default function UnifiedPersonProfile() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { role } = useAuth();
+  const { canAny } = usePermissions();
   const { selectedCompanyId, selectedCompany, loading: companyLoading } = useCompany();
   const lastCompanyIdRef = useRef<string | null>(selectedCompanyId);
   if (selectedCompanyId) lastCompanyIdRef.current = selectedCompanyId;
   const stableCompanyId = selectedCompanyId ?? (companyLoading ? lastCompanyIdRef.current : null);
-  const isPrivileged = role === "developer" || role === "owner" || role === "admin";
+  const isPrivileged = canAny(["workers.edit", "users.manage"]);
 
   const [employee, setEmployee] = useState<EmployeeRecord | null>(null);
   const [loading, setLoading] = useState(true);
