@@ -51,6 +51,8 @@ import { notifyError, notifySuccess } from "@/lib/feedback/notify";
 interface MemberRow {
   user_id: string;
   role: string;
+  /** ROL OPERATIVO EXPLÍCITO de esta empresa. SSOT del rol. */
+  operating_role_key: string | null;
   full_name: string | null;
   email: string | null;
   updated_at: string | null;
@@ -95,6 +97,8 @@ export default function AccessConsole() {
   const [draft, setDraft] = useState<OverrideDraft>(EMPTY_DRAFT);
   /** Copia de lo persistido, para detectar cambios sin guardar y revertir. */
   const [baseline, setBaseline] = useState<OverrideDraft>(EMPTY_DRAFT);
+  /** ROL OPERATIVO explícito en edición (SSOT al guardar). */
+  const [roleDraft, setRoleDraft] = useState<string | null>(null);
   const [legacyRows, setLegacyRows] = useState<ModulePermissionRow[]>([]);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
@@ -118,7 +122,7 @@ export default function AccessConsole() {
 
     (async () => {
       const [{ data: cu }, { data: tmpl }] = await Promise.all([
-        supabase.from("company_users").select("user_id, role").eq("company_id", selectedCompanyId),
+        supabase.from("company_users").select("user_id, role, operating_role_key").eq("company_id", selectedCompanyId),
         supabase.from("role_templates").select("*").or(`company_id.eq.${selectedCompanyId},is_system.eq.true`),
       ]);
 
@@ -156,6 +160,7 @@ export default function AccessConsole() {
           return {
             user_id: row.user_id,
             role: row.role,
+            operating_role_key: (row as { operating_role_key?: string | null }).operating_role_key ?? null,
             full_name: p?.full_name ?? null,
             email: p?.email ?? null,
             updated_at: overrideRows?.find((c) => c.user_id === row.user_id)?.updated_at ?? null,
@@ -213,13 +218,19 @@ export default function AccessConsole() {
     if (selectedUser) void loadProfile(selectedUser);
   }, [selectedUser, loadProfile]);
 
+  // El rol en edición siempre parte del rol explícito persistido de esta empresa.
+  useEffect(() => {
+    const m = members.find((x) => x.user_id === selectedUser) ?? null;
+    setRoleDraft(m?.operating_role_key ?? null);
+  }, [selectedUser, members]);
+
   const target = members.find((m) => m.user_id === selectedUser) ?? null;
 
   /** Personas de la empresa mapeadas a la cadena operativa (solo lectura). */
   const operatingPeople: OperatingPerson[] = useMemo(
     () =>
       members.map((m) => {
-        const p = resolvePrimaryRole(m.role, m.overrides);
+        const p = resolvePrimaryRole(m.role, m.overrides, m.operating_role_key);
         return {
           userId: m.user_id,
           name: m.full_name ?? m.email ?? "Sin nombre",
@@ -269,13 +280,16 @@ export default function AccessConsole() {
     [preview],
   );
 
-  const dirty = useMemo(() => isDirty(draft, baseline), [draft, baseline]);
+  const dirty = useMemo(
+    () => isDirty(draft, baseline) || roleDraft !== (target?.operating_role_key ?? null),
+    [draft, baseline, roleDraft, target],
+  );
   const changedCount = useMemo(() => changedPermissions(draft, baseline).length, [draft, baseline]);
 
-  /** REGLA: rol principal vigente según el borrador actual. */
+  /** ROL = responsabilidad explícita. Los overrides NO lo cambian. */
   const primary = useMemo(
-    () => (target ? resolvePrimaryRole(target.role, draft.actions) : null),
-    [target, draft.actions],
+    () => (target ? resolvePrimaryRole(target.role, draft.actions, roleDraft) : null),
+    [target, draft.actions, roleDraft],
   );
 
   /** EXCEPCIONES: permisos donde el override contradice al rol principal. */
@@ -294,12 +308,22 @@ export default function AccessConsole() {
     setDraft((prev) => applyToggle(prev, spec, next));
   };
 
-  /** Cambia el ROL PRINCIPAL: reescribe la regla, conserva la membresía. */
+  /**
+   * Cambia el ROL OPERATIVO EXPLÍCITO. Persiste en la membresía al guardar.
+   * Los overrides existentes NO se borran: el rol es una capa aparte.
+   */
   const changePrimaryRole = (roleKey: string) => {
     const role = assignableRoles(target?.role ?? "").find((r) => r.key === roleKey);
     if (!role) return;
-    setDraft(applyTemplateToDraft(EMPTY_DRAFT, templateActionsFor(role)));
+    setRoleDraft(role.key);
   };
+
+  /** Carga los permisos base del rol como punto de partida (opcional). */
+  const loadRoleDefaultsIntoDraft = () => {
+    if (!primary?.role) return;
+    setDraft(applyTemplateToDraft(EMPTY_DRAFT, templateActionsFor(primary.role)));
+  };
+
 
 
   /** Roles → Usuarios: conserva la plantilla y pide persona en la superficie canónica. */
@@ -319,7 +343,10 @@ export default function AccessConsole() {
     });
   };
 
-  const discard = () => setDraft(baseline);
+  const discard = () => {
+    setDraft(baseline);
+    setRoleDraft(target?.operating_role_key ?? null);
+  };
 
 
 
@@ -334,6 +361,7 @@ export default function AccessConsole() {
       _actions: attempted.actions,
       _modules: attempted.modules,
       _reason: reason || null,
+      _operating_role: roleDraft ?? "",
     } as never);
 
     setSaving(false);
@@ -357,6 +385,12 @@ export default function AccessConsole() {
       consequence: "Aplica solo a esta empresa y queda registrado en Actividad.",
     });
     void loadProfile(selectedUser);
+    // Refresca la membresía para que Roles y Modelo operativo lean el rol nuevo.
+    setMembers((prev) =>
+      prev.map((m) =>
+        m.user_id === selectedUser ? { ...m, operating_role_key: roleDraft ?? null } : m,
+      ),
+    );
   };
 
 
@@ -484,7 +518,7 @@ export default function AccessConsole() {
                 )}
                 <div className="max-h-[420px] space-y-1.5 overflow-y-auto">
                   {filtered.map((m) => {
-                    const p = resolvePrimaryRole(m.role, m.overrides);
+                    const p = resolvePrimaryRole(m.role, m.overrides, m.operating_role_key);
                     return (
                       <button
                         key={m.user_id}
@@ -534,24 +568,24 @@ export default function AccessConsole() {
 
                 {target && !loadingProfile && (
                   <>
-                    {/* REGLA — rol principal */}
+                    {/* ROL — responsabilidad explícita (no se infiere de permisos) */}
                     <div className="rounded-xl border bg-muted/20 p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Rol principal
+                        Rol operativo
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-3">
                         {assignableRoles(target.role).length > 0 ? (
                           <Select
-                            value={primary?.role?.key ?? "custom"}
+                            value={roleDraft ?? primary?.role?.key ?? "unassigned"}
                             onValueChange={changePrimaryRole}
                           >
                             <SelectTrigger className="h-9 w-full max-w-xs">
                               <SelectValue placeholder="Elige un rol" />
                             </SelectTrigger>
                             <SelectContent>
-                              {primary?.custom && (
-                                <SelectItem value="custom" disabled>
-                                  Acceso personalizado
+                              {!roleDraft && (
+                                <SelectItem value="unassigned" disabled>
+                                  Sin rol asignado
                                 </SelectItem>
                               )}
                               {assignableRoles(target.role).map((r) => (
@@ -568,6 +602,25 @@ export default function AccessConsole() {
                           <p className="text-xs text-muted-foreground">{primary.role.description}</p>
                         )}
                       </div>
+                      {primary?.role && assignableRoles(target.role).length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-2 h-8"
+                          onClick={loadRoleDefaultsIntoDraft}
+                        >
+                          Cargar permisos base de este rol
+                        </Button>
+                      )}
+                      {primary?.suggestion && primary.suggestion.role.key !== primary.role?.key && (
+                        <p className="mt-2 text-[11px] text-muted-foreground">
+                          Diagnóstico: sus permisos se parecen{" "}
+                          {Math.round(primary.suggestion.score * 100)}% a{" "}
+                          <strong>{primary.suggestion.role.label}</strong>. Es solo una sugerencia; el rol
+                          no cambia solo.
+                        </p>
+                      )}
+
                       <p className="mt-3 text-xs text-muted-foreground">
                         Empresa: <strong>{selectedCompany?.name ?? "—"}</strong>
                         {" · Alcance: "}
@@ -771,7 +824,9 @@ export default function AccessConsole() {
                   {(() => {
                     const roster = canonical
                       ? members.filter(
-                          (m) => resolvePrimaryRole(m.role, m.overrides).role?.key === canonical.key,
+                          (m) =>
+                            resolvePrimaryRole(m.role, m.overrides, m.operating_role_key).role?.key ===
+                            canonical.key,
                         )
                       : [];
                     const mission = canonical ? RESPONSIBILITIES[canonical.key]?.mission : null;

@@ -2579,6 +2579,7 @@ export type Database = {
           company_id: string
           created_at: string
           id: string
+          operating_role_key: string | null
           role: string
           user_id: string
         }
@@ -2586,6 +2587,7 @@ export type Database = {
           company_id: string
           created_at?: string
           id?: string
+          operating_role_key?: string | null
           role?: string
           user_id: string
         }
@@ -2593,6 +2595,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           id?: string
+          operating_role_key?: string | null
           role?: string
           user_id?: string
         }
@@ -18344,16 +18347,28 @@ export type Database = {
         Args: { _employee_id: string; _pin: string }
         Returns: boolean
       }
-      admin_set_user_access: {
-        Args: {
-          _actions?: Json
-          _company_id: string
-          _modules?: Json
-          _reason?: string
-          _user_id: string
-        }
-        Returns: Json
-      }
+      admin_set_user_access:
+        | {
+            Args: {
+              _actions?: Json
+              _company_id: string
+              _modules?: Json
+              _reason?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _actions?: Json
+              _company_id: string
+              _modules?: Json
+              _operating_role?: string
+              _reason?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       anon_can_upload_onboarding_doc: {
         Args: { _path: string }
         Returns: boolean
