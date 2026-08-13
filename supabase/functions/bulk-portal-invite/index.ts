@@ -52,7 +52,7 @@ function buildActivationEmail(
         <p style="font-size: 13px; font-weight: 600; color: #3366FF; margin: 0 0 12px;">🔐 Your Login Credentials</p>
         <table style="width: 100%; font-size: 14px; color: #333;">
           <tr><td style="padding: 4px 0; color: #777;">Phone:</td><td style="padding: 4px 0; font-weight: 600;">${employee.phone_number}</td></tr>
-          <tr><td style="padding: 4px 0; color: #777;">Temporary PIN:</td><td style="padding: 4px 0; font-weight: 600; font-family: monospace; font-size: 18px; letter-spacing: 4px;">${pin}</td></tr>
+          ${pinRow}
         </table>
       </div>
 
