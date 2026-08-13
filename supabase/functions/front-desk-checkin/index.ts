@@ -1,6 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { resolveDemoDualMode } from "../_shared/security-flags.ts";
-import { validatePinDual } from "../_shared/pin-validation.ts";
+import { verifyCanonicalPin } from "../_shared/canonical-pin.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -208,61 +207,17 @@ async function authorizeEmployeeAction(
     }
   }
 
-  // (3) PIN path — S7-E / S7-K demo-only hash-first validation.
-  // Resolver force-pins every non-demo tenant + any error to "legacy",
-  // so the legacy strict-equality branch runs unchanged for real tenants.
-  // Demo may resolve to "dual" or "hash_only_ready" (S7-K capability — not
-  // yet activated on any tenant). Both modes use validatePinDual.
-  if (pin && typeof pin === "string") {
-    const _pinAuthMode_fd = await resolveDemoDualMode(adminClient, (emp as any).company_id, "front-desk-checkin");
-    if (_pinAuthMode_fd === "dual" || _pinAuthMode_fd === "hash_only_ready") {
-      const _validationMode = _pinAuthMode_fd;
-      let dualOk = false;
-      let dualSource: string | null = null;
-      let dualHashMismatch = false;
-      let dualHashError = false;
-      let dualFallbackSuppressed = false;
-      let dualSuppressedReason: string | null = null;
-      try {
-        const r = await validatePinDual({
-          inputPin: pin,
-          storedPlaintext: (emp as any).access_pin ?? null,
-          storedHash: (emp as any).access_pin_hash ?? null,
-          hashVersion: (emp as any).pin_hash_version ?? null,
-          employeeId: (emp as any).id,
-          client: adminClient,
-          mode: _validationMode,
-        });
-        dualOk = r.ok;
-        dualSource = r.source;
-        dualHashMismatch = r.hashMismatch;
-        dualHashError = r.hashError;
-        dualFallbackSuppressed = r.fallbackSuppressed;
-        dualSuppressedReason = r.suppressedReason;
-      } catch {
-        dualOk = false;
-      }
-      try {
-        console.info("[pin-auth-validate]", {
-          ctx: "front-desk-checkin",
-          mode: _validationMode,
-          company_id: (emp as any).company_id,
-          employee_id: (emp as any).id,
-          has_hash: !!(emp as any).access_pin_hash,
-          hash_version: (emp as any).pin_hash_version ?? null,
-          validation_source: dualSource,
-          hash_mismatch: dualHashMismatch,
-          hash_error: dualHashError,
-          fallback_suppressed: dualFallbackSuppressed,
-          suppressed_reason: dualSuppressedReason,
-          result: dualOk ? "ok" : "fail",
-        });
-      } catch { /* logging must never throw */ }
-      if (dualOk) return { ok: true, via: "pin" };
-    } else if ((emp as any).access_pin && pin === (emp as any).access_pin) {
-      // Legacy gate — unchanged bit-for-bit from pre-S7-E.
-      return { ok: true, via: "pin" };
-    }
+  // (3) PIN path — P0 AUTH PIN CANONICALIZATION: validador único contra la
+  // credencial del Auth User. Sin fallback a employees.access_pin / hash.
+  if (pin && typeof pin === "string" && (emp as any).user_id) {
+    const check = await verifyCanonicalPin(adminClient, (emp as any).user_id, pin);
+    console.info("[auth-pin-canonical]", {
+      ctx: "front-desk-checkin",
+      company_id: (emp as any).company_id,
+      employee_id: (emp as any).id,
+      result: check.ok ? "ok" : check.reason,
+    });
+    if (check.ok) return { ok: true, via: "pin" };
   }
 
 

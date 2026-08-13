@@ -1,6 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { resolveDemoDualMode } from "../_shared/security-flags.ts";
-import { validatePinDual } from "../_shared/pin-validation.ts";
+import {
+  resolveCanonicalIdentity,
+  verifyCanonicalPin,
+  lockoutMessage,
+} from "../_shared/canonical-pin.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -128,67 +131,28 @@ Deno.serve(async (req) => {
       return jsonResp({ error: "Invalid credentials" }, 401);
     }
 
-    // S7-E / S7-K: demo-only hash-first PIN validation. Resolver force-pins
-    // every non-demo tenant + any error to "legacy". Demo may resolve to
-    // "dual" (current) or "hash_only_ready" (S7-K capability — not yet
-    // activated on any tenant). Both honored values use validatePinDual.
-    const _pinAuthMode_kiosk = await resolveDemoDualMode(adminClient, employee.company_id, "kiosk-clock");
-    let pinOk = false;
-    if (_pinAuthMode_kiosk === "dual" || _pinAuthMode_kiosk === "hash_only_ready") {
-      const _validationMode = _pinAuthMode_kiosk;
-      let dualSource: string | null = null;
-      let dualHashMismatch = false;
-      let dualHashError = false;
-      let dualFallbackSuppressed = false;
-      let dualSuppressedReason: string | null = null;
-      try {
-        const r = await validatePinDual({
-          inputPin: pin,
-          storedPlaintext: employee.access_pin ?? null,
-          storedHash: employee.access_pin_hash ?? null,
-          hashVersion: employee.pin_hash_version ?? null,
-          employeeId: employee.id,
-          client: adminClient,
-          mode: _validationMode,
-        });
-        pinOk = r.ok;
-        dualSource = r.source;
-        dualHashMismatch = r.hashMismatch;
-        dualHashError = r.hashError;
-        dualFallbackSuppressed = r.fallbackSuppressed;
-        dualSuppressedReason = r.suppressedReason;
-      } catch {
-        pinOk = false;
+    // P0 AUTH PIN CANONICALIZATION: validador único contra la credencial del
+    // Auth User. Sin fallback a employees.access_pin / hash.
+    const kioskIdentity = await resolveCanonicalIdentity(adminClient, cleanPhone);
+    const kioskCheck = await verifyCanonicalPin(adminClient, kioskIdentity.userId, pin);
+
+    console.info("[auth-pin-canonical]", {
+      ctx: "kiosk-clock",
+      company_id: employee.company_id,
+      auth_user_resolved: !!kioskIdentity.userId,
+      has_credential: kioskIdentity.hasCredential,
+      result: kioskCheck.ok ? "ok" : kioskCheck.reason,
+    });
+
+    if (!kioskCheck.ok) {
+      if (kioskCheck.reason === "locked") {
+        return jsonResp({ error: lockoutMessage(kioskCheck.lockedUntil) }, 429);
       }
-      try {
-        console.info("[pin-auth-validate]", {
-          ctx: "kiosk-clock",
-          mode: _validationMode,
-          company_id: employee.company_id,
-          employee_id: employee.id,
-          has_hash: !!employee.access_pin_hash,
-          hash_version: employee.pin_hash_version ?? null,
-          validation_source: dualSource,
-          hash_mismatch: dualHashMismatch,
-          hash_error: dualHashError,
-          fallback_suppressed: dualFallbackSuppressed,
-          suppressed_reason: dualSuppressedReason,
-          result: pinOk ? "ok" : "fail",
-        });
-      } catch { /* logging must never throw */ }
-    } else {
-      // Legacy gate — unchanged bit-for-bit from pre-S7-E.
-      pinOk = !!employee.access_pin && employee.access_pin === pin;
-    }
-
-
-    if (!pinOk) {
       await recordFailed(adminClient, cleanPhone);
       await recordFailedIp(adminClient, ipKey);
       console.warn(JSON.stringify({ event: "kiosk_auth_fail", reason: "bad_pin", ip, phone_hash: phoneHash }));
       return jsonResp({ error: "Invalid credentials" }, 401);
     }
-    void _pinAuthMode_kiosk;
 
     // PIN correct — only NOW reveal account-inactive (not enumeration risk)
     if (!employee.is_active) {

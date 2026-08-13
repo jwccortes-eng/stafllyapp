@@ -32,7 +32,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { CompanyLogo } from "@/components/ui/company-logo";
-import CompanySwitchPinDialog from "@/components/CompanySwitchPinDialog";
 import { TerminalCard } from "@/components/ocs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MT, TAP, FOCUS_RING } from "@/lib/mobile/mobile-scale";
@@ -490,13 +489,6 @@ export const ContextSwitcher = forwardRef<HTMLDivElement, ContextSwitcherProps>(
     const [online, setOnline] = useState(
       typeof navigator === "undefined" ? true : navigator.onLine,
     );
-    const [pinDialogOpen, setPinDialogOpen] = useState(false);
-    const [pendingCompany, setPendingCompany] = useState<{
-      id: string;
-      name: string;
-      logo_url?: string | null;
-      brand_color?: string | null;
-    } | null>(null);
 
     const pendingCompanyRef = useRef<string | null>(null);
 
@@ -621,18 +613,9 @@ export const ContextSwitcher = forwardRef<HTMLDivElement, ContextSwitcherProps>(
         });
         return;
       }
-      // Usuarios sin modo global confirman el cambio con PIN.
-      if (!canUseGlobalMode && companies.length > 1) {
-        setOpen(false);
-        setPendingCompany({
-          id: c.id,
-          name: c.name,
-          logo_url: c.logoUrl,
-          brand_color: c.brandColor,
-        });
-        setPinDialogOpen(true);
-        return;
-      }
+      // P0 AUTH PIN CANONICALIZATION: el cambio de compañía no pide PIN.
+      // La membresía ya está resuelta por el acceso; un segundo PIN solo
+      // reintroducía credenciales divergentes.
       performSwitch(c.id);
     };
 
@@ -771,15 +754,6 @@ export const ContextSwitcher = forwardRef<HTMLDivElement, ContextSwitcherProps>(
           </Popover>
         )}
 
-        <CompanySwitchPinDialog
-          open={pinDialogOpen}
-          onOpenChange={setPinDialogOpen}
-          targetCompany={pendingCompany}
-          onConfirm={(companyId: string) => {
-            performSwitch(companyId);
-            setPendingCompany(null);
-          }}
-        />
       </>
     );
   },

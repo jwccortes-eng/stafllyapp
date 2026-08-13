@@ -1,7 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPinAuthMode, PIN_AUTH_MODE_DEFAULT, type PinAuthMode } from "../_shared/security-flags.ts";
-import { validatePinDual } from "../_shared/pin-validation.ts";
 import { resolveMultiCompanyAccess, accessDeniedMessage } from "../_shared/multi-company-access.ts";
+import {
+  resolveCanonicalIdentity,
+  verifyCanonicalPin,
+  setCanonicalPin,
+  lockoutMessage,
+} from "../_shared/canonical-pin.ts";
 
 // Internal prefix to meet Supabase min-password-length (6 chars) while keeping 4-digit PINs
 const AUTH_PWD_PREFIX = "SF_";
@@ -410,14 +415,16 @@ Deno.serve(async (req) => {
         );
       }
 
-      // "Already activated" = real linked auth user. A legacy/seed access_pin
-      // without a user_id is NOT a real activation; the invite flow must be
-      // allowed to overwrite it and create the auth user.
-      if (employee.user_id && employee.access_pin) {
-        return new Response(
-          JSON.stringify({ error: "Tu cuenta ya está activada. Inicia sesión con tu PIN.", code: "already_activated" }),
-          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // "Ya activada" = Auth User real CON credencial canónica. Un PIN legacy
+      // en la ficha ya no cuenta como activación.
+      if (employee.user_id) {
+        const existing = await resolveCanonicalIdentity(adminClient, employee.phone_number);
+        if (existing.userId === employee.user_id && existing.hasCredential) {
+          return new Response(
+            JSON.stringify({ error: "Tu cuenta ya está activada. Inicia sesión con tu PIN.", code: "already_activated" }),
+            { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
 
       // S7-C: safe mode read. Telemetry only — no branching on mode in this sprint.
@@ -434,7 +441,10 @@ Deno.serve(async (req) => {
       const empPhone = (employee.phone_number || "").replace(/[^\d+]/g, "").slice(0, 20);
       const authIdentifier = empPhone || `noph_${employee.id.replace(/-/g, "").slice(0, 16)}`;
 
-      const updateData: Record<string, any> = { access_pin: pin };
+      // P0 AUTH PIN CANONICALIZATION: la activación ya NO escribe PIN en la
+      // ficha. El PIN se guarda en la credencial canónica del Auth User una
+      // vez resuelto/creado (más abajo).
+      const updateData: Record<string, any> = {};
       if (email && typeof email === "string" && email.includes("@")) {
         updateData.email = email.trim().slice(0, 255);
       }
@@ -442,14 +452,9 @@ Deno.serve(async (req) => {
         updateData.avatar_url = avatar_url.slice(0, 500);
       }
 
-      await adminClient.from("employees").update(updateData).eq("id", employee.id);
-      // S4-B dual-write: mirror plaintext PIN into bcrypt hash columns. Best-effort.
-      try {
-        await adminClient.rpc("internal_dual_write_pin_hash", {
-          _employee_id: employee.id,
-          _pin: pin,
-        });
-      } catch (_) { /* never block activation; no PIN/hash logged */ }
+      if (Object.keys(updateData).length > 0) {
+        await adminClient.from("employees").update(updateData).eq("id", employee.id);
+      }
 
       const empEmail = `emp_${authIdentifier}@employee.internal`;
 
@@ -480,6 +485,11 @@ Deno.serve(async (req) => {
         }
       } else {
         await adminClient.auth.admin.updateUserById(employee.user_id, { password: pwd });
+      }
+
+      // Escritor único: la credencial canónica se crea contra el Auth User.
+      if (employee.user_id) {
+        await setCanonicalPin(adminClient, employee.user_id, pin, "activation");
       }
 
       await ensureEmployeeRole(adminClient, employee.user_id);
@@ -647,26 +657,23 @@ Deno.serve(async (req) => {
       const pwd = authPassword(pin);
       console.info("[phone-login]", { normalizedPhone: cleanPhone, hasPin: !!pin, step: "login" });
 
-      const rateCheck = await checkRateLimit(adminClient, cleanPhone);
-      if (!rateCheck.allowed) {
-        return new Response(
-          JSON.stringify({ error: rateCheck.message }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      // ── P0 AUTH PIN CANONICALIZATION ──────────────────────────────────
+      // Flujo único: normalizar teléfono → resolver Auth User → lockout
+      // canónico → PIN canónico → memberships → sesión.
+      // Ningún fallback a employees.access_pin / hash / switch_pin.
+      const identity = await resolveCanonicalIdentity(adminClient, phone);
 
       // P0 — MULTI-COMPANY AUTH ACCESS TRUTH: identidad completa por teléfono
       // (sin filtrar por `is_active`); el resolver decide si hay acceso.
       const { data: loginEmployees } = await adminClient
         .from("employees")
-        .select("id, first_name, last_name, phone_number, access_pin, access_pin_hash, pin_hash_version, is_active, user_id, must_change_pin, company_id, portal_access_enabled, merged_into_employee_id, created_at")
+        .select("id, first_name, last_name, phone_number, is_active, user_id, must_change_pin, company_id, portal_access_enabled, merged_into_employee_id, created_at")
         .in("phone_number", phoneVariants)
         .order("created_at", { ascending: true });
 
       const loginAccess = resolveMultiCompanyAccess(loginEmployees ?? []);
 
-      if (loginAccess.outcome === "no_identity") {
-        await recordFailedAttempt(adminClient, cleanPhone);
+      if (loginAccess.outcome === "no_identity" && !identity.userId) {
         return new Response(
           JSON.stringify({ error: "Credenciales inválidas" }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -680,13 +687,55 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Credencial: se valida el PIN sobre las fichas ACTIVAS de la persona.
-      // Una ficha inactiva en otra compañía no puede secuestrar el login.
       const activeLogin = loginAccess.activeRecords;
-      const employee = activeLogin.find((e) => e.access_pin === pin)
-        || activeLogin.find((e) => !!e.access_pin || !!e.access_pin_hash)
+      const authUserId = identity.userId
+        ?? activeLogin.find((e: any) => !!e.user_id)?.user_id
+        ?? null;
+
+      const pinCheck = await verifyCanonicalPin(adminClient, authUserId, pin);
+
+      console.info("[auth-pin-canonical]", {
+        ctx: "login",
+        normalizedPhone: identity.phone,
+        auth_user_resolved: !!authUserId,
+        has_credential: identity.hasCredential,
+        result: pinCheck.ok ? "ok" : pinCheck.reason,
+      });
+
+      if (!pinCheck.ok) {
+        if (pinCheck.reason === "locked") {
+          return new Response(
+            JSON.stringify({ error: lockoutMessage(pinCheck.lockedUntil), code: "locked" }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (pinCheck.reason === "no_credential") {
+          return new Response(
+            JSON.stringify({
+              error: "Tu acceso aún no tiene PIN configurado. Pide a tu administrador que lo genere.",
+              code: "no_credential",
+            }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        return new Response(
+          JSON.stringify({ error: "Credenciales inválidas" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Contexto operativo: ficha activa asociada al Auth User autenticado.
+      const employee = activeLogin.find((e: any) => e.user_id === authUserId)
         || loginAccess.primaryRecord
         || activeLogin[0]!;
+
+      if (!employee) {
+        return new Response(
+          JSON.stringify({ error: accessDeniedMessage("access_disabled"), code: "access_disabled" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (!employee.user_id && authUserId) employee.user_id = authUserId;
 
       console.info("[multi-company-auth]", {
         step: "login_access_truth",
@@ -696,83 +745,9 @@ Deno.serve(async (req) => {
         selected_company_id: employee.company_id,
       });
 
-      // S7-D / S7-K: resolve effective mode BEFORE the PIN gate. Real tenants
-      // and any resolver error force "legacy". Stafly Demo may resolve to
-      // "dual" (current) or "hash_only_ready" (S7-K capability — not yet
-      // activated on any tenant). Mode === "dual" or "hash_only_ready" both
-      // use the validatePinDual helper with mode passed through.
-      const _pinAuthMode_login = await resolvePinAuthModeSafe(adminClient, employee.company_id, "login");
-
-      if (_pinAuthMode_login === "dual" || _pinAuthMode_login === "hash_only_ready") {
-        const _validationMode = _pinAuthMode_login; // narrow for helper
-        let dualOk = false;
-        let dualSource: string | null = null;
-        let dualHashMismatch = false;
-        let dualHashError = false;
-        let dualFallbackSuppressed = false;
-        let dualSuppressedReason: string | null = null;
-        try {
-          const r = await validatePinDual({
-            inputPin: pin,
-            storedPlaintext: employee.access_pin ?? null,
-            storedHash: employee.access_pin_hash ?? null,
-            hashVersion: employee.pin_hash_version ?? null,
-            employeeId: employee.id,
-            client: adminClient,
-            mode: _validationMode,
-          });
-          dualOk = r.ok;
-          dualSource = r.source;
-          dualHashMismatch = r.hashMismatch;
-          dualHashError = r.hashError;
-          dualFallbackSuppressed = r.fallbackSuppressed;
-          dualSuppressedReason = r.suppressedReason;
-        } catch {
-          // Helper is no-throw, but be defensive — fail closed.
-          dualOk = false;
-        }
-        try {
-          console.info("[pin-auth-validate]", {
-            ctx: "login",
-            mode: _validationMode,
-            company_id: employee.company_id,
-            employee_id: employee.id,
-            has_hash: !!employee.access_pin_hash,
-            hash_version: employee.pin_hash_version ?? null,
-            validation_source: dualSource,
-            hash_mismatch: dualHashMismatch,
-            hash_error: dualHashError,
-            fallback_suppressed: dualFallbackSuppressed,
-            suppressed_reason: dualSuppressedReason,
-            result: dualOk ? "ok" : "fail",
-          });
-        } catch { /* logging must never throw */ }
-
-        if (!dualOk) {
-          // Same generic user-facing 401 as a wrong PIN in any mode.
-          const result = await recordFailedAttempt(adminClient, cleanPhone);
-          return new Response(
-            JSON.stringify({ error: result.message }),
-            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        // Fall through to existing Supabase auth password flow below.
-        // Auth bridge (random server-side password + session minting) is
-        // documented as BLOCKED for S7-D — see STAFLY_AUTH_PASSWORD_REFACTOR_PLAN.md.
-      } else {
-        // Legacy gate — unchanged bit-for-bit from pre-S7-D.
-        if (!employee.access_pin || employee.access_pin !== pin) {
-          const result = await recordFailedAttempt(adminClient, cleanPhone);
-          return new Response(
-            JSON.stringify({ error: result.message }),
-            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-      }
-
-
+      // Lockout legacy por teléfono: neutralizado. El único bloqueo válido
+      // es el canónico (auth_pin_credentials.locked_until).
       await resetRateLimit(adminClient, cleanPhone);
-      void _pinAuthMode_login;
 
       const empEmail = `emp_${cleanPhone}@employee.internal`;
       
@@ -952,30 +927,32 @@ Deno.serve(async (req) => {
       // Generate 4-digit PIN for provision as well
       const newPin = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
       const newPwd = authPassword(newPin);
-      
-      await adminClient.from("employees").update({ access_pin: newPin }).eq("id", employee_id);
-      // S4-B dual-write
-      try {
-        await adminClient.rpc("internal_dual_write_pin_hash", {
-          _employee_id: employee_id,
-          _pin: newPin,
-        });
-      } catch (_) { /* best-effort; no PIN/hash logged */ }
 
       const { data: emp } = await adminClient
         .from("employees")
         .select("phone_number, user_id")
         .eq("id", employee_id)
         .maybeSingle();
-      
-      // Also update auth password if employee has an auth account
-      if (emp?.user_id) {
-        await adminClient.auth.admin.updateUserById(emp.user_id, { password: newPwd });
+
+      if (!emp?.user_id) {
+        return new Response(
+          JSON.stringify({
+            error: "Esta persona aún no tiene identidad de acceso. Actívala antes de generar el PIN.",
+            code: "no_auth_user",
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
-      if (emp?.phone_number) {
-        await resetRateLimit(adminClient, emp.phone_number.replace(/[\s\-\(\)]/g, ""));
+      // Escritor único: credencial canónica + limpieza atómica de lockout.
+      const provisioned = await setCanonicalPin(adminClient, emp.user_id, newPin, "provision");
+      if (!provisioned) {
+        return new Response(
+          JSON.stringify({ error: "No se pudo generar el PIN" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
+      await adminClient.auth.admin.updateUserById(emp.user_id, { password: newPwd });
 
       return new Response(
         JSON.stringify({ success: true, pin: newPin }),
@@ -1008,20 +985,17 @@ Deno.serve(async (req) => {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const { data: emps } = await adminClient
-        .from("employees")
-        .select("id, first_name, last_name, access_pin, user_id")
-        .not("access_pin", "is", null)
-        .not("user_id", "is", null);
-
-      let updated = 0;
-      for (const e of emps ?? []) {
-        if (e.access_pin && e.user_id) {
-          const pwd = authPassword(e.access_pin);
-          const { error } = await adminClient.auth.admin.updateUserById(e.user_id, { password: pwd });
-          if (!error) updated++;
-        }
-      }
+      // RETIRADO (P0 AUTH PIN CANONICALIZATION): este escritor propagaba el PIN
+      // legacy de una ficha arbitraria a la contraseña de autenticación.
+      return new Response(
+        JSON.stringify({
+          error: "Operación retirada. El PIN es único por persona y se gestiona con reset de PIN.",
+          code: "retired",
+        }),
+        { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+      // deno-lint-ignore no-unreachable
+      const updated = 0;
 
       return new Response(
         JSON.stringify({ success: true, updated }),
@@ -1056,45 +1030,32 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Find employee linked to this user
-      const { data: emp } = await adminClient
-        .from("employees")
-        .select("id, access_pin, user_id, company_id")
-        .eq("user_id", caller.id)
-        .maybeSingle();
+      // Canonical: el PIN pertenece al Auth User, no a la ficha de empleado.
+      if (current_pin) {
+        const currentCheck = await verifyCanonicalPin(adminClient, caller.id, current_pin);
+        if (!currentCheck.ok) {
+          const msg = currentCheck.reason === "locked"
+            ? lockoutMessage(currentCheck.lockedUntil)
+            : "PIN actual incorrecto";
+          return new Response(JSON.stringify({ error: msg }), {
+            status: currentCheck.reason === "locked" ? 429 : 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
 
-      if (!emp) {
-        return new Response(JSON.stringify({ error: "Empleado no encontrado" }), {
-          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const changed = await setCanonicalPin(adminClient, caller.id, new_pin, "self_change", caller.id);
+      if (!changed) {
+        return new Response(JSON.stringify({ error: "No se pudo actualizar el PIN" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // S7-B: read effective pin_auth_mode for this tenant (no behavior change).
-      const _pinAuthMode_changepin = await resolvePinAuthModeSafe(
-        adminClient,
-        (emp as any).company_id ?? null,
-        "change-pin",
-      );
-      void _pinAuthMode_changepin;
+      await adminClient.from("employees")
+        .update({ must_change_pin: false })
+        .eq("user_id", caller.id);
 
-      // Verify current PIN if provided
-      if (current_pin && emp.access_pin && current_pin !== emp.access_pin) {
-        return new Response(JSON.stringify({ error: "PIN actual incorrecto" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Update PIN in employees table and clear must_change_pin flag
-      await adminClient.from("employees").update({ access_pin: new_pin, must_change_pin: false }).eq("id", emp.id);
-      // S4-B dual-write
-      try {
-        await adminClient.rpc("internal_dual_write_pin_hash", {
-          _employee_id: emp.id,
-          _pin: new_pin,
-        });
-      } catch (_) { /* best-effort; no PIN/hash logged */ }
-
-      // Sync auth password
+      // Sync auth password (puente de sesión, no credencial)
       const newPwd = authPassword(new_pin);
       await adminClient.auth.admin.updateUserById(caller.id, { password: newPwd });
 
