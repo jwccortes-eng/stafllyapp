@@ -521,7 +521,16 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
   const perms = resolvePermissions(input.permissions);
 
 
-  const attention: Array<HubAttentionItem & { _boost: number }> = [];
+  /** Metadatos que convierten un item de atención en alerta de bandeja. */
+  type AlertMeta = {
+    type: HubAlertType;
+    title: string;
+    stage: ServiceStage;
+    severity: HubAlertSeverity;
+  };
+  const attention: Array<
+    HubAttentionItem & { _boost: number; _alert?: AlertMeta }
+  > = [];
   const operations: HubOperation[] = [];
   const teams: HubTeamSummary[] = [];
   const closeouts: HubDecisionItem[] = [];
