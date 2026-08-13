@@ -86,7 +86,7 @@ const OnboardingWizard = lazy(() => import("./pages/admin/OnboardingWizard"));
 const EmployeeOnboarding = lazy(() => import("./pages/admin/EmployeeOnboarding"));
 const Workforce = lazy(() => import("./pages/admin/Workforce"));
 const UnifiedPersonProfile = lazy(() => import("./pages/admin/UnifiedPersonProfile"));
-const Permissions = lazy(() => import("./pages/admin/Permissions"));
+const Permissions = lazy(() => import("./pages/admin/AccessConsole"));
 const CompanyConfig = lazy(() => import("./pages/admin/CompanyConfig"));
 const Automations = lazy(() => import("./pages/admin/Automations"));
 const PayrollSettings = lazy(() => import("./pages/admin/PayrollSettings"));
