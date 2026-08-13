@@ -8888,6 +8888,7 @@ export type Database = {
           can_delete: boolean
           can_edit: boolean
           can_view: boolean
+          company_id: string | null
           created_at: string
           id: string
           module: string
@@ -8898,6 +8899,7 @@ export type Database = {
           can_delete?: boolean
           can_edit?: boolean
           can_view?: boolean
+          company_id?: string | null
           created_at?: string
           id?: string
           module: string
@@ -8908,13 +8910,29 @@ export type Database = {
           can_delete?: boolean
           can_edit?: boolean
           can_view?: boolean
+          company_id?: string | null
           created_at?: string
           id?: string
           module?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "module_permissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_permissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       movements: {
         Row: {
@@ -18087,6 +18105,42 @@ export type Database = {
           },
         ]
       }
+      permission_scope_review: {
+        Row: {
+          can_delete: boolean | null
+          can_edit: boolean | null
+          can_view: boolean | null
+          candidate_company_ids: string[] | null
+          membership_count: number | null
+          module: string | null
+          module_permission_id: string | null
+          review_status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          can_delete?: boolean | null
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          candidate_company_ids?: never
+          membership_count?: never
+          module?: string | null
+          module_permission_id?: string | null
+          review_status?: never
+          user_id?: string | null
+        }
+        Update: {
+          can_delete?: boolean | null
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          candidate_company_ids?: never
+          membership_count?: never
+          module?: string | null
+          module_permission_id?: string | null
+          review_status?: never
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles_safe: {
         Row: {
           avatar_url: string | null
@@ -18289,6 +18343,16 @@ export type Database = {
       admin_set_auth_pin_for_employee: {
         Args: { _employee_id: string; _pin: string }
         Returns: boolean
+      }
+      admin_set_user_access: {
+        Args: {
+          _actions?: Json
+          _company_id: string
+          _modules?: Json
+          _reason?: string
+          _user_id: string
+        }
+        Returns: Json
       }
       anon_can_upload_onboarding_doc: {
         Args: { _path: string }
@@ -18502,6 +18566,10 @@ export type Database = {
         Args: { p_target_company_id: string; p_target_employee_id: string }
         Returns: Json
       }
+      effective_access: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: Json
+      }
       email_queue_dispatch: { Args: never; Returns: undefined }
       employee_has_access_pin: {
         Args: { _employee_id: string }
@@ -18680,6 +18748,19 @@ export type Database = {
       }
       has_module_permission: {
         Args: { _module: string; _permission: string; _user_id: string }
+        Returns: boolean
+      }
+      has_module_permission_in_company: {
+        Args: {
+          _company_id: string
+          _module: string
+          _permission: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      has_permission: {
+        Args: { _company_id: string; _permission: string; _user_id: string }
         Returns: boolean
       }
       has_role: {
@@ -18880,6 +18961,16 @@ export type Database = {
           deleted_metrics: number
           deleted_observations: number
           deleted_probes: number
+        }[]
+      }
+      permission_catalog: {
+        Args: never
+        Returns: {
+          domain: string
+          legacy_action: string
+          legacy_level: string
+          legacy_module: string
+          permission: string
         }[]
       }
       pick_workers_to_rate: {

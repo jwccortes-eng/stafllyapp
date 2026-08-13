@@ -17,6 +17,7 @@ type EmployeeStatus = 'active' | 'inactive' | null;
 
 interface ModulePermission {
   module: string;
+  company_id: string | null;
   can_view: boolean;
   can_edit: boolean;
   can_delete: boolean;
@@ -24,8 +25,10 @@ interface ModulePermission {
 
 interface ActionPermission {
   action: string;
+  company_id: string | null;
   granted: boolean;
 }
+
 
 export type AuthState = "initializing" | "authenticated" | "recovering" | "unauthenticated";
 
@@ -87,6 +90,9 @@ interface AuthContextType {
   loading: boolean;
   permissions: ModulePermission[];
   actionPermissions: ActionPermission[];
+  /** FASE 2 — estado explícito de autorización. Nunca asumir defaults. */
+  authorizationStatus: "loading" | "ready" | "error";
+
   signOut: () => Promise<void>;
   hasModuleAccess: (module: string, permission: 'view' | 'edit' | 'delete') => boolean;
   hasActionPermission: (action: string) => boolean;
@@ -121,6 +127,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   permissions: [],
   actionPermissions: [],
+  authorizationStatus: "loading",
+
   signOut: async () => {},
   hasModuleAccess: () => false,
   hasActionPermission: () => false,
@@ -155,6 +163,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
   const [actionPermissions, setActionPermissions] = useState<ActionPermission[]>([]);
+  const [authorizationStatus, setAuthorizationStatus] = useState<"loading" | "ready" | "error">("loading");
+
   const [fullName, setFullName] = useState<string | null>(null);
   const hydratedUserIdRef = useRef<string | null>(null);
   const activeModeRef = useRef<ActiveMode>(activeMode);
@@ -175,7 +185,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetAuthState = useCallback(() => {
+    setAuthorizationStatus("loading");
     setRole(null);
+
     setAllRoles(new Set());
     setCompanyRoles({});
     setEmployeeId(null);
@@ -243,22 +255,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
       setFullName(profileData?.full_name ?? null);
 
-      // Fetch module permissions for managers and supervisors (company_owner gets full access like admin)
-      if (resolvedRole === 'manager' || resolvedRole === 'supervisor') {
-        const { data: permsData } = await supabase
-          .from('module_permissions')
-          .select('module, can_view, can_edit, can_delete')
-          .eq('user_id', userId);
-        setPermissions((permsData as ModulePermission[]) ?? []);
-        const { data: actionPermsData } = await supabase
-          .from('action_permissions')
-          .select('action, granted')
-          .eq('user_id', userId);
-        setActionPermissions((actionPermsData as ActionPermission[]) ?? []);
-      } else {
-        setPermissions([]);
-        setActionPermissions([]);
+      // FASE 2 — sin bypass de carga: los permisos se resuelven SIEMPRE, para
+      // cualquier rol, antes de declarar la autorización lista. Nunca
+      // "unknown → allow → deny".
+      const [{ data: permsData, error: permsError }, { data: actionPermsData, error: actionsError }] =
+        await Promise.all([
+          supabase
+            .from('module_permissions')
+            .select('module, company_id, can_view, can_edit, can_delete')
+            .eq('user_id', userId),
+          supabase
+            .from('action_permissions')
+            .select('action, company_id, granted')
+            .eq('user_id', userId),
+        ]);
+
+      if (permsError || actionsError) {
+        setAuthorizationStatus("error");
+        throw permsError ?? actionsError;
       }
+
+      setPermissions((permsData as ModulePermission[]) ?? []);
+      setActionPermissions((actionPermsData as ActionPermission[]) ?? []);
+      setAuthorizationStatus("ready");
+
 
       // Set first employee as default (company context will refine later)
       const firstEmp = activeEmps[0];
@@ -319,6 +339,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cause: err,
       });
       resetAuthState();
+      // FASE 2 — el fallo de autorización es un estado explícito, no un "deny silencioso".
+      setAuthorizationStatus("error");
+
     }
   }, [resetAuthState]);
 
@@ -712,7 +735,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       activeMode, setActiveMode,
       canAccessAdmin, canAccessPortal,
       employeeId, allEmployeeIds, employeeActive, fullName, loading,
-      permissions, actionPermissions, signOut, hasModuleAccess, hasActionPermission,
+      permissions, actionPermissions, authorizationStatus, signOut, hasModuleAccess, hasActionPermission,
       resolveEmployeeForCompany,
     }}>
       {children}
