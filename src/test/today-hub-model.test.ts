@@ -172,7 +172,9 @@ describe("buildTodayHubModel", () => {
       ],
     });
     const item = m.attentionItems.find((i) => i.id === "s1:open-clock")!;
-    expect(item.action?.href).toBe("/app/timeclock?shiftId=s1");
+    expect(item.action?.href).toBe(
+      "/app/timeclock?shiftId=s1&from=command-center",
+    );
   });
 
   it("solicitudes pendientes se modelan como validación", () => {
@@ -194,7 +196,9 @@ describe("buildTodayHubModel", () => {
         }),
       ],
     });
-    expect(m.primaryAction?.href).toBe("/app/shift-ops?id=gap");
+    expect(m.primaryAction?.href).toBe(
+      "/app/shift-ops?id=gap&stage=team&from=command-center",
+    );
     expect(m.primaryAction?.label).toBe("Completar equipo");
   });
 });
