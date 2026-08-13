@@ -541,7 +541,9 @@ export default function AccessConsole() {
                     {selectedUser ? "Aplicar a la persona seleccionada" : "Selecciona una persona"}
                   </Button>
                 </div>
-              ))}
+                );
+              })}
+
             </CardContent>
           </Card>
         </TabsContent>
