@@ -12,6 +12,18 @@ import {
   type PermissionSpec,
 } from "@/lib/auth/permission-catalog";
 import type { ActionPermissionRow, ModulePermissionRow } from "@/lib/auth/permission-resolver";
+import {
+  EMPTY_DRAFT,
+  applyToggle,
+  applyTemplateToDraft,
+  changedPermissions,
+  isConfigurable,
+  isDirty,
+  isProtected,
+  overrideValue,
+  switchValue,
+  type OverrideDraft,
+} from "@/lib/auth/permission-overrides";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -63,8 +75,10 @@ export default function AccessConsole() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [actions, setActions] = useState<Record<string, boolean>>({});
-  const [modules, setModules] = useState<ModuleState>({});
+  /** Capa 2: overrides explícitos de esta compañía. ÚNICO estado editable. */
+  const [draft, setDraft] = useState<OverrideDraft>(EMPTY_DRAFT);
+  /** Copia de lo persistido, para detectar cambios sin guardar y revertir. */
+  const [baseline, setBaseline] = useState<OverrideDraft>(EMPTY_DRAFT);
   const [legacyRows, setLegacyRows] = useState<ModulePermissionRow[]>([]);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
@@ -131,6 +145,8 @@ export default function AccessConsole() {
         supabase.from("module_permissions").select("module, company_id, can_view, can_edit, can_delete").eq("user_id", userId),
       ]);
 
+      // OVERRIDES = solo lo explícito de ESTA compañía. Lo heredado
+      // (company_id NULL) alimenta el preview, nunca el estado editable.
       const nextActions: Record<string, boolean> = {};
       for (const a of acts ?? []) nextActions[a.action] = a.granted;
 
@@ -140,14 +156,10 @@ export default function AccessConsole() {
       for (const m of scoped) {
         nextModules[m.module] = { view: m.can_view, edit: m.can_edit, delete: m.can_delete };
       }
-      // Heredado (sin compañía): se muestra como punto de partida, pero al
-      // guardar queda escrito explícitamente para ESTA compañía.
-      for (const m of legacy) {
-        nextModules[m.module] ??= { view: m.can_view, edit: m.can_edit, delete: m.can_delete };
-      }
 
-      setActions(nextActions);
-      setModules(nextModules);
+      const loaded: OverrideDraft = { actions: nextActions, modules: nextModules };
+      setDraft(loaded);
+      setBaseline(loaded);
       setLegacyRows(legacy);
       setReason("");
       setLoadingProfile(false);
@@ -161,75 +173,56 @@ export default function AccessConsole() {
 
   const target = members.find((m) => m.user_id === selectedUser) ?? null;
 
-  /* ---------------- evaluación efectiva (misma lógica que backend) ---------------- */
-  const preview = useMemo(() => {
-    if (!target || !selectedCompanyId) return {} as Record<string, boolean>;
-    const actionRows: ActionPermissionRow[] = Object.entries(actions).map(([action, granted]) => ({
-      action,
-      company_id: selectedCompanyId,
-      granted,
-    }));
-    const moduleRows: ModulePermissionRow[] = Object.entries(modules).map(([module, v]) => ({
-      module,
-      company_id: selectedCompanyId,
-      can_view: v.view,
-      can_edit: v.edit,
-      can_delete: v.delete,
-    }));
-    return evaluateAccessPreview(
-      {
-        globalRoles: new Set<string>(),
-        companyRoles: { [selectedCompanyId]: target.role },
-        modulePermissions: [...moduleRows, ...legacyRows],
-        actionPermissions: actionRows,
-      },
-      selectedCompanyId,
-    );
-  }, [target, selectedCompanyId, actions, modules, legacyRows]);
+  /* ---------------- capas: role defaults · overrides · effective ---------------- */
+  const evaluateWith = useCallback(
+    (source: OverrideDraft) => {
+      if (!target || !selectedCompanyId) return {} as Record<string, boolean>;
+      const actionRows: ActionPermissionRow[] = Object.entries(source.actions).map(([action, granted]) => ({
+        action,
+        company_id: selectedCompanyId,
+        granted,
+      }));
+      const moduleRows: ModulePermissionRow[] = Object.entries(source.modules).map(([module, v]) => ({
+        module,
+        company_id: selectedCompanyId,
+        can_view: v.view,
+        can_edit: v.edit,
+        can_delete: v.delete,
+      }));
+      return evaluateAccessPreview(
+        {
+          globalRoles: new Set<string>(),
+          companyRoles: { [selectedCompanyId]: target.role },
+          modulePermissions: [...moduleRows, ...legacyRows],
+          actionPermissions: actionRows,
+        },
+        selectedCompanyId,
+      );
+    },
+    [target, selectedCompanyId, legacyRows],
+  );
+
+  /** Capa 1: lo que concede el rol por sí solo (sin overrides). */
+  const roleDefaults = useMemo(() => evaluateWith(EMPTY_DRAFT), [evaluateWith]);
+  /** Capa 3: acceso efectivo = rol + overrides. SOLO LECTURA. */
+  const preview = useMemo(() => evaluateWith(draft), [evaluateWith, draft]);
 
   const grantedSet = useMemo(
     () => new Set(Object.entries(preview).filter(([, v]) => v).map(([k]) => k)),
     [preview],
   );
 
-  /* ---------------- edición ---------------- */
+  const dirty = useMemo(() => isDirty(draft, baseline), [draft, baseline]);
+  const changedCount = useMemo(() => changedPermissions(draft, baseline).length, [draft, baseline]);
+
+  /* ---------------- edición (capa 2: overrides) ---------------- */
   const togglePermission = (spec: PermissionSpec, next: boolean) => {
-    if (spec.legacyAction) {
-      setActions((prev) => ({ ...prev, [spec.legacyAction as string]: next }));
-    }
-    if (spec.legacyModule && spec.legacyLevel) {
-      setModules((prev) => {
-        const cur = prev[spec.legacyModule as string] ?? { view: false, edit: false, delete: false };
-        const updated = { ...cur, [spec.legacyLevel as string]: next };
-        // editar/eliminar implican poder ver
-        if (next && spec.legacyLevel !== "view") updated.view = true;
-        if (!next && spec.legacyLevel === "view") {
-          updated.edit = false;
-          updated.delete = false;
-        }
-        return { ...prev, [spec.legacyModule as string]: updated };
-      });
-    }
+    if (isProtected(target?.role, spec)) return;
+    setDraft((prev) => applyToggle(prev, spec, next));
   };
 
   const applyTemplate = (tpl: RoleTemplate) => {
-    const next: Record<string, boolean> = { ...actions };
-    for (const spec of PERMISSION_CATALOG) if (spec.legacyAction) next[spec.legacyAction] = false;
-    for (const a of tpl.actions) next[a] = true;
-    setActions(next);
-    // los módulos siguen a las acciones del catálogo
-    const nextModules: ModuleState = { ...modules };
-    for (const spec of PERMISSION_CATALOG) {
-      if (!spec.legacyModule || !spec.legacyLevel || !spec.legacyAction) continue;
-      const on = !!next[spec.legacyAction];
-      const cur = nextModules[spec.legacyModule] ?? { view: false, edit: false, delete: false };
-      nextModules[spec.legacyModule] = {
-        ...cur,
-        [spec.legacyLevel]: on || cur[spec.legacyLevel],
-        view: on ? true : cur.view,
-      };
-    }
-    setModules(nextModules);
+    setDraft((prev) => applyTemplateToDraft(prev, tpl.actions));
     notifySuccess({
       key: "access-template",
       title: `Plantilla "${tpl.name}" aplicada`,
@@ -238,27 +231,32 @@ export default function AccessConsole() {
     });
   };
 
+  const discard = () => setDraft(baseline);
+
+
+
   const save = async () => {
     if (!selectedUser || !selectedCompanyId) return;
+    const attempted = draft;
     setSaving(true);
-    const modulePayload: Record<string, { view: boolean; edit: boolean; delete: boolean }> = {};
-    for (const [k, v] of Object.entries(modules)) modulePayload[k] = v;
 
     const { error } = await supabase.rpc("admin_set_user_access", {
       _user_id: selectedUser,
       _company_id: selectedCompanyId,
-      _actions: actions,
-      _modules: modulePayload,
+      _actions: attempted.actions,
+      _modules: attempted.modules,
       _reason: reason || null,
     } as never);
 
     setSaving(false);
     if (error) {
+      // Revertir: el estado editable vuelve a lo persistido.
+      setDraft(baseline);
       notifyError({
         key: "access-save",
         title: "No se guardaron los permisos",
         fact: error.message,
-        consequence: "El acceso de esta persona sigue como estaba.",
+        consequence: "El acceso de esta persona sigue como estaba y los cambios se descartaron.",
         action: { label: "Reintentar", onClick: () => void save() },
         cause: error,
       });
@@ -272,6 +270,7 @@ export default function AccessConsole() {
     });
     void loadProfile(selectedUser);
   };
+
 
   /* ---------------- render ---------------- */
   if (status === "loading") return <AuthorizationLoading />;
@@ -370,10 +369,17 @@ export default function AccessConsole() {
                   <>
                     {(target.role === "company_owner" || target.role === "admin") && (
                       <p className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
-                        Esta persona es <strong>{target.role}</strong> de la empresa: tiene acceso completo dentro de
-                        {" "}{selectedCompany?.name}. Los permisos de abajo solo aplicarían si cambia a un rol acotado.
+                        Esta persona es <strong>{target.role}</strong> en {selectedCompany?.name}: su rol concede todo
+                        por defecto. Puedes quitarle permisos concretos aquí y la excepción aplica solo a esta empresa.
+                        {target.role === "company_owner" && (
+                          <>
+                            {" "}Como dueña de la empresa conserva siempre <strong>administrar usuarios</strong>,{" "}
+                            <strong>administrar roles y permisos</strong> y <strong>configuración de empresa</strong>.
+                          </>
+                        )}
                       </p>
                     )}
+
 
                     <Accordion type="multiple" className="w-full">
                       {DOMAIN_ORDER.filter((d) => byDomain[d]?.length).map((domain) => {
@@ -391,7 +397,14 @@ export default function AccessConsole() {
                             </AccordionTrigger>
                             <AccordionContent className="space-y-2">
                               {specs.map((spec) => {
-                                const configurable = !!spec.legacyAction || !!spec.legacyModule;
+                                const configurable = isConfigurable(spec);
+                                const protectedPerm = isProtected(target.role, spec);
+                                const roleDefault = !!roleDefaults[spec.permission];
+                                const checked = protectedPerm
+                                  ? true
+                                  : switchValue(spec, draft, roleDefault);
+                                const ov = overrideValue(spec, draft);
+                                const effective = !!preview[spec.permission];
                                 return (
                                   <div
                                     key={spec.permission}
@@ -403,10 +416,20 @@ export default function AccessConsole() {
                                         {spec.permission}
                                         {spec.write ? " · escritura" : ""}
                                       </p>
+                                      <p className="truncate text-[10px] text-muted-foreground">
+                                        {protectedPerm
+                                          ? "Protegido: el dueño no puede quitárselo"
+                                          : ov === undefined
+                                            ? `Heredado del rol ${target.role} · ${roleDefault ? "permitido" : "denegado"}`
+                                            : `Excepción de esta empresa · ${ov ? "permitido" : "denegado"}`}
+                                        {" · efectivo: "}
+                                        {effective ? "sí" : "no"}
+                                      </p>
                                     </div>
                                     {configurable ? (
                                       <Switch
-                                        checked={!!preview[spec.permission]}
+                                        checked={checked}
+                                        disabled={protectedPerm}
                                         onCheckedChange={(v) => togglePermission(spec, v)}
                                       />
                                     ) : (
@@ -431,9 +454,17 @@ export default function AccessConsole() {
                         className="min-h-[60px] text-sm"
                       />
                       <div className="flex flex-wrap items-center gap-2">
-                        <Button onClick={save} disabled={saving}>
+                        {dirty && (
+                          <Badge variant="destructive" className="text-[10px]">
+                            Cambios sin guardar · {changedCount}
+                          </Badge>
+                        )}
+                        <Button onClick={save} disabled={saving || !dirty}>
                           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           Guardar cambios
+                        </Button>
+                        <Button variant="ghost" onClick={discard} disabled={saving || !dirty}>
+                          Descartar
                         </Button>
                         <Button variant="outline" onClick={() => setShowPreview((v) => !v)} className="gap-1.5">
                           <Eye className="h-4 w-4" />
@@ -441,6 +472,7 @@ export default function AccessConsole() {
                         </Button>
                       </div>
                     </div>
+
 
                     {showPreview && (
                       <div className="rounded-xl border bg-muted/30 p-3">

@@ -36,12 +36,30 @@ const GLOBAL_FULL_ACCESS = new Set(["developer", "owner"]);
 /** Roles por compañía con acceso total dentro de ESA compañía. */
 const COMPANY_FULL_ACCESS = new Set(["company_owner", "admin"]);
 
-export function isFullAccess(input: AuthorizationInput, companyId: string | null): boolean {
+/**
+ * Permisos NO removibles para un `company_owner`.
+ * Quitarlos dejaría a la empresa sin dueño operativo ni forma de recuperarse
+ * (lockout administrativo). Documentado en
+ * docs/qa/P0_PERMISSION_CONSOLE_EDITABLE_STATE_FIX.md
+ */
+export const PROTECTED_OWNER_PERMISSIONS: ReadonlySet<string> = new Set([
+  "users.manage",
+  "roles.manage",
+  "company.settings",
+]);
+
+export function hasGlobalFullAccess(input: AuthorizationInput): boolean {
   for (const r of input.globalRoles) if (GLOBAL_FULL_ACCESS.has(r)) return true;
+  return false;
+}
+
+export function isFullAccess(input: AuthorizationInput, companyId: string | null): boolean {
+  if (hasGlobalFullAccess(input)) return true;
   if (!companyId) return false;
   const cRole = input.companyRoles[companyId];
   return !!cRole && COMPANY_FULL_ACCESS.has(cRole);
 }
+
 
 function moduleAllows(
   input: AuthorizationInput,
@@ -69,6 +87,46 @@ function moduleAllows(
 }
 
 /**
+ * Override explícito para la compañía activa.
+ * `undefined` = no hay fila explícita (se hereda del rol).
+ */
+export function explicitOverride(
+  input: AuthorizationInput,
+  permission: string,
+  companyId: string | null,
+): boolean | undefined {
+  const spec = getPermissionSpec(permission);
+  if (!spec || companyId === null) return undefined;
+
+  let saw = false;
+  let anyTrue = false;
+
+  if (spec.legacyAction) {
+    const row = input.actionPermissions.find(
+      (r) => r.action === spec.legacyAction && r.company_id === companyId,
+    );
+    if (row) {
+      saw = true;
+      if (row.granted) anyTrue = true;
+    }
+  }
+
+  if (spec.legacyModule && spec.legacyLevel) {
+    const row = input.modulePermissions.find(
+      (r) => r.module === spec.legacyModule && r.company_id === companyId,
+    );
+    if (row) {
+      saw = true;
+      const v =
+        spec.legacyLevel === "view" ? row.can_view : spec.legacyLevel === "edit" ? row.can_edit : row.can_delete;
+      if (v) anyTrue = true;
+    }
+  }
+
+  return saw ? anyTrue : undefined;
+}
+
+/**
  * `can(permission, companyId)` — única autoridad de autorización en frontend.
  */
 export function evaluatePermission(
@@ -83,7 +141,17 @@ export function evaluatePermission(
 
   // users.manage / roles.manage / configuración pura: solo administración de compañía.
   if (!spec.legacyAction && !spec.legacyModule) return full;
-  if (full) return true;
+
+  if (full) {
+    // Staff de plataforma (developer/owner global): nunca restringible por compañía.
+    if (hasGlobalFullAccess(input)) return true;
+    const cRole = companyId ? input.companyRoles[companyId] : undefined;
+    // El dueño conserva siempre sus permisos críticos (anti-lockout).
+    if (cRole === "company_owner" && PROTECTED_OWNER_PERMISSIONS.has(spec.permission)) return true;
+    // Un override explícito en NEGATIVO restringe también a admin / owner.
+    if (explicitOverride(input, permission, companyId) === false) return false;
+    return true;
+  }
 
   if (spec.legacyAction) {
     const row = input.actionPermissions.find(
@@ -95,6 +163,8 @@ export function evaluatePermission(
   if (spec.legacyModule && spec.legacyLevel) {
     if (moduleAllows(input, companyId, spec.legacyModule, spec.legacyLevel)) return true;
   }
+
+
 
   return false;
 }
