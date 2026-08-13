@@ -28,7 +28,11 @@ import {
   SCOPE_LABELS,
   roleFromTemplateName,
   rolesForMembership,
+  templateActionsFor,
 } from "@/lib/auth/role-model";
+import { assignableRoles, resolvePrimaryRole } from "@/lib/auth/primary-role";
+import { resolvePortalStatus } from "@/lib/portal/portal-status";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -47,6 +51,10 @@ interface MemberRow {
   full_name: string | null;
   email: string | null;
   updated_at: string | null;
+  /** Overrides de acción persistidos en esta empresa (para derivar el rol principal). */
+  overrides: Record<string, boolean>;
+  is_active: boolean | null;
+  portal: string;
 }
 
 interface RoleTemplate {
