@@ -1026,45 +1026,32 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Find employee linked to this user
-      const { data: emp } = await adminClient
-        .from("employees")
-        .select("id, access_pin, user_id, company_id")
-        .eq("user_id", caller.id)
-        .maybeSingle();
+      // Canonical: el PIN pertenece al Auth User, no a la ficha de empleado.
+      if (current_pin) {
+        const currentCheck = await verifyCanonicalPin(adminClient, caller.id, current_pin);
+        if (!currentCheck.ok) {
+          const msg = currentCheck.reason === "locked"
+            ? lockoutMessage(currentCheck.lockedUntil)
+            : "PIN actual incorrecto";
+          return new Response(JSON.stringify({ error: msg }), {
+            status: currentCheck.reason === "locked" ? 429 : 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
 
-      if (!emp) {
-        return new Response(JSON.stringify({ error: "Empleado no encontrado" }), {
-          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const changed = await setCanonicalPin(adminClient, caller.id, new_pin, "self_change", caller.id);
+      if (!changed) {
+        return new Response(JSON.stringify({ error: "No se pudo actualizar el PIN" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // S7-B: read effective pin_auth_mode for this tenant (no behavior change).
-      const _pinAuthMode_changepin = await resolvePinAuthModeSafe(
-        adminClient,
-        (emp as any).company_id ?? null,
-        "change-pin",
-      );
-      void _pinAuthMode_changepin;
+      await adminClient.from("employees")
+        .update({ must_change_pin: false })
+        .eq("user_id", caller.id);
 
-      // Verify current PIN if provided
-      if (current_pin && emp.access_pin && current_pin !== emp.access_pin) {
-        return new Response(JSON.stringify({ error: "PIN actual incorrecto" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Update PIN in employees table and clear must_change_pin flag
-      await adminClient.from("employees").update({ access_pin: new_pin, must_change_pin: false }).eq("id", emp.id);
-      // S4-B dual-write
-      try {
-        await adminClient.rpc("internal_dual_write_pin_hash", {
-          _employee_id: emp.id,
-          _pin: new_pin,
-        });
-      } catch (_) { /* best-effort; no PIN/hash logged */ }
-
-      // Sync auth password
+      // Sync auth password (puente de sesión, no credencial)
       const newPwd = authPassword(new_pin);
       await adminClient.auth.admin.updateUserById(caller.id, { password: newPwd });
 
