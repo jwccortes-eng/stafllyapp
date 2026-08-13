@@ -188,9 +188,9 @@ function AlertEntry({ alert, go }: { alert: HubAlert; go: (href: string) => void
           <p className={cn(MT.body)}>{alert.headline}</p>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
             <ContextCell label="Dónde" value={ctx.locationName ?? ctx.clientName ?? "Sin sitio"} />
-            <ContextCell label="Cuándo" value={`${ctx.whenLabel} · ${ctx.ageLabel}`} />
+            <ContextCell label="Cuándo" value={ctx.whenLabel} />
             <ContextCell label="A quién" value={who} />
-            <ContextCell label="Ahora" value={ctx.current} />
+            <ContextCell label="Ahora" value={`${ctx.current} · ${ctx.ageLabel}`} />
           </dl>
         </div>
       }
@@ -429,9 +429,9 @@ export default function TodayHubView() {
 
   /* P1 — La bandeja manda: alertas con contexto, agrupadas por servicio.
      Los KPIs sin servicio siguen siendo items de atención. */
-  const inboxGroups = model.alertGroups.filter(
-    (g) => g.severity === "critical" || g.severity === "attention",
-  );
+  // Todo lo que no es puro contexto entra a la bandeja: si una alerta se
+  // genera, no puede desaparecer de la pantalla.
+  const inboxGroups = model.alertGroups.filter((g) => g.severity !== "info");
   const alertIds = new Set(model.alerts.map((a) => a.id));
   const attention = model.attentionItems.filter(
     (i) =>
