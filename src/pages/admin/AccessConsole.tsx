@@ -24,6 +24,11 @@ import {
   switchValue,
   type OverrideDraft,
 } from "@/lib/auth/permission-overrides";
+import {
+  SCOPE_LABELS,
+  roleFromTemplateName,
+  rolesForMembership,
+} from "@/lib/auth/role-model";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -380,6 +385,20 @@ export default function AccessConsole() {
                       </p>
                     )}
 
+                    {(() => {
+                      const candidates = rolesForMembership(target.role);
+                      if (!candidates.length) return null;
+                      return (
+                        <p className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
+                          Roles canónicos disponibles para <strong>{target.role}</strong>:{" "}
+                          {candidates.map((r) => `${r.label} (${SCOPE_LABELS[r.scope]})`).join(" · ")}. Aplica una
+                          plantilla desde la pestaña Roles y luego ajusta excepciones aquí.
+                        </p>
+                      );
+                    })()}
+
+
+
 
                     <Accordion type="multiple" className="w-full">
                       {DOMAIN_ORDER.filter((d) => byDomain[d]?.length).map((domain) => {
@@ -514,14 +533,23 @@ export default function AccessConsole() {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {templates.map((tpl) => (
+              {templates.map((tpl) => {
+                const canonical = roleFromTemplateName(tpl.name);
+                return (
                 <div key={tpl.id} className="rounded-xl border p-4">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold">{tpl.name}</p>
                     {tpl.is_system && <Badge variant="secondary" className="text-[10px]">Sistema</Badge>}
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">{tpl.description ?? "—"}</p>
+                  {canonical && (
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      Alcance: <strong>{SCOPE_LABELS[canonical.scope]}</strong>
+                      {canonical.aliases?.length ? ` · También llamado: ${canonical.aliases.join(", ")}` : ""}
+                    </p>
+                  )}
                   <p className="mt-2 text-[11px] text-muted-foreground">{tpl.actions.length} permisos</p>
+
                   <Button
                     size="sm"
                     variant="outline"
@@ -532,7 +560,9 @@ export default function AccessConsole() {
                     {selectedUser ? "Aplicar a la persona seleccionada" : "Selecciona una persona"}
                   </Button>
                 </div>
-              ))}
+                );
+              })}
+
             </CardContent>
           </Card>
         </TabsContent>
