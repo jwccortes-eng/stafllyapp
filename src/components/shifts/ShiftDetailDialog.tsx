@@ -196,18 +196,28 @@ export function ShiftDetailDialog({
   const navigate = useNavigate();
   const { selectedCompanyId, selectedCompany } = useCompany();
 
+  // P0 · SELECTED SEGMENT TRUTH — el horario visible es el segmento activo,
+  // no siempre el que abrió la lista. El QK sigue siendo el del servicio raíz.
+  const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
+  useEffect(() => {
+    setActiveSegmentId(null);
+  }, [shiftProp?.id, open]);
+  const activeShiftId = activeSegmentId ?? shiftProp?.id ?? null;
+  const isForeignSegment = !!activeSegmentId && activeSegmentId !== shiftProp?.id;
+
   // P0 SINGLE SERVICE STATE — el detalle no muestra el snapshot que la lista
   // tenía al hacer clic: lee la versión canónica (fila completa por tenant).
   const { service: canonicalShift } = useServiceState<Shift>({
     companyId: selectedCompanyId,
-    shiftId: shiftProp?.id ?? null,
-    placeholder: shiftProp,
+    shiftId: activeShiftId,
+    placeholder: isForeignSegment ? null : shiftProp,
     enabled: open,
   });
-  const shift = (canonicalShift ?? shiftProp) as Shift | null;
+  const shift = (canonicalShift ?? (isForeignSegment ? null : shiftProp)) as Shift | null;
 
   // P0 · SERVICE ROOT QK: la cabecera muestra el QK del servicio raíz.
   useServiceRootRefs(shift ? [shift as any] : []);
+
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [tab, setTab] = useState(initialTab || "details");
@@ -592,11 +602,12 @@ export function ShiftDetailDialog({
                   {getShiftDisplayIdentity(shift).primaryRef}
                 </span>
               )}
-              {getShiftDisplayIdentity(shift).isServiceSegment && (
+              {(getShiftDisplayIdentity(shift).isServiceSegment || getShiftDisplayIdentity(shift).segmentLabel) && (
                 <span className="text-[9.5px] font-semibold text-primary bg-primary/10 rounded px-1.5 py-px shrink-0">
                   {getShiftDisplayIdentity(shift).segmentLabel ?? "Horario del servicio"}
                 </span>
               )}
+
 
             </div>
           }
@@ -675,7 +686,9 @@ export function ShiftDetailDialog({
           <ServiceSegmentsPanel
             shift={shift as unknown as { id: string; parent_shift_id?: string | null }}
             companyId={(shift as unknown as { company_id?: string | null }).company_id ?? null}
+            onOpenSegment={(id) => { setActiveSegmentId(id); setShowAddPanel(false); setSelected([]); }}
           />
+
         </div>
 
         {/* ── Unstaffed import alert (FASE 1: visibilidad de imports rotos) ── */}
