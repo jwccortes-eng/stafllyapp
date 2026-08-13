@@ -32,7 +32,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { CompanyLogo } from "@/components/ui/company-logo";
-import CompanySwitchPinDialog from "@/components/CompanySwitchPinDialog";
 import { TerminalCard } from "@/components/ocs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MT, TAP, FOCUS_RING } from "@/lib/mobile/mobile-scale";
