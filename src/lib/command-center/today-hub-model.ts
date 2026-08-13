@@ -19,6 +19,21 @@
 import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { readAttendance } from "./attendance-semantics";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
+import {
+  serviceDeepLink,
+  hoursDeepLink,
+  timeclockDeepLink,
+  type ServiceStage,
+} from "./deep-link";
+import {
+  resolveShiftPublicationTruth,
+  type ShiftTruthShiftInput,
+} from "@/lib/shifts/publication-truth";
+import {
+  resolveServiceLocationTruth,
+  type ServiceLocationInput,
+} from "@/lib/shifts/service-location";
+
 
 export interface HubShiftOpsLike {
   bucket: string;
@@ -36,6 +51,21 @@ export interface HubShiftOpsLike {
 }
 
 
+/**
+ * Persona del turno tal como la produce `deriveShiftOpsState` + nombre ya
+ * resuelto por el llamador. Permite que la alerta diga A QUIÉN afecta.
+ */
+export interface HubWorkerLike {
+  employee_id: string;
+  name?: string | null;
+  assignment_status?: string | null;
+  /** none | open | closed | missing_out | unlinked */
+  clock_state?: string | null;
+  clock_in?: string | null;
+  clock_out?: string | null;
+  response_status?: string | null;
+}
+
 export interface HubShiftLike {
   id: string;
   title: string;
@@ -50,6 +80,18 @@ export interface HubShiftLike {
   meeting_point?: string | null;
   meeting_point_location_name?: string | null;
   pending_claims?: number;
+  /** Estado de publicación crudo. Si viene, se evalúa Publication Truth. */
+  publication_status?: string | null;
+  status?: string | null;
+  claimable?: boolean | null;
+  /**
+   * Entrada del resolver canónico de ubicación. SÓLO si el llamador la
+   * hidrata se evalúa la alerta de ubicación: sin datos no se inventa un
+   * "Falta ubicación" (regla dura contra falsos positivos).
+   */
+  location?: ServiceLocationInput | null;
+  /** Personas del turno, para nombrar a quién afecta cada alerta. */
+  workers?: HubWorkerLike[];
   transport?: {
     required: boolean;
     missing_driver: boolean;
@@ -57,6 +99,7 @@ export interface HubShiftLike {
   } | null;
   ops: HubShiftOpsLike;
 }
+
 
 /** Contadores globales ya existentes (tenant-scoped, sólo lectura). */
 export interface HubCounts {
@@ -169,6 +212,93 @@ export interface HubLink {
   href: string;
 }
 
+/**
+ * P1 — Bandeja operativa. Severidad visual del Command Center.
+ *  - critical  : rompe el servicio ahora (cobertura, no-show, sin ubicación).
+ *  - attention : se degrada si nadie actúa hoy.
+ *  - prep      : preparación previa (confirmaciones, publicación).
+ *  - info      : contexto, sin acción obligatoria.
+ */
+export type HubAlertSeverity = "critical" | "attention" | "prep" | "info";
+
+/** Tipos canónicos de incidencia. Uno por causa raíz, nunca por pantalla. */
+export type HubAlertType =
+  | "coverage_gap"
+  | "unconfirmed_team"
+  | "attendance_risk"
+  | "missing_clock_out"
+  | "missing_driver"
+  | "not_published"
+  | "missing_destination"
+  | "missing_meeting_point";
+
+/**
+ * Contexto obligatorio de toda alerta. Responde en <3 s:
+ * QUÉ pasó · DÓNDE · A QUIÉN afecta · CUÁNDO.
+ */
+export interface HubAlertContext {
+  /** Referencia canónica visible (QK-00xxxx). Nunca el UUID. */
+  serviceRef: string | null;
+  /** Cliente del servicio. */
+  clientName: string | null;
+  /** Sitio / punto de encuentro legible. */
+  locationName: string | null;
+  /** "Hoy" · "Mañana" · "Ayer" · "12 mar". */
+  dateLabel: string;
+  /** "08:00–16:00". */
+  timeLabel: string;
+  /** "Hoy · 08:00–16:00". */
+  whenLabel: string;
+  /** Antigüedad humana: "hace 32 min" / "en 2 h". */
+  ageLabel: string;
+  /** Personas afectadas, ya nombradas. Vacío si es del servicio completo. */
+  people: string[];
+  /** Cuántas personas afecta. 0 = afecta al servicio. */
+  peopleCount: number;
+  /** Qué se esperaba. */
+  expected: string;
+  /** Qué está pasando realmente. */
+  current: string;
+}
+
+export interface HubAlert {
+  id: string;
+  shiftId: string;
+  type: HubAlertType;
+  severity: HubAlertSeverity;
+  priority: HubPriority;
+  status: string;
+  /** Título corto y humano: "Cobertura incompleta". */
+  title: string;
+  /** Lectura accionable en una frase. */
+  headline: string;
+  /** Por qué el sistema lo señala. */
+  because: string;
+  /** Qué pasa si no se actúa. */
+  impact?: string;
+  context: HubAlertContext;
+  /** Etapa exacta del Service Command Center donde se resuelve. */
+  stage: ServiceStage;
+  /** ÚNICA acción principal. Ausente ⇒ sin permiso (fail-closed). */
+  cta?: HubLink;
+  secondary: HubLink[];
+}
+
+/** Alertas del mismo servicio, agrupadas para no repetir contexto. */
+export interface HubAlertGroup {
+  shiftId: string;
+  serviceRef: string | null;
+  title: string;
+  clientName: string | null;
+  whenLabel: string;
+  locationName: string | null;
+  severity: HubAlertSeverity;
+  priority: HubPriority;
+  alerts: HubAlert[];
+  /** Acción principal del grupo = CTA de la alerta más severa. */
+  action?: HubLink;
+}
+
 export interface HubAttentionItem {
   id: string;
   /** `risk` → InsightCard · `validation` → ValidationCard · `kpi` → KpiCard */
@@ -186,7 +316,10 @@ export interface HubAttentionItem {
   action?: HubLink;
   alternatives?: HubLink[];
   shiftId?: string;
+  /** Presente en items derivados de una alerta operativa. */
+  context?: HubAlertContext;
 }
+
 
 export interface HubOperation {
   shiftId: string;
@@ -249,6 +382,10 @@ export interface HubEmptyState {
 }
 
 export interface TodayHubModel {
+  /** Bandeja operativa: toda incidencia con contexto y una acción. */
+  alerts: HubAlert[];
+  /** Las mismas alertas agrupadas por servicio. */
+  alertGroups: HubAlertGroup[];
   attentionItems: HubAttentionItem[];
   activeOperations: HubOperation[];
   teamSummaries: HubTeamSummary[];
@@ -261,13 +398,15 @@ export interface TodayHubModel {
 /* ── Rutas canónicas (deep links, sin menús intermedios) ─────────────── */
 
 const ROUTES = {
-  shiftOps: (id: string) => `/app/shift-ops?id=${id}`,
+  /** Deep link a la etapa exacta del Service Command Center. */
+  shiftOps: (id: string, stage: ServiceStage = "summary", focus?: string | null) =>
+    serviceDeepLink({ shiftId: id, stage, focusEmployeeId: focus ?? null }),
   closeout: "/app/daily-close",
-  hours: (id?: string) =>
-    id ? `/app/payroll-review-queue?shiftId=${id}` : "/app/payroll-review-queue",
-  timeclock: (id: string) => `/app/timeclock?shiftId=${id}`,
+  hours: (id?: string) => hoursDeepLink(id ?? null),
+  timeclock: (id: string, focus?: string | null) => timeclockDeepLink(id, focus ?? null),
   documents: "/app/documents",
 };
+
 
 /* ── Helpers puros ───────────────────────────────────────────────────── */
 
@@ -296,6 +435,66 @@ function startsInLabel(minutes: number): string {
   return m === 0 ? `comienza en ${h} h` : `comienza en ${h} h ${m} min`;
 }
 
+/* ── Contexto humano de la alerta (P1 — Action-Driven Command Center) ── */
+
+const MONTHS_ES = [
+  "ene", "feb", "mar", "abr", "may", "jun",
+  "jul", "ago", "sep", "oct", "nov", "dic",
+];
+
+/** "Hoy" · "Mañana" · "Ayer" · "12 mar". Nunca una fecha ISO cruda. */
+export function dateLabelFor(date: string, now: Date): string {
+  const toKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const today = toKey(now);
+  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+  const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
+  if (date === today) return "Hoy";
+  if (date === toKey(tomorrow)) return "Mañana";
+  if (date === toKey(yesterday)) return "Ayer";
+  const [y, m, d] = date.split("-").map(Number);
+  if (!y || !m || !d) return date;
+  return `${d} ${MONTHS_ES[m - 1]}`;
+}
+
+/** Antigüedad humana: "hace 32 min" cuando ya pasó, "en 2 h" si falta. */
+export function ageLabelFor(minutesUntil: number): string {
+  const abs = Math.abs(minutesUntil);
+  const unit =
+    abs < 60
+      ? `${abs} min`
+      : abs < 24 * 60
+        ? `${Math.floor(abs / 60)} h`
+        : `${Math.floor(abs / (24 * 60))} d`;
+  if (minutesUntil === 0) return "ahora";
+  return minutesUntil < 0 ? `hace ${unit}` : `en ${unit}`;
+}
+
+/** Nombres legibles de las personas afectadas, sin inventar identidades. */
+function peopleNames(workers: HubWorkerLike[] | undefined, ids: string[]): string[] {
+  if (!workers?.length) return [];
+  return ids
+    .map((id) => workers.find((w) => w.employee_id === id))
+    .map((w) => (w?.name ?? "").trim())
+    .filter((n) => n.length > 0);
+}
+
+/** Severidad visual derivada de la prioridad operativa. */
+const SEVERITY_BY_PRIORITY: Record<HubPriority, HubAlertSeverity> = {
+  critical: "critical",
+  high: "attention",
+  medium: "prep",
+  low: "info",
+};
+
+const SEVERITY_WEIGHT: Record<HubAlertSeverity, number> = {
+  critical: 0,
+  attention: 1,
+  prep: 2,
+  info: 3,
+};
+
+
 function sortByPriority<T extends { priority: HubPriority }>(items: T[]): T[] {
   return [...items].sort(
     (a, b) => PRIORITY_WEIGHT[a.priority] - PRIORITY_WEIGHT[b.priority],
@@ -322,7 +521,16 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
   const perms = resolvePermissions(input.permissions);
 
 
-  const attention: Array<HubAttentionItem & { _boost: number }> = [];
+  /** Metadatos que convierten un item de atención en alerta de bandeja. */
+  type AlertMeta = {
+    type: HubAlertType;
+    title: string;
+    stage: ServiceStage;
+    severity: HubAlertSeverity;
+  };
+  const attention: Array<
+    HubAttentionItem & { _boost: number; _alert?: AlertMeta }
+  > = [];
   const operations: HubOperation[] = [];
   const teams: HubTeamSummary[] = [];
   const closeouts: HubDecisionItem[] = [];
@@ -341,10 +549,50 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
       shift.meeting_point ??
       null;
 
+    /* — Identidad y contexto humano compartidos por todas las alertas — */
+    const identity = getShiftDisplayIdentity(shift);
+    const serviceRef =
+      identity.primaryRefKind === "none" ? null : identity.primaryRef;
+    const dateLabel = dateLabelFor(shift.date, now);
+    const baseContext: HubAlertContext = {
+      serviceRef,
+      clientName: shift.client_name ?? null,
+      locationName: where,
+      dateLabel,
+      timeLabel: range,
+      whenLabel: `${dateLabel} · ${range}`,
+      ageLabel: ageLabelFor(mins),
+      people: [],
+      peopleCount: 0,
+      expected: "",
+      current: "",
+    };
+
     const push = (
       item: Omit<HubAttentionItem, "id"> & { id: string; kind: HubAttentionItem["kind"] },
       boostKind: string,
-    ) => attention.push({ ...item, _boost: roleBoost(role, boostKind) });
+      alert?: {
+        type: HubAlertType;
+        title: string;
+        stage: ServiceStage;
+        severity?: HubAlertSeverity;
+        context: Partial<HubAlertContext>;
+      },
+    ) =>
+      attention.push({
+        ...item,
+        context: alert ? { ...baseContext, ...alert.context } : undefined,
+        _boost: roleBoost(role, boostKind),
+        _alert: alert
+          ? {
+              type: alert.type,
+              title: alert.title,
+              stage: alert.stage,
+              severity: alert.severity ?? SEVERITY_BY_PRIORITY[item.priority],
+            }
+          : undefined,
+      });
+
 
     /* — Asistencia: NUNCA se asume no-show (OX-4.3.1) — */
     const attendance = readAttendance({
@@ -361,6 +609,11 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
         attendance.state === "missing_checkin" ||
         attendance.state === "awaiting_checkin")
     ) {
+      // A QUIÉN afecta: personas activas sin fichaje de entrada.
+      const pendingIds = (shift.workers ?? [])
+        .filter((w) => (w.clock_state ?? "none") === "none")
+        .map((w) => w.employee_id);
+      const names = peopleNames(shift.workers, pendingIds);
       push(
         {
           id: `${shift.id}:attendance`,
@@ -374,11 +627,35 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
               ? "Cobertura real menor a la comprometida con el cliente."
               : "La cobertura real aún no está confirmada en sitio.",
           action: perms.canManageAttendance
-            ? { label: "Revisar asistencia", href: ROUTES.shiftOps(shift.id) }
+            ? {
+                label:
+                  attendance.state === "no_show_confirmed"
+                    ? "Reemplazar"
+                    : "Revisar asistencia",
+                href: ROUTES.shiftOps(
+                  shift.id,
+                  "attendance",
+                  pendingIds.length === 1 ? pendingIds[0] : null,
+                ),
+              }
             : undefined,
           shiftId: shift.id,
         },
         attendance.state === "no_show_confirmed" ? "no_show" : "attendance",
+        {
+          type: "attendance_risk",
+          title: attendance.label,
+          stage: "attendance",
+          context: {
+            people: names,
+            peopleCount: attendance.count,
+            expected: `Check-in a las ${hhmm(shift.start_time)}`,
+            current:
+              attendance.state === "no_show_confirmed"
+                ? `${attendance.count} ausencia(s) confirmada(s)`
+                : `${attendance.count} sin fichaje de entrada`,
+          },
+        },
       );
     }
 
@@ -396,17 +673,35 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           because: `${range}${where ? ` · ${where}` : ""} — ${startsInLabel(mins)}.`,
           impact: "El turno no puede considerarse cubierto.",
           action: perms.canAssign
-            ? { label: "Completar equipo", href: ROUTES.shiftOps(shift.id) }
+            ? { label: "Completar equipo", href: ROUTES.shiftOps(shift.id, "team") }
             : undefined,
           shiftId: shift.id,
         },
         "coverage",
+        {
+          type: "coverage_gap",
+          title: "Cobertura incompleta",
+          stage: "team",
+          context: {
+            peopleCount: 0,
+            expected: `${required} persona(s) asignada(s)`,
+            current: `${assigned} de ${required} · faltan ${missing}`,
+          },
+        },
       );
     }
 
     /* — Sin confirmar antes de empezar — */
     const unconfirmed = Math.max(0, assigned - ops.confirmed);
     if (unconfirmed > 0 && mins > 0 && mins <= 12 * 60) {
+      const pendingIds = (shift.workers ?? [])
+        .filter(
+          (w) =>
+            !["confirmed", "accepted"].includes(
+              String(w.assignment_status ?? "").toLowerCase(),
+            ),
+        )
+        .map((w) => w.employee_id);
       push(
         {
           id: `${shift.id}:unconfirmed`,
@@ -417,12 +712,31 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           because: `El turno ${startsInLabel(mins)} y aún no responden.`,
           impact: "Riesgo de arrancar sin equipo completo.",
           action: perms.canConfirmTeam
-            ? { label: "Contactar pendientes", href: ROUTES.shiftOps(shift.id) }
+            ? {
+                label: "Contactar pendientes",
+                href: ROUTES.shiftOps(
+                  shift.id,
+                  "team",
+                  pendingIds.length === 1 ? pendingIds[0] : null,
+                ),
+              }
             : undefined,
 
           shiftId: shift.id,
         },
         "unconfirmed",
+        {
+          type: "unconfirmed_team",
+          title: "Equipo sin confirmar",
+          stage: "team",
+          severity: "prep",
+          context: {
+            people: peopleNames(shift.workers, pendingIds),
+            peopleCount: unconfirmed,
+            expected: `${assigned} confirmación(es) antes de ${hhmm(shift.start_time)}`,
+            current: `${ops.confirmed} de ${assigned} confirmados`,
+          },
+        },
       );
     }
 
@@ -438,16 +752,29 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           because: "El turno requiere transporte y no hay conductor.",
           impact: "El equipo puede no llegar al punto de encuentro.",
           action: perms.canAssign
-            ? { label: "Asignar conductor", href: ROUTES.shiftOps(shift.id) }
+            ? { label: "Asignar conductor", href: ROUTES.shiftOps(shift.id, "operation") }
             : undefined,
           shiftId: shift.id,
         },
         "transport",
+        {
+          type: "missing_driver",
+          title: "Sin conductor",
+          stage: "operation",
+          context: {
+            peopleCount: 0,
+            expected: "1 conductor asignado",
+            current: "Sin conductor",
+          },
+        },
       );
     }
 
     /* — Fichajes abiertos sin salida — */
     if (ops.missing_clock_outs > 0) {
+      const openIds = (shift.workers ?? [])
+        .filter((w) => (w.clock_state ?? "") === "missing_out")
+        .map((w) => w.employee_id);
       push(
         {
           id: `${shift.id}:open-clock`,
@@ -458,13 +785,141 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           because: "El turno terminó y los relojes siguen abiertos.",
           impact: "Las horas no pueden revisarse hasta cerrarlos.",
           action: perms.canManageAttendance
-            ? { label: "Cerrar clock-out", href: ROUTES.timeclock(shift.id) }
+            ? {
+                label: "Cerrar clock-out",
+                href: ROUTES.timeclock(
+                  shift.id,
+                  openIds.length === 1 ? openIds[0] : null,
+                ),
+              }
             : undefined,
           shiftId: shift.id,
         },
         "open_clock",
+        {
+          type: "missing_clock_out",
+          title: "Fichajes sin salida",
+          stage: "time",
+          context: {
+            people: peopleNames(shift.workers, openIds),
+            peopleCount: ops.missing_clock_outs,
+            expected: `Clock-out a las ${hhmm(shift.end_time)}`,
+            current: `${ops.missing_clock_outs} reloj(es) abierto(s)`,
+          },
+        },
       );
     }
+
+    /* — Publicación pendiente (Publication Truth, resolver canónico) — */
+    if (shift.publication_status !== undefined && assigned > 0) {
+      const truth = resolveShiftPublicationTruth({
+        shift: {
+          id: shift.id,
+          slots: shift.slots ?? null,
+          status: shift.status ?? null,
+          publication_status: shift.publication_status ?? null,
+          claimable: shift.claimable ?? null,
+        } as ShiftTruthShiftInput,
+        assignments: (shift.workers ?? []).map((w) => ({
+          status: w.assignment_status ?? "assigned",
+          response_status: w.response_status ?? null,
+        })) as never,
+      });
+      if (!truth.is_published && !truth.is_cancelled) {
+        push(
+          {
+            id: `${shift.id}:not-published`,
+            kind: "risk",
+            priority: mins <= 12 * 60 ? "high" : "medium",
+            status: "draft",
+            headline: `${shift.title} asignado pero sin publicar`,
+            because:
+              truth.admin_blocking_reason ??
+              "El equipo está asignado internamente y el servicio no está publicado.",
+            impact: "Nadie del equipo ve este servicio en su portal.",
+            action: perms.canOperate
+              ? { label: "Publicar", href: ROUTES.shiftOps(shift.id, "summary") }
+              : undefined,
+            shiftId: shift.id,
+          },
+          "coverage",
+          {
+            type: "not_published",
+            title: "Sin publicar",
+            stage: "summary",
+            severity: mins <= 12 * 60 ? "attention" : "prep",
+            context: {
+              peopleCount: assigned,
+              expected: "Servicio publicado y visible para el equipo",
+              current: truth.admin_label,
+            },
+          },
+        );
+      }
+    }
+
+    /* — Ubicación (Location Truth). Sólo si el llamador hidrató la entrada:
+         sin datos NO se declara "falta ubicación" (anti falso positivo). — */
+    if (shift.location) {
+      const loc = resolveServiceLocationTruth(shift.location);
+      if (loc.destinationStatus === "MISSING_DESTINATION") {
+        push(
+          {
+            id: `${shift.id}:destination`,
+            kind: "risk",
+            priority: mins <= 4 * 60 ? "critical" : "high",
+            status: "blocked",
+            headline: `Sin destino operativo en ${shift.title}`,
+            because: "El servicio no tiene sitio, dirección ni punto declarado.",
+            impact: "El equipo no sabe a dónde ir.",
+            action: perms.canOperate
+              ? { label: "Definir ubicación", href: ROUTES.shiftOps(shift.id, "operation") }
+              : undefined,
+            shiftId: shift.id,
+          },
+          "coverage",
+          {
+            type: "missing_destination",
+            title: "Falta ubicación",
+            stage: "operation",
+            context: {
+              peopleCount: assigned,
+              expected: "Un destino operativo declarado",
+              current: "Sin destino",
+            },
+          },
+        );
+      } else if (loc.meetingPointMissing) {
+        push(
+          {
+            id: `${shift.id}:meeting-point`,
+            kind: "risk",
+            priority: "medium",
+            status: "warning",
+            headline: `Falta punto de encuentro en ${shift.title}`,
+            because: "El servicio requiere transporte y no hay punto de encuentro.",
+            impact: "El equipo no sabe dónde abordar.",
+            action: perms.canOperate
+              ? { label: "Definir punto", href: ROUTES.shiftOps(shift.id, "operation") }
+              : undefined,
+            shiftId: shift.id,
+          },
+          "transport",
+          {
+            type: "missing_meeting_point",
+            title: "Sin punto de encuentro",
+            stage: "operation",
+            severity: "prep",
+            context: {
+              peopleCount: assigned,
+              expected: "Punto de encuentro declarado",
+              current: "Sin punto de encuentro",
+            },
+          },
+        );
+      }
+    }
+
 
     /* — Solicitudes pendientes (decisión) — */
     if ((shift.pending_claims ?? 0) > 0) {
@@ -635,13 +1090,68 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
   }
 
 
-  const attentionItems = attention
-    .sort(
-      (a, b) =>
-        PRIORITY_WEIGHT[a.priority] + a._boost -
-        (PRIORITY_WEIGHT[b.priority] + b._boost),
-    )
-    .map(({ _boost, ...item }) => item);
+  const sortedAttention = attention.sort(
+    (a, b) =>
+      PRIORITY_WEIGHT[a.priority] + a._boost -
+      (PRIORITY_WEIGHT[b.priority] + b._boost),
+  );
+
+  /* — Bandeja operativa: proyección de los mismos items, con contexto —
+     No hay una segunda derivación: las alertas SON los items de atención
+     que declararon metadatos de alerta. Una sola verdad, dos formatos. */
+  const alerts: HubAlert[] = sortedAttention
+    .filter((a) => a._alert && a.shiftId && a.context)
+    .map((a) => ({
+      id: a.id,
+      shiftId: a.shiftId!,
+      type: a._alert!.type,
+      severity: a._alert!.severity,
+      priority: a.priority,
+      status: a.status,
+      title: a._alert!.title,
+      headline: a.headline,
+      because: a.because,
+      impact: a.impact,
+      context: a.context!,
+      stage: a._alert!.stage,
+      cta: a.action,
+      secondary: a.alternatives ?? [],
+    }));
+
+  const groupIndex = new Map<string, HubAlertGroup>();
+  for (const alert of alerts) {
+    const shift = input.shifts.find((s) => s.id === alert.shiftId);
+    const existing = groupIndex.get(alert.shiftId);
+    if (existing) {
+      existing.alerts.push(alert);
+      if (SEVERITY_WEIGHT[alert.severity] < SEVERITY_WEIGHT[existing.severity]) {
+        existing.severity = alert.severity;
+        existing.priority = alert.priority;
+        existing.action = alert.cta ?? existing.action;
+      }
+      continue;
+    }
+    groupIndex.set(alert.shiftId, {
+      shiftId: alert.shiftId,
+      serviceRef: alert.context.serviceRef,
+      title: shift?.title ?? alert.context.serviceRef ?? "Servicio",
+      clientName: alert.context.clientName,
+      whenLabel: alert.context.whenLabel,
+      locationName: alert.context.locationName,
+      severity: alert.severity,
+      priority: alert.priority,
+      alerts: [alert],
+      action: alert.cta,
+    });
+  }
+  const alertGroups = [...groupIndex.values()].sort(
+    (a, b) => SEVERITY_WEIGHT[a.severity] - SEVERITY_WEIGHT[b.severity],
+  );
+
+  const attentionItems = sortedAttention.map(
+    ({ _boost, _alert, ...item }) => item,
+  );
+
 
   const activeOperations = sortByPriority(operations);
   const teamSummaries = sortByPriority(teams);
@@ -688,7 +1198,10 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
 
 
   return {
+    alerts,
+    alertGroups,
     attentionItems,
+
     activeOperations,
     teamSummaries,
     closeoutItems,

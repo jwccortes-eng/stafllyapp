@@ -58,7 +58,14 @@ export interface TodayOpsShift {
   client_id: string | null;
   client_name: string | null;
   location_id: string | null;
+  /** Job Site V2 — destino canónico prioritario. */
+  job_site_location_id: string | null;
+  job_site_address: string | null;
+  job_site_location_name: string | null;
+  claimable: boolean | null;
+  transportation_required: boolean;
   job_site_name: string | null;
+
   meeting_point: string | null;
   meeting_point_location_id: string | null;
   meeting_point_location_name: string | null;
@@ -136,7 +143,7 @@ export function useTodayOperations(
     const shiftsRes = await supabase
       .from("scheduled_shifts")
       .select(
-        "id, title, date, start_time, end_time, status, publication_status, slots, shift_code, shift_ref, client_id, location_id, meeting_point, meeting_point_location_id, meeting_time, shift_admin_id, transportation_required, car_capacity, driver_employee_id",
+        "id, title, date, start_time, end_time, status, publication_status, slots, shift_code, shift_ref, client_id, location_id, job_site_location_id, job_site_address, claimable, meeting_point, meeting_point_location_id, meeting_time, shift_admin_id, transportation_required, car_capacity, driver_employee_id",
       )
       .eq("company_id", companyId)
       .eq("date", dateStr)
@@ -272,7 +279,13 @@ export function useTodayOperations(
         missing_driver: required && driverIds.size === 0,
         capacity_short: required && slots > capacity_total,
       };
-
+      // Destino canónico: Job Site V2 manda sobre el venue legado.
+      const jobSiteName: string | null = s.job_site_location_id
+        ? ((locV2Map.get(s.job_site_location_id) as string | undefined) ?? null)
+        : null;
+      const legacyVenueName: string | null = s.location_id
+        ? ((locMap.get(s.location_id) as string | undefined) ?? null)
+        : null;
 
       return {
         id: s.id,
@@ -288,7 +301,14 @@ export function useTodayOperations(
         client_id: s.client_id ?? null,
         client_name: s.client_id ? (clientMap.get(s.client_id) ?? null) : null,
         location_id: s.location_id ?? null,
-        job_site_name: s.location_id ? (locMap.get(s.location_id) ?? null) : null,
+        job_site_location_id: s.job_site_location_id ?? null,
+        job_site_address: s.job_site_address ?? null,
+        job_site_location_name: jobSiteName,
+        claimable: s.claimable ?? null,
+        transportation_required: Boolean(s.transportation_required),
+        job_site_name: jobSiteName ?? legacyVenueName,
+
+
         meeting_point: s.meeting_point ?? null,
         meeting_point_location_id: s.meeting_point_location_id ?? null,
         meeting_point_location_name: s.meeting_point_location_id

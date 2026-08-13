@@ -32,6 +32,9 @@ import {
 } from "@/components/ocs";
 import {
   buildTodayHubModel,
+  type HubAlert,
+  type HubAlertGroup,
+  type HubAlertSeverity,
   type HubAttentionItem,
   type HubCounts,
   type HubDecisionItem,
@@ -143,7 +146,109 @@ function Section({
 
 /* ── Renderers OCS ───────────────────────────────────────────────────── */
 
+/* ── P1 — Bandeja operativa accionable ──────────────────────────────── */
+
+const SEVERITY_LABEL: Record<HubAlertSeverity, string> = {
+  critical: "Crítico",
+  attention: "Requiere acción",
+  prep: "Preparación",
+  info: "Contexto",
+};
+
+const SEVERITY_STATUS: Record<HubAlertSeverity, string> = {
+  critical: "blocked",
+  attention: "warning",
+  prep: "pending",
+  info: "info",
+};
+
+/**
+ * Una alerta = una lectura completa en <3 s.
+ * QUÉ (title) · DÓNDE (QK + cliente + sitio) · A QUIÉN (personas) ·
+ * QUÉ HAGO AHORA (una sola acción principal).
+ */
+function AlertEntry({ alert, go }: { alert: HubAlert; go: (href: string) => void }) {
+  const ctx = alert.context;
+  const who =
+    ctx.people.length > 0
+      ? ctx.people.length <= 2
+        ? ctx.people.join(" · ")
+        : `${ctx.people.slice(0, 2).join(" · ")} +${ctx.people.length - 2}`
+      : ctx.peopleCount > 0
+        ? `${ctx.peopleCount} persona(s)`
+        : "Servicio completo";
+
+  return (
+    <OperationalCard
+      status={SEVERITY_STATUS[alert.severity]}
+      statusLabel={SEVERITY_LABEL[alert.severity]}
+      title={alert.title}
+      primary={
+        <div className="space-y-1.5">
+          <p className={cn(MT.body)}>{alert.headline}</p>
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
+            <ContextCell label="Dónde" value={ctx.locationName ?? ctx.clientName ?? "Sin sitio"} />
+            <ContextCell label="Cuándo" value={ctx.whenLabel} />
+            <ContextCell label="A quién" value={who} />
+            <ContextCell label="Ahora" value={`${ctx.current} · ${ctx.ageLabel}`} />
+          </dl>
+        </div>
+      }
+      secondary={
+        alert.cta
+          ? alert.impact
+          : `${alert.impact ?? alert.because} No tienes permiso para resolverlo.`
+      }
+      action={
+        alert.cta
+          ? { label: alert.cta.label, onClick: () => go(alert.cta!.href) }
+          : undefined
+      }
+    />
+  );
+}
+
+function ContextCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className={cn(MT_EYEBROW, "text-muted-foreground")}>{label}</dt>
+      <dd className={cn(MT.caption, "truncate font-medium")}>{value}</dd>
+    </div>
+  );
+}
+
+/** Cabecera de servicio: el contexto se dice una vez, no en cada alerta. */
+function AlertGroupBlock({
+  group,
+  go,
+}: {
+  group: HubAlertGroup;
+  go: (href: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-0.5">
+        <span className={cn(MT.body, "font-semibold")}>
+          {group.serviceRef ?? group.title}
+        </span>
+        {group.clientName ? (
+          <span className={cn(MT.caption, "text-muted-foreground")}>
+            {group.clientName}
+          </span>
+        ) : null}
+        <span className={cn(MT.caption, "text-muted-foreground")}>
+          · {group.whenLabel}
+        </span>
+      </div>
+      {group.alerts.map((a) => (
+        <AlertEntry key={a.id} alert={a} go={go} />
+      ))}
+    </div>
+  );
+}
+
 function AttentionEntry({
+
   item,
   go,
 }: {
@@ -212,7 +317,7 @@ export default function TodayHubView() {
   const isMobile = useIsMobile();
   const { selectedCompanyId } = useCompany();
   const today = useMemo(() => new Date(), []);
-  const { loading, error, shifts, refresh } = useTodayOperations(
+  const { loading, error, shifts, employeesById, refresh } = useTodayOperations(
     selectedCompanyId ?? null,
     today,
   );
@@ -238,10 +343,55 @@ export default function TodayHubView() {
     }
   }, [permsReason]);
 
-  const model = useMemo(
-    () => buildTodayHubModel({ shifts: shifts as any, counts, permissions }),
-    [shifts, counts, permissions],
+  /**
+   * P1 — El modelo necesita PERSONAS y UBICACIÓN para responder "a quién
+   * afecta" y "dónde". Aquí sólo se hidrata: la verdad la resuelven los
+   * resolvers canónicos dentro de `buildTodayHubModel`.
+   */
+  const hubShifts = useMemo(
+    () =>
+      shifts.map((s) => ({
+        ...s,
+        workers: s.ops.workers.map((w) => {
+          const emp = employeesById.get(w.employee_id);
+          return {
+            employee_id: w.employee_id,
+            name: emp ? `${emp.first_name} ${emp.last_name}`.trim() : null,
+            assignment_status: w.assignment_status,
+            clock_state: w.clock_state,
+            clock_in: w.clock_in,
+            clock_out: w.clock_out,
+          };
+        }),
+        location: {
+          location_id: s.location_id,
+          job_site_location_id: s.job_site_location_id,
+          job_site_address: s.job_site_address,
+          meeting_point: s.meeting_point,
+          meeting_point_location_id: s.meeting_point_location_id,
+          transportation_required: s.transportation_required,
+          jobSiteV2: s.job_site_location_name
+            ? { name: s.job_site_location_name }
+            : null,
+          // `job_site_name` ya resuelve V2 primero; sólo es venue legado
+          // cuando no hay Job Site V2.
+          legacyVenue:
+            !s.job_site_location_name && s.job_site_name
+              ? { name: s.job_site_name }
+              : null,
+          meetingV2: s.meeting_point_location_name
+            ? { name: s.meeting_point_location_name }
+            : null,
+        },
+      })),
+    [shifts, employeesById],
   );
+
+  const model = useMemo(
+    () => buildTodayHubModel({ shifts: hubShifts as any, counts, permissions }),
+    [hubShifts, counts, permissions],
+  );
+
 
   const go = (href: string) => navigate(href);
   const retryAll = () => { refresh(); refreshCounts(); };
@@ -277,26 +427,42 @@ export default function TodayHubView() {
     );
   }
 
+  /* P1 — La bandeja manda: alertas con contexto, agrupadas por servicio.
+     Los KPIs sin servicio siguen siendo items de atención. */
+  // Todo lo que no es puro contexto entra a la bandeja: si una alerta se
+  // genera, no puede desaparecer de la pantalla.
+  const inboxGroups = model.alertGroups.filter((g) => g.severity !== "info");
+  const alertIds = new Set(model.alerts.map((a) => a.id));
   const attention = model.attentionItems.filter(
-    (i) => i.priority === "critical" || i.priority === "high",
+    (i) =>
+      !alertIds.has(i.id) &&
+      (i.priority === "critical" || i.priority === "high"),
   );
   const secondaryKpis = model.attentionItems.filter(
-    (i) => i.priority === "medium" || i.priority === "low",
+    (i) =>
+      !alertIds.has(i.id) &&
+      (i.priority === "medium" || i.priority === "low"),
   );
+  const inboxCount =
+    inboxGroups.reduce((n, g) => n + g.alerts.length, 0) + attention.length;
 
-  /* Bloque 1 — Atención */
+  /* Bloque 1 — Bandeja operativa */
   const attentionBlock =
-    attention.length > 0 ? (
+    inboxCount > 0 ? (
       <Section
         eyebrow="Prioridad"
         title="Atención"
-        helper="Sólo lo que requiere una decisión ahora."
-        count={attention.length}
+        helper="Qué pasó, dónde, a quién afecta y qué hacer ahora."
+        count={inboxCount}
       >
+        {inboxGroups.map((group) => (
+          <AlertGroupBlock key={group.shiftId} group={group} go={go} />
+        ))}
         {attention.map((item) => (
           <AttentionEntry key={item.id} item={item} go={go} />
         ))}
       </Section>
+
     ) : (
       <Section eyebrow="Estado" title={model.emptyState.headline}>
         <OperationalCard
