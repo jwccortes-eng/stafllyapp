@@ -17,6 +17,7 @@ type EmployeeStatus = 'active' | 'inactive' | null;
 
 interface ModulePermission {
   module: string;
+  company_id: string | null;
   can_view: boolean;
   can_edit: boolean;
   can_delete: boolean;
@@ -24,8 +25,10 @@ interface ModulePermission {
 
 interface ActionPermission {
   action: string;
+  company_id: string | null;
   granted: boolean;
 }
+
 
 export type AuthState = "initializing" | "authenticated" | "recovering" | "unauthenticated";
 
@@ -243,22 +246,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
       setFullName(profileData?.full_name ?? null);
 
-      // Fetch module permissions for managers and supervisors (company_owner gets full access like admin)
-      if (resolvedRole === 'manager' || resolvedRole === 'supervisor') {
-        const { data: permsData } = await supabase
-          .from('module_permissions')
-          .select('module, can_view, can_edit, can_delete')
-          .eq('user_id', userId);
-        setPermissions((permsData as ModulePermission[]) ?? []);
-        const { data: actionPermsData } = await supabase
-          .from('action_permissions')
-          .select('action, granted')
-          .eq('user_id', userId);
-        setActionPermissions((actionPermsData as ActionPermission[]) ?? []);
-      } else {
-        setPermissions([]);
-        setActionPermissions([]);
+      // FASE 2 — sin bypass de carga: los permisos se resuelven SIEMPRE, para
+      // cualquier rol, antes de declarar la autorización lista. Nunca
+      // "unknown → allow → deny".
+      const [{ data: permsData, error: permsError }, { data: actionPermsData, error: actionsError }] =
+        await Promise.all([
+          supabase
+            .from('module_permissions')
+            .select('module, company_id, can_view, can_edit, can_delete')
+            .eq('user_id', userId),
+          supabase
+            .from('action_permissions')
+            .select('action, company_id, granted')
+            .eq('user_id', userId),
+        ]);
+
+      if (permsError || actionsError) {
+        setAuthorizationStatus("error");
+        throw permsError ?? actionsError;
       }
+
+      setPermissions((permsData as ModulePermission[]) ?? []);
+      setActionPermissions((actionPermsData as ActionPermission[]) ?? []);
+      setAuthorizationStatus("ready");
+
 
       // Set first employee as default (company context will refine later)
       const firstEmp = activeEmps[0];
