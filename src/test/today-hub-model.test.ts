@@ -256,7 +256,7 @@ describe("bandeja operativa accionable", () => {
           shift_ref: "QK-001592",
           start_time: "09:00:00",
           workers: [
-            { employee_id: "e1", name: "Sophia Contreras", assignment_status: "confirmed", clock_state: "not_started" },
+            { employee_id: "e1", name: "Sophia Contreras", assignment_status: "confirmed", clock_state: "none" },
             { employee_id: "e2", name: "William Rodríguez", assignment_status: "confirmed", clock_state: "clocked_in" },
           ],
           ops: {
@@ -275,7 +275,7 @@ describe("bandeja operativa accionable", () => {
 
   it("nombra a la persona afectada y da contexto completo", () => {
     const m = noShow();
-    const alert = m.alerts.find((a) => a.severity === "critical");
+    const alert = m.alerts.find((a) => a.type === "attendance_risk");
     expect(alert).toBeTruthy();
     expect(alert!.context.people).toContain("Sophia Contreras");
     expect(alert!.context.serviceRef).toBe("QK-001592");
@@ -286,9 +286,11 @@ describe("bandeja operativa accionable", () => {
 
   it("ofrece una sola acción principal con deep link a la etapa exacta", () => {
     const m = noShow();
-    const alert = m.alerts.find((a) => a.severity === "critical")!;
+    const alert = m.alerts.find((a) => a.type === "attendance_risk")!;
     expect(alert.cta).toBeTruthy();
     expect(alert.cta!.href).toContain("/app/shift-ops?id=s1");
+    expect(alert.cta!.href).toContain("stage=attendance");
+    expect(alert.cta!.href).toContain("focus=e1");
     expect(alert.cta!.href).toContain("from=command-center");
   });
 
