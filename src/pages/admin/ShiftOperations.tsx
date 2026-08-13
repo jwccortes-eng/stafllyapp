@@ -1,5 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
+import {
+  readStage,
+  isCommandCenterReturn,
+  COMMAND_CENTER_ROUTE,
+} from "@/lib/command-center/deep-link";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -176,6 +181,27 @@ export default function ShiftOperations() {
   } | null>(null);
   const staffingRef = useRef<HTMLDivElement | null>(null);
   const scrollToStaffing = () => staffingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  /* P1 Command Center — la alerta abre la ETAPA exacta, no la pantalla. */
+  const requestedStage = readStage(searchParams);
+  const focusEmployeeId = searchParams.get("focus");
+  const cameFromCommandCenter = isCommandCenterReturn(searchParams);
+
+  useEffect(() => {
+    if (loading || !shift || !requestedStage) return;
+    // Se ancla después del render de la fase, por eso el frame diferido.
+    const raf = requestAnimationFrame(() => {
+      const target =
+        (focusEmployeeId &&
+          document.querySelector<HTMLElement>(`[data-employee-id="${focusEmployeeId}"]`)) ||
+        document.querySelector<HTMLElement>(`[data-stage="${requestedStage}"]`);
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (target && focusEmployeeId) {
+        target.setAttribute("data-focused", "true");
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [loading, shift, requestedStage, focusEmployeeId]);
 
   useEffect(() => {
     // Reset stale state immediately when the shift or company changes, so the
@@ -632,12 +658,14 @@ export default function ShiftOperations() {
         });
 
         const attendanceEvidenceBlock = selectedCompanyId ? (
+          <div data-stage="attendance" className="scroll-mt-24">
           <AttendanceEvidenceCard
             shift={{ id: shift.id, date: shift.date, start_time: shift.start_time, end_time: shift.end_time, status: shift.status }}
             assignments={assignments as any}
             companyId={selectedCompanyId}
             userId={user?.id ?? null}
           />
+          </div>
         ) : null;
 
         const nextActionsBlock = (
@@ -655,7 +683,7 @@ export default function ShiftOperations() {
         const assignedTeamBlock = <AssignedTeamCard assignments={assignments as any} />;
 
         const candidatesBlock = (
-          <div ref={staffingRef} className="scroll-mt-24">
+          <div ref={staffingRef} data-stage="team" className="scroll-mt-24">
             <CandidatesCard
               recommended={recommended}
               pool={pool}
@@ -679,6 +707,7 @@ export default function ShiftOperations() {
 
         // P0 OX — terminal closure action (evaluates real time entries, never touches payroll).
         const closeoutCard = selectedCompanyId ? (
+          <div data-stage="time" className="scroll-mt-24">
           <ShiftClosureCard
             companyId={selectedCompanyId}
             shiftId={shift.id}
@@ -686,6 +715,7 @@ export default function ShiftOperations() {
             assignedCount={assignments.length}
             onClosed={loadAll}
           />
+          </div>
         ) : null;
 
 
@@ -860,7 +890,7 @@ export default function ShiftOperations() {
           </div>
 
           {/* B) Staffing Board */}
-          <div ref={staffingRef} className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 scroll-mt-24">
+          <div ref={staffingRef} data-stage="team" className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 scroll-mt-24">
             <h2 className="text-sm font-bold flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Staffing Board</h2>
             {/* KPI chips */}
             <div className="flex flex-wrap gap-2">
