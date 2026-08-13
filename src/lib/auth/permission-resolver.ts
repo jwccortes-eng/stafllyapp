@@ -36,12 +36,30 @@ const GLOBAL_FULL_ACCESS = new Set(["developer", "owner"]);
 /** Roles por compañía con acceso total dentro de ESA compañía. */
 const COMPANY_FULL_ACCESS = new Set(["company_owner", "admin"]);
 
-export function isFullAccess(input: AuthorizationInput, companyId: string | null): boolean {
+/**
+ * Permisos NO removibles para un `company_owner`.
+ * Quitarlos dejaría a la empresa sin dueño operativo ni forma de recuperarse
+ * (lockout administrativo). Documentado en
+ * docs/qa/P0_PERMISSION_CONSOLE_EDITABLE_STATE_FIX.md
+ */
+export const PROTECTED_OWNER_PERMISSIONS: ReadonlySet<string> = new Set([
+  "users.manage",
+  "roles.manage",
+  "company.settings",
+]);
+
+export function hasGlobalFullAccess(input: AuthorizationInput): boolean {
   for (const r of input.globalRoles) if (GLOBAL_FULL_ACCESS.has(r)) return true;
+  return false;
+}
+
+export function isFullAccess(input: AuthorizationInput, companyId: string | null): boolean {
+  if (hasGlobalFullAccess(input)) return true;
   if (!companyId) return false;
   const cRole = input.companyRoles[companyId];
   return !!cRole && COMPANY_FULL_ACCESS.has(cRole);
 }
+
 
 function moduleAllows(
   input: AuthorizationInput,
