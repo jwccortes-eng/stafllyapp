@@ -10,9 +10,9 @@ import {
   roleLabel,
   scopeLabelOf,
   visibleAliases,
-  type CanonicalRoleKeyLike,
   type OperatingPerson,
-} from "@/lib/auth/operating-model-types";
+} from "@/lib/auth/operating-model";
+import type { CanonicalRoleKey } from "@/lib/auth/role-model";
 
 interface Props {
   roleKey: string | null;
