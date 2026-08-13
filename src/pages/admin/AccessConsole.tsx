@@ -27,8 +27,12 @@ import {
 import {
   SCOPE_LABELS,
   roleFromTemplateName,
-  rolesForMembership,
+  
+  templateActionsFor,
 } from "@/lib/auth/role-model";
+import { assignableRoles, resolvePrimaryRole } from "@/lib/auth/primary-role";
+import { resolvePortalStatus } from "@/lib/portal/portal-status";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -47,6 +51,10 @@ interface MemberRow {
   full_name: string | null;
   email: string | null;
   updated_at: string | null;
+  /** Overrides de acción persistidos en esta empresa (para derivar el rol principal). */
+  overrides: Record<string, boolean>;
+  is_active: boolean | null;
+  portal: string;
 }
 
 interface RoleTemplate {
@@ -112,28 +120,47 @@ export default function AccessConsole() {
       ]);
 
       const ids = (cu ?? []).map((r) => r.user_id);
-      const { data: profiles } = ids.length
-        ? await supabase.from("profiles").select("user_id, full_name, email").in("user_id", ids)
-        : { data: [] as { user_id: string; full_name: string | null; email: string | null }[] };
-      const { data: lastChanges } = ids.length
-        ? await supabase
-            .from("action_permissions")
-            .select("user_id, updated_at")
-            .eq("company_id", selectedCompanyId)
-            .in("user_id", ids)
-            .order("updated_at", { ascending: false })
-        : { data: [] as { user_id: string; updated_at: string }[] };
+      const [{ data: profiles }, { data: overrideRows }, { data: emps }] = ids.length
+        ? await Promise.all([
+            supabase.from("profiles").select("user_id, full_name, email").in("user_id", ids),
+            supabase
+              .from("action_permissions")
+              .select("user_id, action, granted, updated_at")
+              .eq("company_id", selectedCompanyId)
+              .in("user_id", ids)
+              .order("updated_at", { ascending: false }),
+            supabase
+              .from("employees")
+              .select("user_id, is_active, phone_number")
+              .eq("company_id", selectedCompanyId)
+              .in("user_id", ids),
+          ])
+        : [
+            { data: [] as { user_id: string; full_name: string | null; email: string | null }[] },
+            { data: [] as { user_id: string; action: string; granted: boolean; updated_at: string }[] },
+            { data: [] as { user_id: string; is_active: boolean | null; phone_number: string | null }[] },
+          ];
 
       if (cancelled) return;
       setMembers(
         (cu ?? []).map((row) => {
           const p = profiles?.find((x) => x.user_id === row.user_id);
+          const emp = emps?.find((e) => e.user_id === row.user_id) ?? null;
+          const overrides: Record<string, boolean> = {};
+          for (const o of overrideRows ?? []) {
+            if (o.user_id === row.user_id) overrides[o.action] = o.granted;
+          }
           return {
             user_id: row.user_id,
             role: row.role,
             full_name: p?.full_name ?? null,
             email: p?.email ?? null,
-            updated_at: lastChanges?.find((c) => c.user_id === row.user_id)?.updated_at ?? null,
+            updated_at: overrideRows?.find((c) => c.user_id === row.user_id)?.updated_at ?? null,
+            overrides,
+            is_active: emp?.is_active ?? null,
+            portal: resolvePortalStatus(
+              emp ? { user_id: row.user_id, is_active: emp.is_active, phone_number: emp.phone_number } : { user_id: row.user_id },
+            ).label,
           };
         }),
       );
@@ -145,6 +172,7 @@ export default function AccessConsole() {
       cancelled = true;
     };
   }, [selectedCompanyId]);
+
 
   /* ---------------- perfil de acceso del usuario elegido ---------------- */
   const loadProfile = useCallback(
@@ -226,11 +254,35 @@ export default function AccessConsole() {
   const dirty = useMemo(() => isDirty(draft, baseline), [draft, baseline]);
   const changedCount = useMemo(() => changedPermissions(draft, baseline).length, [draft, baseline]);
 
+  /** REGLA: rol principal vigente según el borrador actual. */
+  const primary = useMemo(
+    () => (target ? resolvePrimaryRole(target.role, draft.actions) : null),
+    [target, draft.actions],
+  );
+
+  /** EXCEPCIONES: permisos donde el override contradice al rol principal. */
+  const exceptions = useMemo(
+    () =>
+      PERMISSION_CATALOG.filter((spec) => {
+        const ov = overrideValue(spec, draft);
+        return ov !== undefined && ov !== !!roleDefaults[spec.permission];
+      }).length,
+    [draft, roleDefaults],
+  );
+
   /* ---------------- edición (capa 2: overrides) ---------------- */
   const togglePermission = (spec: PermissionSpec, next: boolean) => {
     if (isProtected(target?.role, spec)) return;
     setDraft((prev) => applyToggle(prev, spec, next));
   };
+
+  /** Cambia el ROL PRINCIPAL: reescribe la regla, conserva la membresía. */
+  const changePrimaryRole = (roleKey: string) => {
+    const role = assignableRoles(target?.role ?? "").find((r) => r.key === roleKey);
+    if (!role) return;
+    setDraft(applyTemplateToDraft(EMPTY_DRAFT, templateActionsFor(role)));
+  };
+
 
   /** Roles → Usuarios: conserva la plantilla y pide persona en la superficie canónica. */
   const startTemplateFlow = (tpl: RoleTemplate) => {
@@ -382,48 +434,71 @@ export default function AccessConsole() {
               )}
             </div>
           )}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-1">
+          <div className="space-y-4">
+            <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Personas con acceso</CardTitle>
                 <CardDescription className="text-xs">
-                  Miembros de {selectedCompany?.name ?? "la empresa"}
+                  Miembros de {selectedCompany?.name ?? "la empresa"} · elige a alguien para ver y cambiar
+                  qué puede hacer.
                 </CardDescription>
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar persona…"
-                  className="mt-2 h-9"
+                  className="mt-2 h-9 max-w-sm"
                 />
               </CardHeader>
-              <CardContent className="space-y-1.5 max-h-[520px] overflow-y-auto">
+              <CardContent className="space-y-1.5">
                 {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                 {!loading && filtered.length === 0 && (
                   <p className="text-xs text-muted-foreground">No hay miembros en esta empresa.</p>
                 )}
-                {filtered.map((m) => (
-                  <button
-                    key={m.user_id}
-                    onClick={() => setSelectedUser(m.user_id)}
-                    className={`w-full rounded-xl border p-3 text-left transition-colors ${
-                      selectedUser === m.user_id ? "border-primary/40 bg-accent/60" : "hover:bg-accent/40"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-medium">{m.full_name ?? m.email ?? m.user_id}</p>
-                      <Badge variant="secondary" className="shrink-0 text-[10px]">{m.role}</Badge>
-                    </div>
-                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                      {m.updated_at
-                        ? `Permisos actualizados ${new Date(m.updated_at).toLocaleDateString()}`
-                        : "Sin permisos específicos"}
-                    </p>
-                  </button>
-                ))}
+                {!loading && filtered.length > 0 && (
+                  <div className="hidden grid-cols-[minmax(0,2fr)_1.4fr_1.4fr_.8fr_1fr] gap-3 px-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:grid">
+                    <span>Nombre</span>
+                    <span>Rol principal</span>
+                    <span>Alcance</span>
+                    <span>Estado</span>
+                    <span>Portal</span>
+                  </div>
+                )}
+                <div className="max-h-[420px] space-y-1.5 overflow-y-auto">
+                  {filtered.map((m) => {
+                    const p = resolvePrimaryRole(m.role, m.overrides);
+                    return (
+                      <button
+                        key={m.user_id}
+                        onClick={() => setSelectedUser(m.user_id)}
+                        className={`grid w-full grid-cols-1 gap-1 rounded-xl border p-3 text-left transition-colors sm:grid-cols-[minmax(0,2fr)_1.4fr_1.4fr_.8fr_1fr] sm:items-center sm:gap-3 ${
+                          selectedUser === m.user_id ? "border-primary/40 bg-accent/60" : "hover:bg-accent/40"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{m.full_name ?? m.email ?? m.user_id}</p>
+                          <p className="truncate text-[11px] text-muted-foreground">{m.email ?? "—"}</p>
+                        </div>
+                        <span className="truncate text-xs">
+                          {p.label}
+                          {p.custom && (
+                            <Badge variant="outline" className="ml-1.5 text-[9px]">
+                              excepciones
+                            </Badge>
+                          )}
+                        </span>
+                        <span className="truncate text-xs text-muted-foreground">{p.scopeLabel}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {m.is_active === false ? "Inactiva" : "Activa"}
+                        </span>
+                        <span className="truncate text-xs text-muted-foreground">{m.portal}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="lg:col-span-2">
+            <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">
                   {target ? `Perfil de acceso — ${target.full_name ?? target.email}` : "Perfil de acceso"}
@@ -440,10 +515,60 @@ export default function AccessConsole() {
 
                 {target && !loadingProfile && (
                   <>
+                    {/* REGLA — rol principal */}
+                    <div className="rounded-xl border bg-muted/20 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Rol principal
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
+                        {assignableRoles(target.role).length > 0 ? (
+                          <Select
+                            value={primary?.role?.key ?? "custom"}
+                            onValueChange={changePrimaryRole}
+                          >
+                            <SelectTrigger className="h-9 w-full max-w-xs">
+                              <SelectValue placeholder="Elige un rol" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {primary?.custom && (
+                                <SelectItem value="custom" disabled>
+                                  Acceso personalizado
+                                </SelectItem>
+                              )}
+                              {assignableRoles(target.role).map((r) => (
+                                <SelectItem key={r.key} value={r.key}>
+                                  {r.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge className="text-[11px]">{primary?.label}</Badge>
+                        )}
+                        {primary?.role?.description && (
+                          <p className="text-xs text-muted-foreground">{primary.role.description}</p>
+                        )}
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Empresa: <strong>{selectedCompany?.name ?? "—"}</strong>
+                        {" · Alcance: "}
+                        <strong>{primary?.scopeLabel}</strong>
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Acceso efectivo: <strong>{grantedSet.size} permisos</strong> ·{" "}
+                        <strong>{exceptions} excepciones</strong>
+                      </p>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        El rol principal es la regla. Los cambios se aplican al pulsar Guardar y solo afectan
+                        a esta empresa.
+                      </p>
+                    </div>
+
                     {(target.role === "company_owner" || target.role === "admin") && (
                       <p className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
-                        Esta persona es <strong>{target.role}</strong> en {selectedCompany?.name}: su rol concede todo
-                        por defecto. Puedes quitarle permisos concretos aquí y la excepción aplica solo a esta empresa.
+                        Esta persona es <strong>{target.role}</strong> en {selectedCompany?.name}: su membresía concede
+                        todo por defecto. Puedes quitarle permisos concretos aquí y la excepción aplica solo a esta
+                        empresa.
                         {target.role === "company_owner" && (
                           <>
                             {" "}Como dueña de la empresa conserva siempre <strong>administrar usuarios</strong>,{" "}
@@ -453,17 +578,10 @@ export default function AccessConsole() {
                       </p>
                     )}
 
-                    {(() => {
-                      const candidates = rolesForMembership(target.role);
-                      if (!candidates.length) return null;
-                      return (
-                        <p className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
-                          Roles canónicos disponibles para <strong>{target.role}</strong>:{" "}
-                          {candidates.map((r) => `${r.label} (${SCOPE_LABELS[r.scope]})`).join(" · ")}. Aplica una
-                          plantilla desde la pestaña Roles y luego ajusta excepciones aquí.
-                        </p>
-                      );
-                    })()}
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Excepciones · {exceptions}
+                    </p>
+
 
 
 
