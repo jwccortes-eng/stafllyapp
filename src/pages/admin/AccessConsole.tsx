@@ -272,13 +272,16 @@ export default function AccessConsole() {
     [preview],
   );
 
-  const dirty = useMemo(() => isDirty(draft, baseline), [draft, baseline]);
+  const dirty = useMemo(
+    () => isDirty(draft, baseline) || roleDraft !== (target?.operating_role_key ?? null),
+    [draft, baseline, roleDraft, target],
+  );
   const changedCount = useMemo(() => changedPermissions(draft, baseline).length, [draft, baseline]);
 
-  /** REGLA: rol principal vigente según el borrador actual. */
+  /** ROL = responsabilidad explícita. Los overrides NO lo cambian. */
   const primary = useMemo(
-    () => (target ? resolvePrimaryRole(target.role, draft.actions) : null),
-    [target, draft.actions],
+    () => (target ? resolvePrimaryRole(target.role, draft.actions, roleDraft) : null),
+    [target, draft.actions, roleDraft],
   );
 
   /** EXCEPCIONES: permisos donde el override contradice al rol principal. */
@@ -297,12 +300,22 @@ export default function AccessConsole() {
     setDraft((prev) => applyToggle(prev, spec, next));
   };
 
-  /** Cambia el ROL PRINCIPAL: reescribe la regla, conserva la membresía. */
+  /**
+   * Cambia el ROL OPERATIVO EXPLÍCITO. Persiste en la membresía al guardar.
+   * Los overrides existentes NO se borran: el rol es una capa aparte.
+   */
   const changePrimaryRole = (roleKey: string) => {
     const role = assignableRoles(target?.role ?? "").find((r) => r.key === roleKey);
     if (!role) return;
-    setDraft(applyTemplateToDraft(EMPTY_DRAFT, templateActionsFor(role)));
+    setRoleDraft(role.key);
   };
+
+  /** Carga los permisos base del rol como punto de partida (opcional). */
+  const loadRoleDefaultsIntoDraft = () => {
+    if (!primary?.role) return;
+    setDraft(applyTemplateToDraft(EMPTY_DRAFT, templateActionsFor(primary.role)));
+  };
+
 
 
   /** Roles → Usuarios: conserva la plantilla y pide persona en la superficie canónica. */
