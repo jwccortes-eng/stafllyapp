@@ -719,12 +719,12 @@ export function DuplicateShiftDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Cancelar
+          <Button variant="ghost" onClick={() => setMode("choose")} disabled={submitting}>
+            Volver
           </Button>
           <Button onClick={handleSubmit} disabled={submitting || !targetDate || (copyWorkers && !checkingOverlap && workersToCopy.length === 0)}>
             {submitting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Copy className="h-4 w-4 mr-1.5" />}
-            Duplicar como borrador
+            {mode === "same" ? "Agregar horario" : "Crear servicio nuevo"}
           </Button>
         </DialogFooter>
       </DialogContent>
