@@ -112,28 +112,47 @@ export default function AccessConsole() {
       ]);
 
       const ids = (cu ?? []).map((r) => r.user_id);
-      const { data: profiles } = ids.length
-        ? await supabase.from("profiles").select("user_id, full_name, email").in("user_id", ids)
-        : { data: [] as { user_id: string; full_name: string | null; email: string | null }[] };
-      const { data: lastChanges } = ids.length
-        ? await supabase
-            .from("action_permissions")
-            .select("user_id, updated_at")
-            .eq("company_id", selectedCompanyId)
-            .in("user_id", ids)
-            .order("updated_at", { ascending: false })
-        : { data: [] as { user_id: string; updated_at: string }[] };
+      const [{ data: profiles }, { data: overrideRows }, { data: emps }] = ids.length
+        ? await Promise.all([
+            supabase.from("profiles").select("user_id, full_name, email").in("user_id", ids),
+            supabase
+              .from("action_permissions")
+              .select("user_id, action, granted, updated_at")
+              .eq("company_id", selectedCompanyId)
+              .in("user_id", ids)
+              .order("updated_at", { ascending: false }),
+            supabase
+              .from("employees")
+              .select("user_id, is_active, phone_number")
+              .eq("company_id", selectedCompanyId)
+              .in("user_id", ids),
+          ])
+        : [
+            { data: [] as { user_id: string; full_name: string | null; email: string | null }[] },
+            { data: [] as { user_id: string; action: string; granted: boolean; updated_at: string }[] },
+            { data: [] as { user_id: string; is_active: boolean | null; phone_number: string | null }[] },
+          ];
 
       if (cancelled) return;
       setMembers(
         (cu ?? []).map((row) => {
           const p = profiles?.find((x) => x.user_id === row.user_id);
+          const emp = emps?.find((e) => e.user_id === row.user_id) ?? null;
+          const overrides: Record<string, boolean> = {};
+          for (const o of overrideRows ?? []) {
+            if (o.user_id === row.user_id) overrides[o.action] = o.granted;
+          }
           return {
             user_id: row.user_id,
             role: row.role,
             full_name: p?.full_name ?? null,
             email: p?.email ?? null,
-            updated_at: lastChanges?.find((c) => c.user_id === row.user_id)?.updated_at ?? null,
+            updated_at: overrideRows?.find((c) => c.user_id === row.user_id)?.updated_at ?? null,
+            overrides,
+            is_active: emp?.is_active ?? null,
+            portal: resolvePortalStatus(
+              emp ? { user_id: row.user_id, is_active: emp.is_active, phone_number: emp.phone_number } : { user_id: row.user_id },
+            ).label,
           };
         }),
       );
@@ -145,6 +164,7 @@ export default function AccessConsole() {
       cancelled = true;
     };
   }, [selectedCompanyId]);
+
 
   /* ---------------- perfil de acceso del usuario elegido ---------------- */
   const loadProfile = useCallback(
