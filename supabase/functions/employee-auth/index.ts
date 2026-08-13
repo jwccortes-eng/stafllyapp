@@ -415,14 +415,16 @@ Deno.serve(async (req) => {
         );
       }
 
-      // "Already activated" = real linked auth user. A legacy/seed access_pin
-      // without a user_id is NOT a real activation; the invite flow must be
-      // allowed to overwrite it and create the auth user.
-      if (employee.user_id && employee.access_pin) {
-        return new Response(
-          JSON.stringify({ error: "Tu cuenta ya está activada. Inicia sesión con tu PIN.", code: "already_activated" }),
-          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // "Ya activada" = Auth User real CON credencial canónica. Un PIN legacy
+      // en la ficha ya no cuenta como activación.
+      if (employee.user_id) {
+        const existing = await resolveCanonicalIdentity(adminClient, employee.phone_number);
+        if (existing.userId === employee.user_id && existing.hasCredential) {
+          return new Response(
+            JSON.stringify({ error: "Tu cuenta ya está activada. Inicia sesión con tu PIN.", code: "already_activated" }),
+            { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
 
       // S7-C: safe mode read. Telemetry only — no branching on mode in this sprint.
