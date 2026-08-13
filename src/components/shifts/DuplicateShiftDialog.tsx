@@ -111,6 +111,12 @@ export function DuplicateShiftDialog({
   open, onOpenChange, shift, assignments, companyId, userId,
   defaultCopyWorkers = false, onDuplicated,
 }: Props) {
+  /**
+   * P1 — MISMO SERVICIO vs NUEVO SERVICIO.
+   * `choose` es la primera pantalla: nunca se escribe sin decidir la intención.
+   */
+  const [mode, setMode] = useState<"choose" | "same" | "new">("choose");
+  const [segmentName, setSegmentName] = useState("");
   const [targetDate, setTargetDate] = useState<Date | undefined>(undefined);
   const [copyClient, setCopyClient] = useState(true);
   const [copyTime, setCopyTime] = useState(true);
@@ -123,6 +129,10 @@ export function DuplicateShiftDialog({
   const [submitting, setSubmitting] = useState(false);
   const [pendingForceEmployee, setPendingForceEmployee] = useState<OverlapRow | null>(null);
 
+  /** Servicio raíz al que pertenecería el nuevo horario. */
+  const parentServiceId = shift.parent_shift_id ?? shift.id;
+  const serviceRef = (shift.shift_ref ?? "").trim() || null;
+
   // Reset when reopened
   useEffect(() => {
     if (open) {
@@ -132,6 +142,8 @@ export function DuplicateShiftDialog({
         employee_ids_received: assignments.map((assignment) => assignment.employee_id),
         default_copy_workers_received: defaultCopyWorkers,
       });
+      setMode("choose");
+      setSegmentName("");
       setTargetDate(undefined);
       setCopyClient(true);
       setCopyTime(true);
@@ -142,6 +154,7 @@ export function DuplicateShiftDialog({
       setOverlaps([]);
     }
   }, [open, defaultCopyWorkers]);
+
 
   // Población base = SOLO los employee_id del Servicio origen. Nunca se consulta
   // el roster completo. De esos ids se verifica la elegibilidad canónica actual.
