@@ -64,6 +64,10 @@ interface SourceShift {
   meeting_point_location_id?: string | null;
   job_site_location_id?: string | null;
   claimable?: boolean | null;
+  /** QK visible del servicio. Se conserva cuando se agrega otro horario. */
+  shift_ref?: string | null;
+  /** Si ya es un horario interno, el nuevo cuelga del MISMO servicio raíz. */
+  parent_shift_id?: string | null;
 }
 
 interface SourceAssignment {
