@@ -41,6 +41,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 
@@ -193,14 +194,11 @@ function pickSuggestedMaster(members: EmployeeRecord[], metrics: Map<string, Emp
 
 export default function WorkerDuplicates() {
   const { role } = useAuth();
+  const { canAny } = usePermissions();
   const { selectedCompanyId } = useCompany();
   const { toast } = useToast();
 
-  const isPrivileged =
-    role === "developer" ||
-    role === "owner" ||
-    role === "company_owner" ||
-    role === "admin";
+  const isPrivileged = canAny(["workers.edit", "users.manage"]);
 
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);

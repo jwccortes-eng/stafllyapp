@@ -62,6 +62,7 @@ import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parse
 import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   resolveExistingEmployeeIdentity,
   resolveIdentityFromIndex,
@@ -217,21 +218,13 @@ export default function Employees() {
   usePageView("Employees");
   const { selectedCompanyId, selectedCompany } = useCompany();
   const { role, allRoles, canAccessAdminForCompany, user } = useAuth();
+  const { canAny } = usePermissions();
   // S3.5A: tenant-scoped admin check (was global canAccessAdmin).
   // Effective privilege: trust either the resolved highest-priority role OR
   // company-scoped admin access for the currently selected tenant. Same admin
   // role set as before — no permission widening.
   const canAdminHere = canAccessAdminForCompany(selectedCompanyId);
-  const isPrivileged =
-    role === 'developer' ||
-    role === 'owner' ||
-    role === 'company_owner' ||
-    role === 'admin' ||
-    allRoles.has('developer') ||
-    allRoles.has('owner') ||
-    allRoles.has('company_owner') ||
-    allRoles.has('admin') ||
-    canAdminHere;
+  const isPrivileged = canAny(['workers.edit', 'users.manage']) || canAdminHere;
 
   // Diagnostic log (safe — no PII). Helps confirm why the duplicates entry
   // does or doesn't show in the current company context.
