@@ -735,9 +735,9 @@ Deno.serve(async (req) => {
         selected_company_id: employee.company_id,
       });
 
-
+      // Lockout legacy por teléfono: neutralizado. El único bloqueo válido
+      // es el canónico (auth_pin_credentials.locked_until).
       await resetRateLimit(adminClient, cleanPhone);
-      void _pinAuthMode_login;
 
       const empEmail = `emp_${cleanPhone}@employee.internal`;
       
