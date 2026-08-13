@@ -922,15 +922,6 @@ Deno.serve(async (req) => {
       // Generate 4-digit PIN for provision as well
       const newPin = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
       const newPwd = authPassword(newPin);
-      
-      await adminClient.from("employees").update({ access_pin: newPin }).eq("id", employee_id);
-      // S4-B dual-write
-      try {
-        await adminClient.rpc("internal_dual_write_pin_hash", {
-          _employee_id: employee_id,
-          _pin: newPin,
-        });
-      } catch (_) { /* best-effort; no PIN/hash logged */ }
 
       const { data: emp } = await adminClient
         .from("employees")
