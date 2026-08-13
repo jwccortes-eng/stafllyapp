@@ -602,11 +602,12 @@ export function ShiftDetailDialog({
                   {getShiftDisplayIdentity(shift).primaryRef}
                 </span>
               )}
-              {getShiftDisplayIdentity(shift).isServiceSegment && (
+              {(getShiftDisplayIdentity(shift).isServiceSegment || getShiftDisplayIdentity(shift).segmentLabel) && (
                 <span className="text-[9.5px] font-semibold text-primary bg-primary/10 rounded px-1.5 py-px shrink-0">
                   {getShiftDisplayIdentity(shift).segmentLabel ?? "Horario del servicio"}
                 </span>
               )}
+
 
             </div>
           }
