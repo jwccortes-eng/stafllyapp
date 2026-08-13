@@ -16,9 +16,14 @@ function extractLast4Digits(phone: string): string | null {
 
 function buildActivationEmail(
   employee: { first_name: string; last_name: string; phone_number: string },
-  pin: string,
+  pin: string | null,
   companyName: string,
 ): string {
+  // `pin` solo llega cuando esta invitación creó la credencial. Si la persona
+  // ya tenía PIN, nunca se revela: usa el que ya conoce.
+  const pinRow = pin
+    ? `<tr><td style="padding: 4px 0; color: #777;">Temporary PIN:</td><td style="padding: 4px 0; font-weight: 600; font-family: monospace; font-size: 18px; letter-spacing: 4px;">${pin}</td></tr>`
+    : `<tr><td style="padding: 4px 0; color: #777;">PIN:</td><td style="padding: 4px 0; font-weight: 600;">Use the PIN you already have</td></tr>`;
   return `
 <!DOCTYPE html>
 <html>
