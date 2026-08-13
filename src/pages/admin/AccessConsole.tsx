@@ -390,7 +390,14 @@ export default function AccessConsole() {
                             </AccordionTrigger>
                             <AccordionContent className="space-y-2">
                               {specs.map((spec) => {
-                                const configurable = !!spec.legacyAction || !!spec.legacyModule;
+                                const configurable = isConfigurable(spec);
+                                const protectedPerm = isProtected(target.role, spec);
+                                const roleDefault = !!roleDefaults[spec.permission];
+                                const checked = protectedPerm
+                                  ? true
+                                  : switchValue(spec, draft, roleDefault);
+                                const ov = overrideValue(spec, draft);
+                                const effective = !!preview[spec.permission];
                                 return (
                                   <div
                                     key={spec.permission}
@@ -402,10 +409,20 @@ export default function AccessConsole() {
                                         {spec.permission}
                                         {spec.write ? " · escritura" : ""}
                                       </p>
+                                      <p className="truncate text-[10px] text-muted-foreground">
+                                        {protectedPerm
+                                          ? "Protegido: el dueño no puede quitárselo"
+                                          : ov === undefined
+                                            ? `Heredado del rol ${target.role} · ${roleDefault ? "permitido" : "denegado"}`
+                                            : `Excepción de esta empresa · ${ov ? "permitido" : "denegado"}`}
+                                        {" · efectivo: "}
+                                        {effective ? "sí" : "no"}
+                                      </p>
                                     </div>
                                     {configurable ? (
                                       <Switch
-                                        checked={!!preview[spec.permission]}
+                                        checked={checked}
+                                        disabled={protectedPerm}
                                         onCheckedChange={(v) => togglePermission(spec, v)}
                                       />
                                     ) : (
@@ -430,9 +447,17 @@ export default function AccessConsole() {
                         className="min-h-[60px] text-sm"
                       />
                       <div className="flex flex-wrap items-center gap-2">
-                        <Button onClick={save} disabled={saving}>
+                        {dirty && (
+                          <Badge variant="destructive" className="text-[10px]">
+                            Cambios sin guardar · {changedCount}
+                          </Badge>
+                        )}
+                        <Button onClick={save} disabled={saving || !dirty}>
                           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           Guardar cambios
+                        </Button>
+                        <Button variant="ghost" onClick={discard} disabled={saving || !dirty}>
+                          Descartar
                         </Button>
                         <Button variant="outline" onClick={() => setShowPreview((v) => !v)} className="gap-1.5">
                           <Eye className="h-4 w-4" />
@@ -440,6 +465,7 @@ export default function AccessConsole() {
                         </Button>
                       </div>
                     </div>
+
 
                     {showPreview && (
                       <div className="rounded-xl border bg-muted/30 p-3">
