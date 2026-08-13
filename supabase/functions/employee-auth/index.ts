@@ -439,7 +439,10 @@ Deno.serve(async (req) => {
       const empPhone = (employee.phone_number || "").replace(/[^\d+]/g, "").slice(0, 20);
       const authIdentifier = empPhone || `noph_${employee.id.replace(/-/g, "").slice(0, 16)}`;
 
-      const updateData: Record<string, any> = { access_pin: pin };
+      // P0 AUTH PIN CANONICALIZATION: la activación ya NO escribe PIN en la
+      // ficha. El PIN se guarda en la credencial canónica del Auth User una
+      // vez resuelto/creado (más abajo).
+      const updateData: Record<string, any> = {};
       if (email && typeof email === "string" && email.includes("@")) {
         updateData.email = email.trim().slice(0, 255);
       }
@@ -447,14 +450,9 @@ Deno.serve(async (req) => {
         updateData.avatar_url = avatar_url.slice(0, 500);
       }
 
-      await adminClient.from("employees").update(updateData).eq("id", employee.id);
-      // S4-B dual-write: mirror plaintext PIN into bcrypt hash columns. Best-effort.
-      try {
-        await adminClient.rpc("internal_dual_write_pin_hash", {
-          _employee_id: employee.id,
-          _pin: pin,
-        });
-      } catch (_) { /* never block activation; no PIN/hash logged */ }
+      if (Object.keys(updateData).length > 0) {
+        await adminClient.from("employees").update(updateData).eq("id", employee.id);
+      }
 
       const empEmail = `emp_${authIdentifier}@employee.internal`;
 
