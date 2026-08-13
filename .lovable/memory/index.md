@@ -6,3 +6,4 @@
 - [Ubicación de Servicio](mem://features/service-location-truth) — Resolver canónico `service-location.ts`, destino vs geo vs punto de encuentro, regla de transporte
 - [Acceso multi-empresa](mem://features/multi-company-auth-access-truth) — AUTH vs MEMBERSHIP vs EMPLOYEE en login por teléfono; resolveMultiCompanyAccess, outcome access_disabled
 - [Stafly Operating Model](mem://features/stafly-operating-model) — Cadena operativa de 8 etapas, responsabilidades canónicas, ResponsibilityCard y pestaña Modelo operativo
+- [Rol operativo explícito](mem://features/explicit-operating-role) — `company_users.operating_role_key` como SSOT del rol; Jaccard solo diagnóstico; overrides nunca cambian el rol
