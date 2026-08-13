@@ -844,7 +844,7 @@ export default function ShiftOperations() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
           {/* Summary card */}
-          <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4">
+          <div data-stage="summary" className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 scroll-mt-24">
             <h2 className="text-sm font-bold flex items-center gap-2"><CalendarDays className="h-4 w-4 text-primary" /> Resumen del turno</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
@@ -877,6 +877,8 @@ export default function ShiftOperations() {
                 <p className="text-sm font-semibold mt-0.5">{shift.slots ?? 1}</p>
               </div>
             </div>
+            {/* P1 — etapa "operación": destino, punto de encuentro, transporte. */}
+            <div data-stage="operation" className="scroll-mt-24" />
             {(shift.meeting_point || shift.special_instructions || locationAddress) && (
               <div className="rounded-xl bg-primary/[0.03] border border-primary/10 p-3 space-y-1.5">
                 {(shift.meeting_point || locationAddress) && (
