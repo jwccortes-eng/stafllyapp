@@ -237,6 +237,15 @@ export function ShiftCard({
             {isLocked && (
               <Lock className="h-3 w-3 text-muted-foreground/55" aria-label="Locked" />
             )}
+            {/* P1 · horario interno del mismo servicio (Setup, Service, VIP…). */}
+            {isServiceSegment(shift as any) && (
+              <span
+                className="rounded-full bg-muted px-1.5 py-px text-[9px] font-medium text-muted-foreground"
+                title="Horario dentro del mismo servicio"
+              >
+                {segmentLabel(shift as any)}
+              </span>
+            )}
             {/* P0 · una sola referencia visible: shift_ref (o fallback etiquetado). */}
             {identity.primaryRefKind !== "none" && (
               <span
