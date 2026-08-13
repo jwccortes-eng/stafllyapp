@@ -928,15 +928,26 @@ Deno.serve(async (req) => {
         .select("phone_number, user_id")
         .eq("id", employee_id)
         .maybeSingle();
-      
-      // Also update auth password if employee has an auth account
-      if (emp?.user_id) {
-        await adminClient.auth.admin.updateUserById(emp.user_id, { password: newPwd });
+
+      if (!emp?.user_id) {
+        return new Response(
+          JSON.stringify({
+            error: "Esta persona aún no tiene identidad de acceso. Actívala antes de generar el PIN.",
+            code: "no_auth_user",
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
-      if (emp?.phone_number) {
-        await resetRateLimit(adminClient, emp.phone_number.replace(/[\s\-\(\)]/g, ""));
+      // Escritor único: credencial canónica + limpieza atómica de lockout.
+      const provisioned = await setCanonicalPin(adminClient, emp.user_id, newPin, "provision");
+      if (!provisioned) {
+        return new Response(
+          JSON.stringify({ error: "No se pudo generar el PIN" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
+      await adminClient.auth.admin.updateUserById(emp.user_id, { password: newPwd });
 
       return new Response(
         JSON.stringify({ success: true, pin: newPin }),
