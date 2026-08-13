@@ -415,6 +415,84 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_pin_credentials: {
+        Row: {
+          created_at: string
+          failed_attempts: number
+          locked_until: string | null
+          phone_canonical: string | null
+          pin_hash: string
+          pin_set_at: string
+          pin_set_by: string | null
+          pin_set_reason: string | null
+          pin_version: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          failed_attempts?: number
+          locked_until?: string | null
+          phone_canonical?: string | null
+          pin_hash: string
+          pin_set_at?: string
+          pin_set_by?: string | null
+          pin_set_reason?: string | null
+          pin_version?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          failed_attempts?: number
+          locked_until?: string | null
+          phone_canonical?: string | null
+          pin_hash?: string
+          pin_set_at?: string
+          pin_set_by?: string | null
+          pin_set_reason?: string | null
+          pin_version?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      auth_pin_migration_review: {
+        Row: {
+          created_at: string
+          details: Json
+          id: string
+          phone_canonical: string | null
+          reason: string
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          id?: string
+          phone_canonical?: string | null
+          reason: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          id?: string
+          phone_canonical?: string | null
+          reason?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       auth_rate_limits: {
         Row: {
           created_at: string
@@ -18207,6 +18285,11 @@ export type Database = {
           verification_ssn_ein: string
         }[]
       }
+      admin_reset_auth_pin: { Args: { _employee_id: string }; Returns: string }
+      admin_set_auth_pin_for_employee: {
+        Args: { _employee_id: string; _pin: string }
+        Returns: boolean
+      }
       anon_can_upload_onboarding_doc: {
         Args: { _path: string }
         Returns: boolean
@@ -18660,6 +18743,14 @@ export type Database = {
         Args: { p_prefix: string; p_value: string }
         Returns: number
       }
+      internal_resolve_auth_identity: {
+        Args: { _phone: string }
+        Returns: Json
+      }
+      internal_verify_auth_pin: {
+        Args: { _pin: string; _user_id: string }
+        Returns: Json
+      }
       internal_verify_pin_hash: {
         Args: { _employee_id: string; _pin: string }
         Returns: boolean
@@ -18765,6 +18856,7 @@ export type Database = {
         Returns: number
       }
       next_internal_id: { Args: { p_company_id: string }; Returns: string }
+      normalize_auth_phone: { Args: { _raw: string }; Returns: string }
       oai_can_read_observations: { Args: never; Returns: boolean }
       oai_delete_company_observations: {
         Args: { _company_id: string }
@@ -18913,6 +19005,10 @@ export type Database = {
           p_review_note?: string
         }
         Returns: undefined
+      }
+      set_auth_pin: {
+        Args: { _pin: string; _reason?: string; _user_id: string }
+        Returns: boolean
       }
       set_employee_access_pin: {
         Args: { _employee_id: string; _pin: string }
