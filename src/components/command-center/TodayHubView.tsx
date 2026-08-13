@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCompany } from "@/hooks/useCompany";
+import { useServiceRootRefs } from "@/hooks/useServiceRootRefs";
 import { useTodayOperations } from "@/hooks/useTodayOperations";
 import { useTodayHubPermissions } from "@/hooks/useTodayHubPermissions";
 
@@ -321,6 +322,7 @@ export default function TodayHubView() {
     selectedCompanyId ?? null,
     today,
   );
+  useServiceRootRefs(shifts as any);
   const {
     permissions,
     resolved: permsResolved,

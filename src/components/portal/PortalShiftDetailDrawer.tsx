@@ -1,4 +1,5 @@
 import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
+import { useServiceRootRefs } from "@/hooks/useServiceRootRefs";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import {
@@ -106,6 +107,7 @@ function getStatusMeta(status?: string): { tone: OpsStatusTone; label: string } 
  */
 export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatus, onAccept, onReject, responding, open, onOpenChange, historyInfo, historyLoading }: PortalShiftDetailDrawerProps) {
   const navigate = useNavigate();
+  useServiceRootRefs(shift ? [shift as any] : []);
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { toast } = useToast();
   const [empCompanyId, setEmpCompanyId] = useState("");
