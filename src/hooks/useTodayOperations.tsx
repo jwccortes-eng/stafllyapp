@@ -288,7 +288,17 @@ export function useTodayOperations(
         client_id: s.client_id ?? null,
         client_name: s.client_id ? (clientMap.get(s.client_id) ?? null) : null,
         location_id: s.location_id ?? null,
-        job_site_name: s.location_id ? (locMap.get(s.location_id) ?? null) : null,
+        job_site_location_id: s.job_site_location_id ?? null,
+        job_site_address: s.job_site_address ?? null,
+        job_site_location_name: s.job_site_location_id
+          ? (locV2Map.get(s.job_site_location_id) ?? null)
+          : null,
+        claimable: s.claimable ?? null,
+        transportation_required: Boolean(s.transportation_required),
+        job_site_name:
+          (s.job_site_location_id ? (locV2Map.get(s.job_site_location_id) ?? null) : null) ??
+          (s.location_id ? (locMap.get(s.location_id) ?? null) : null),
+
         meeting_point: s.meeting_point ?? null,
         meeting_point_location_id: s.meeting_point_location_id ?? null,
         meeting_point_location_name: s.meeting_point_location_id
