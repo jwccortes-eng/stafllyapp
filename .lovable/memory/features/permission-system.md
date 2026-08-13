@@ -24,3 +24,8 @@ Un override negativo restringe también a `admin` y `company_owner`. Excepciones
   `company.settings` (anti-lockout).
 
 Referencia: `docs/qa/P0_PERMISSION_CONSOLE_EDITABLE_STATE_FIX.md`.
+
+Hardcodes de rol retirados en todos los gates de escritura (P1 Hardcode Retirement,
+2026-08-13). Nunca reintroducir `role === "admin"` para autorizar escrituras:
+usar `can`/`canAny`. Quedan solo en navegación/visibilidad y ámbito plataforma.
+Referencia: `docs/qa/P1_PERMISSION_HARDCODE_RETIREMENT.md`.
