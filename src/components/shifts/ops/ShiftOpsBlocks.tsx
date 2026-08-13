@@ -245,7 +245,12 @@ export function AssignedTeamCard({
               ? `${a.employee.first_name ?? ""} ${a.employee.last_name ?? ""}`.trim() || a.employee_id
               : a.employee_id;
             return (
-              <li key={a.id} className="flex items-center gap-3 rounded-xl bg-muted/20 px-3 py-2">
+              <li
+                key={a.id}
+                // Ancla de foco: el Command Center puede señalar a la persona.
+                data-employee-id={a.employee_id}
+                className="flex items-center gap-3 rounded-xl bg-muted/20 px-3 py-2 scroll-mt-24 data-[focused=true]:ring-2 data-[focused=true]:ring-primary/60"
+              >
                 <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
                   {(a.employee?.first_name?.[0] ?? "?") + (a.employee?.last_name?.[0] ?? "")}
                 </div>
