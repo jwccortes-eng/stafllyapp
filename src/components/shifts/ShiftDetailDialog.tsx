@@ -686,7 +686,9 @@ export function ShiftDetailDialog({
           <ServiceSegmentsPanel
             shift={shift as unknown as { id: string; parent_shift_id?: string | null }}
             companyId={(shift as unknown as { company_id?: string | null }).company_id ?? null}
+            onOpenSegment={(id) => { setActiveSegmentId(id); setShowAddPanel(false); setSelected([]); }}
           />
+
         </div>
 
         {/* ── Unstaffed import alert (FASE 1: visibilidad de imports rotos) ── */}
