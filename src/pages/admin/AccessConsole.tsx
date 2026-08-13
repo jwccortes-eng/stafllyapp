@@ -254,11 +254,35 @@ export default function AccessConsole() {
   const dirty = useMemo(() => isDirty(draft, baseline), [draft, baseline]);
   const changedCount = useMemo(() => changedPermissions(draft, baseline).length, [draft, baseline]);
 
+  /** REGLA: rol principal vigente según el borrador actual. */
+  const primary = useMemo(
+    () => (target ? resolvePrimaryRole(target.role, draft.actions) : null),
+    [target, draft.actions],
+  );
+
+  /** EXCEPCIONES: permisos donde el override contradice al rol principal. */
+  const exceptions = useMemo(
+    () =>
+      PERMISSION_CATALOG.filter((spec) => {
+        const ov = overrideValue(spec, draft);
+        return ov !== undefined && ov !== !!roleDefaults[spec.permission];
+      }).length,
+    [draft, roleDefaults],
+  );
+
   /* ---------------- edición (capa 2: overrides) ---------------- */
   const togglePermission = (spec: PermissionSpec, next: boolean) => {
     if (isProtected(target?.role, spec)) return;
     setDraft((prev) => applyToggle(prev, spec, next));
   };
+
+  /** Cambia el ROL PRINCIPAL: reescribe la regla, conserva la membresía. */
+  const changePrimaryRole = (roleKey: string) => {
+    const role = assignableRoles(target?.role ?? "").find((r) => r.key === roleKey);
+    if (!role) return;
+    setDraft(applyTemplateToDraft(EMPTY_DRAFT, templateActionsFor(role)));
+  };
+
 
   /** Roles → Usuarios: conserva la plantilla y pide persona en la superficie canónica. */
   const startTemplateFlow = (tpl: RoleTemplate) => {
