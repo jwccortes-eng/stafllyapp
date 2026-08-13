@@ -18747,6 +18747,15 @@ export type Database = {
         Args: { _phone: string }
         Returns: Json
       }
+      internal_set_auth_pin: {
+        Args: {
+          _actor?: string
+          _pin: string
+          _reason?: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       internal_verify_auth_pin: {
         Args: { _pin: string; _user_id: string }
         Returns: Json
