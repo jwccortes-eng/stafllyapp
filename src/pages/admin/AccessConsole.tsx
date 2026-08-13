@@ -51,6 +51,8 @@ import { notifyError, notifySuccess } from "@/lib/feedback/notify";
 interface MemberRow {
   user_id: string;
   role: string;
+  /** ROL OPERATIVO EXPLÍCITO de esta empresa. SSOT del rol. */
+  operating_role_key: string | null;
   full_name: string | null;
   email: string | null;
   updated_at: string | null;
