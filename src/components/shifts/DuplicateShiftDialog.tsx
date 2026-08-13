@@ -446,28 +446,115 @@ export function DuplicateShiftDialog({
     }
 
     setSubmitting(false);
-    toast.success("Turno duplicado como borrador.", {
-      description: copyWorkers
-        ? `Se copiaron ${workersToCopy.length} trabajador${workersToCopy.length === 1 ? "" : "es"} como pending.`
-        : "Sin trabajadores. Asigna desde Staffing.",
-    });
+    const workersLine = copyWorkers
+      ? `Se copiaron ${workersToCopy.length} trabajador${workersToCopy.length === 1 ? "" : "es"} como pending.`
+      : "Sin trabajadores. Asigna desde Staffing.";
+    toast.success(
+      mode === "same" ? "Horario agregado al mismo servicio." : "Servicio nuevo creado como borrador.",
+      {
+        description: mode === "same"
+          ? `${serviceRef ? `${serviceRef} · ` : ""}Nuevo horario con su propio reloj y horas. ${workersLine}`
+          : `Nuevo consecutivo asignado. ${workersLine}`,
+      },
+    );
     onOpenChange(false);
     onDuplicated?.(newShiftId);
   };
+
+  if (mode === "choose") {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="h-4 w-4 text-primary" /> Duplicar servicio
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              ¿Cómo quieres duplicarlo? Nada se escribe hasta que elijas.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setMode("same")}
+              className="w-full rounded-xl border border-border bg-card p-4 text-left transition hover:border-primary hover:bg-accent/40"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">Mismo servicio</p>
+                <Badge variant="secondary" className="text-[10px]">
+                  {serviceRef ? `Mantiene ${serviceRef}` : "Mantiene la referencia"}
+                </Badge>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Agregar otro horario o equipo al mismo evento (Setup, Service, VIP, Breakdown
+                o una jornada más). Cada horario lleva su propio reloj y sus propias horas.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMode("new")}
+              className="w-full rounded-xl border border-border bg-card p-4 text-left transition hover:border-primary hover:bg-accent/40"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">Nuevo servicio</p>
+                <Badge variant="outline" className="text-[10px]">Nuevo consecutivo</Badge>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Crear un trabajo independiente usando este como plantilla. Genera un
+                consecutivo nuevo y un ciclo operativo aparte.
+              </p>
+            </button>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Copy className="h-4 w-4 text-primary" /> Duplicar turno
+            <Copy className="h-4 w-4 text-primary" />
+            {mode === "same" ? "Agregar horario al mismo servicio" : "Nuevo servicio desde plantilla"}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Siempre crea un borrador nuevo. Nunca publica ni envía notificaciones.
+            {mode === "same"
+              ? `${serviceRef ? `${serviceRef} · ` : ""}Conserva cliente, job site y contexto comercial. No copia reloj, horas, asistencia, cierre ni notificaciones.`
+              : "Siempre crea un borrador nuevo con consecutivo propio. Nunca publica ni envía notificaciones."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          {mode === "same" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Nombre del horario</Label>
+              <Input
+                value={segmentName}
+                onChange={(e) => setSegmentName(e.target.value)}
+                placeholder="Setup, Service, VIP, Breakdown…"
+                className="h-9"
+              />
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {SEGMENT_PRESETS.map((p) => (
+                  <Badge
+                    key={p}
+                    variant={segmentName === p ? "default" : "outline"}
+                    className="cursor-pointer text-[10px]"
+                    onClick={() => setSegmentName(p)}
+                  >
+                    {p}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Target date */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Fecha destino</Label>
