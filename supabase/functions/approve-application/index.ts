@@ -220,7 +220,6 @@ Deno.serve(async (req) => {
     // --- Create or update employee ---
     if (!employeeId) {
       step = "create_employee";
-      const accessPin = phone.length >= 4 ? phone.slice(-4) : null;
 
       const { data: newEmp, error: createErr } = await supabaseAdmin
         .from("employees")
@@ -232,7 +231,6 @@ Deno.serve(async (req) => {
           email: email,
           employee_role: role === "supervisor" ? "Supervisor" : app.worker_type || "employee",
           is_active: initial_status === "active",
-          access_pin: pin_enabled ? accessPin : null,
           portal_access_enabled: portal_enabled,
           has_car: app.has_car ? "Sí" : "No",
           county: app.city || null,
