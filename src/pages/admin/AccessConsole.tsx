@@ -392,6 +392,7 @@ export default function AccessConsole() {
         <TabsList>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" />Usuarios</TabsTrigger>
           <TabsTrigger value="roles" className="gap-1.5"><LayoutTemplate className="h-3.5 w-3.5" />Roles</TabsTrigger>
+          <TabsTrigger value="model" className="gap-1.5"><Workflow className="h-3.5 w-3.5" />Modelo operativo</TabsTrigger>
           <TabsTrigger value="catalog" className="gap-1.5"><ListChecks className="h-3.5 w-3.5" />Permisos</TabsTrigger>
         </TabsList>
 
