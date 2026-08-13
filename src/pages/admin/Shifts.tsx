@@ -441,6 +441,8 @@ function DesktopShifts() {
   }, []);
 
   const [shifts, setShifts] = useState<Shift[]>([]);
+  // P0 · SERVICE ROOT QK: el QK visible siempre es el del servicio raíz.
+  useServiceRootRefs(shifts);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   // `loading` reflects ONLY the very first load. Background refetches use `isRefetching`
   // so the previous data stays visible — no skeleton flash, no layout shift.
