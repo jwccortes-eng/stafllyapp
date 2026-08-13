@@ -240,3 +240,76 @@ describe("OX-4.3.1 — asistencia sin no-show implícito", () => {
     expect(text).not.toContain("no show");
   });
 });
+
+/**
+ * P1 — Bandeja accionable: cada alerta responde QUÉ / DÓNDE / A QUIÉN / AHORA
+ * en una sola lectura y ofrece UNA sola acción principal.
+ */
+describe("bandeja operativa accionable", () => {
+  const noShow = () =>
+    buildTodayHubModel({
+      permissions: FULL_HUB_PERMISSIONS,
+      now: NOW,
+      shifts: [
+        shift({
+          id: "s1",
+          shift_ref: "QK-001592",
+          start_time: "09:00:00",
+          workers: [
+            { employee_id: "e1", name: "Sophia Contreras", assignment_status: "confirmed", clock_state: "not_started" },
+            { employee_id: "e2", name: "William Rodríguez", assignment_status: "confirmed", clock_state: "clocked_in" },
+          ],
+          ops: {
+            bucket: "in_progress",
+            required: 2,
+            assigned_active: 2,
+            confirmed: 2,
+            clocked_in: 1,
+            open_clocks: 1,
+            missing_clock_outs: 0,
+            not_started: 1,
+          },
+        }),
+      ],
+    });
+
+  it("nombra a la persona afectada y da contexto completo", () => {
+    const m = noShow();
+    const alert = m.alerts.find((a) => a.severity === "critical");
+    expect(alert).toBeTruthy();
+    expect(alert!.context.people).toContain("Sophia Contreras");
+    expect(alert!.context.serviceRef).toBe("QK-001592");
+    expect(alert!.context.clientName).toBe("Cliente A");
+    expect(alert!.context.whenLabel).toBeTruthy();
+    expect(alert!.context.ageLabel).toBeTruthy();
+  });
+
+  it("ofrece una sola acción principal con deep link a la etapa exacta", () => {
+    const m = noShow();
+    const alert = m.alerts.find((a) => a.severity === "critical")!;
+    expect(alert.cta).toBeTruthy();
+    expect(alert.cta!.href).toContain("/app/shift-ops?id=s1");
+    expect(alert.cta!.href).toContain("from=command-center");
+  });
+
+  it("agrupa las alertas por servicio para no repetir el contexto", () => {
+    const m = noShow();
+    expect(m.alertGroups).toHaveLength(1);
+    expect(m.alertGroups[0].shiftId).toBe("s1");
+    expect(m.alertGroups[0].alerts.length).toBeGreaterThan(0);
+  });
+
+  it("sin permisos no expone acción resolutiva", () => {
+    const m = buildTodayHubModel({
+      permissions: NO_HUB_PERMISSIONS,
+      now: NOW,
+      shifts: [
+        shift({
+          id: "s2",
+          ops: { bucket: "needs_staff", required: 4, assigned_active: 1, confirmed: 1, clocked_in: 0, open_clocks: 0, missing_clock_outs: 0, not_started: 0 },
+        }),
+      ],
+    });
+    expect(m.alerts.every((a) => a.cta === null || a.cta === undefined)).toBe(true);
+  });
+});
