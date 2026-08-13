@@ -22,6 +22,8 @@
  *   - este módulo es puro: sin React, sin red, sin escrituras.
  */
 
+import { lookupShiftRef } from "./service-ref-registry";
+
 export interface ShiftIdentitySource {
   id?: string | null;
   shift_ref?: string | null;
