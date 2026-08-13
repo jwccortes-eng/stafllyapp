@@ -260,7 +260,6 @@ Deno.serve(async (req) => {
         if (send_email && emp.email) {
           try {
             const html = buildActivationEmail(emp, pin, companyName);
-            void 0;
             const text = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
             const messageId = crypto.randomUUID();
             const idempotencyKey = `bulk-activation-${emp.id}-${Date.now()}`;
