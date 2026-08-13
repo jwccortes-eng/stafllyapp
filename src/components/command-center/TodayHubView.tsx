@@ -238,10 +238,50 @@ export default function TodayHubView() {
     }
   }, [permsReason]);
 
-  const model = useMemo(
-    () => buildTodayHubModel({ shifts: shifts as any, counts, permissions }),
-    [shifts, counts, permissions],
+  /**
+   * P1 — El modelo necesita PERSONAS y UBICACIÓN para responder "a quién
+   * afecta" y "dónde". Aquí sólo se hidrata: la verdad la resuelven los
+   * resolvers canónicos dentro de `buildTodayHubModel`.
+   */
+  const hubShifts = useMemo(
+    () =>
+      shifts.map((s) => ({
+        ...s,
+        workers: s.ops.workers.map((w) => {
+          const emp = employeesById.get(w.employee_id);
+          return {
+            employee_id: w.employee_id,
+            name: emp ? `${emp.first_name} ${emp.last_name}`.trim() : null,
+            assignment_status: w.assignment_status,
+            clock_state: w.clock_state,
+            clock_in: w.clock_in,
+            clock_out: w.clock_out,
+          };
+        }),
+        location: {
+          location_id: s.location_id,
+          job_site_location_id: s.job_site_location_id,
+          job_site_address: s.job_site_address,
+          meeting_point: s.meeting_point,
+          meeting_point_location_id: s.meeting_point_location_id,
+          transportation_required: s.transportation_required,
+          jobSiteV2: s.job_site_location_name
+            ? { name: s.job_site_location_name }
+            : null,
+          legacyVenue: s.job_site_name ? { name: s.job_site_name } : null,
+          meetingV2: s.meeting_point_location_name
+            ? { name: s.meeting_point_location_name }
+            : null,
+        },
+      })),
+    [shifts, employeesById],
   );
+
+  const model = useMemo(
+    () => buildTodayHubModel({ shifts: hubShifts as any, counts, permissions }),
+    [hubShifts, counts, permissions],
+  );
+
 
   const go = (href: string) => navigate(href);
   const retryAll = () => { refresh(); refreshCounts(); };
