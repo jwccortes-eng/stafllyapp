@@ -535,9 +535,20 @@ export default function ShiftOperations() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/app/shifts")}>
+        {/* Volver al origen real: si la alerta vino del Command Center,
+            se regresa a la bandeja, no al listado genérico. */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          aria-label={cameFromCommandCenter ? "Volver a la bandeja de hoy" : "Volver a turnos"}
+          onClick={() =>
+            navigate(cameFromCommandCenter ? COMMAND_CENTER_ROUTE : "/app/shifts")
+          }
+        >
           <ArrowLeft className="h-4 w-4" />
         </Button>
+
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-lg font-bold font-heading">{shift.title}</h1>
