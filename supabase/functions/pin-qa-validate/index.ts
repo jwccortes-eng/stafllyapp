@@ -101,6 +101,17 @@ Deno.serve(async (req) => {
     return jsonResp({ error: "Invalid ctx" }, 400);
   }
   const ctx = ctxRaw as Ctx;
+  void ctx;
+
+  // P0 AUTH PIN CANONICALIZATION: este validador de QA leía el PIN de la ficha
+  // de empleado. Retirado: existe un único validador (credencial del Auth User).
+  return jsonResp(
+    {
+      error: "Validador retirado. El PIN se valida solo contra la credencial única de la persona.",
+      code: "retired",
+    },
+    410,
+  );
 
   // ---------- Admin client (used ONLY for SELECTs + the verify RPC) ----------
   const adminClient = createClient(
