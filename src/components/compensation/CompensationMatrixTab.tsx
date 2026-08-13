@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { useCompensationProfiles, useCompensationMutations, type CompensationProfile, type PaymentMode } from "@/hooks/useCompensation";
 import { useQuery } from "@tanstack/react-query";
@@ -42,6 +43,7 @@ interface EmployeeRow {
 
 export default function CompensationMatrixTab() {
   const { user, role, hasActionPermission } = useAuth();
+  const { can } = usePermissions();
   const { selectedCompanyId } = useCompany();
   const { data: profiles, isLoading: profilesLoading } = useCompensationProfiles();
   const { upsertProfile } = useCompensationMutations();
@@ -52,7 +54,7 @@ export default function CompensationMatrixTab() {
   const [addForm, setAddForm] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
 
-  const canEdit = role === "owner" || role === "admin" || role === "developer" || hasActionPermission("manage_compensation");
+  const canEdit = can("payroll.manage") || hasActionPermission("manage_compensation");
 
   const { data: employees, isLoading: employeesLoading } = useQuery({
     queryKey: ["employees-for-matrix", selectedCompanyId],

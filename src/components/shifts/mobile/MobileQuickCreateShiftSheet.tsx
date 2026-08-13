@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { notifySuccess, notifyError, notifyWarning } from "@/lib/feedback/notify";
 import { SmartLocationField } from "@/components/shifts/form/SmartLocationField";
 import { ClientAvatar } from "@/components/ui/client-avatar";
@@ -217,7 +218,8 @@ export function MobileQuickCreateShiftSheet({
 }: Props) {
   const queryClient = useQueryClient();
   const { user, role, hasModuleAccess } = useAuth();
-  const canCreate = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
+  const { can } = usePermissions();
+  const canCreate = can("service.create");
   const navigate = useNavigate();
   const { companies, setSelectedCompanyId } = useCompany();
   const companyName = companies.find(c => c.id === companyId)?.name ?? "Empresa sin nombre";
