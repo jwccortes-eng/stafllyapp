@@ -297,14 +297,11 @@ export function useTodayOperations(
         location_id: s.location_id ?? null,
         job_site_location_id: s.job_site_location_id ?? null,
         job_site_address: s.job_site_address ?? null,
-        job_site_location_name: s.job_site_location_id
-          ? (locV2Map.get(s.job_site_location_id) ?? null)
-          : null,
+        job_site_location_name: jobSiteName,
         claimable: s.claimable ?? null,
         transportation_required: Boolean(s.transportation_required),
-        job_site_name:
-          (s.job_site_location_id ? (locV2Map.get(s.job_site_location_id) ?? null) : null) ??
-          (s.location_id ? (locMap.get(s.location_id) ?? null) : null),
+        job_site_name: jobSiteName ?? legacyVenueName,
+
 
         meeting_point: s.meeting_point ?? null,
         meeting_point_location_id: s.meeting_point_location_id ?? null,
