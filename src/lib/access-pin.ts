@@ -1,14 +1,14 @@
 /**
- * Phase B — frontend helpers around employees.access_pin.
+ * P0 — AUTH PIN CANONICALIZATION.
  *
- * Frontend code MUST NOT read `employees.access_pin` directly anymore.
- * It calls SECURITY DEFINER RPCs that enforce permissions and only
- * return existence (not the value), or return the PIN exactly once
- * after a privileged reset/set operation.
+ * El PIN pertenece al Auth User (una persona = un PIN = un bloqueo).
+ * El frontend nunca lee ni escribe `employees.access_pin`: llama RPCs
+ * SECURITY DEFINER que resuelven la credencial canónica, devuelven solo
+ * existencia, o devuelven el PIN una única vez tras un reset autorizado.
  */
 import { supabase } from "@/integrations/supabase/client";
 
-/** Returns whether the worker has a PIN configured. Self / company admin / global owner. */
+/** Indica si la persona tiene PIN canónico configurado. Self / admin de empresa / global owner. */
 export async function checkEmployeeHasPin(employeeId: string): Promise<boolean> {
   const { data, error } = await (supabase.rpc as any)("employee_has_access_pin", {
     _employee_id: employeeId,
@@ -20,7 +20,7 @@ export async function checkEmployeeHasPin(employeeId: string): Promise<boolean> 
   return !!data;
 }
 
-/** Bulk version — runs RPC in parallel. Falls back to false on error per id. */
+/** Versión masiva — ejecuta el RPC en paralelo. Ante error, false para ese id. */
 export async function checkEmployeesHasPinBulk(
   ids: string[],
 ): Promise<Record<string, boolean>> {
@@ -32,9 +32,13 @@ export async function checkEmployeesHasPinBulk(
   return Object.fromEntries(results);
 }
 
-/** Resets the worker PIN to a fresh 4-digit value. Returns the new PIN exactly once. */
+/**
+ * Reinicia el PIN de la persona a un valor nuevo de 4 dígitos.
+ * Escritor único: limpia bloqueos y alias telefónicos legacy de forma atómica.
+ * Devuelve el PIN una sola vez.
+ */
 export async function resetEmployeePin(employeeId: string): Promise<string> {
-  const { data, error } = await (supabase.rpc as any)("reset_employee_access_pin", {
+  const { data, error } = await (supabase.rpc as any)("admin_reset_auth_pin", {
     _employee_id: employeeId,
   });
   if (error) throw new Error(error.message ?? "reset_failed");
@@ -42,10 +46,10 @@ export async function resetEmployeePin(employeeId: string): Promise<string> {
   return data;
 }
 
-/** Sets the worker PIN to a manual 4-digit value. */
+/** Fija manualmente el PIN de la persona (4 dígitos) sobre la credencial canónica. */
 export async function setEmployeePin(employeeId: string, pin: string): Promise<void> {
   if (!/^\d{4}$/.test(pin)) throw new Error("invalid_pin_format");
-  const { error } = await (supabase.rpc as any)("set_employee_access_pin", {
+  const { error } = await (supabase.rpc as any)("admin_set_auth_pin_for_employee", {
     _employee_id: employeeId,
     _pin: pin,
   });
