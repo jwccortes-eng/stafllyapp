@@ -514,14 +514,23 @@ export default function AccessConsole() {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {templates.map((tpl) => (
+              {templates.map((tpl) => {
+                const canonical = roleFromTemplateName(tpl.name);
+                return (
                 <div key={tpl.id} className="rounded-xl border p-4">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold">{tpl.name}</p>
                     {tpl.is_system && <Badge variant="secondary" className="text-[10px]">Sistema</Badge>}
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">{tpl.description ?? "—"}</p>
+                  {canonical && (
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      Alcance: <strong>{SCOPE_LABELS[canonical.scope]}</strong>
+                      {canonical.aliases?.length ? ` · También llamado: ${canonical.aliases.join(", ")}` : ""}
+                    </p>
+                  )}
                   <p className="mt-2 text-[11px] text-muted-foreground">{tpl.actions.length} permisos</p>
+
                   <Button
                     size="sm"
                     variant="outline"
