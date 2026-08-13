@@ -435,6 +435,66 @@ function startsInLabel(minutes: number): string {
   return m === 0 ? `comienza en ${h} h` : `comienza en ${h} h ${m} min`;
 }
 
+/* ── Contexto humano de la alerta (P1 — Action-Driven Command Center) ── */
+
+const MONTHS_ES = [
+  "ene", "feb", "mar", "abr", "may", "jun",
+  "jul", "ago", "sep", "oct", "nov", "dic",
+];
+
+/** "Hoy" · "Mañana" · "Ayer" · "12 mar". Nunca una fecha ISO cruda. */
+export function dateLabelFor(date: string, now: Date): string {
+  const toKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const today = toKey(now);
+  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+  const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
+  if (date === today) return "Hoy";
+  if (date === toKey(tomorrow)) return "Mañana";
+  if (date === toKey(yesterday)) return "Ayer";
+  const [y, m, d] = date.split("-").map(Number);
+  if (!y || !m || !d) return date;
+  return `${d} ${MONTHS_ES[m - 1]}`;
+}
+
+/** Antigüedad humana: "hace 32 min" cuando ya pasó, "en 2 h" si falta. */
+export function ageLabelFor(minutesUntil: number): string {
+  const abs = Math.abs(minutesUntil);
+  const unit =
+    abs < 60
+      ? `${abs} min`
+      : abs < 24 * 60
+        ? `${Math.floor(abs / 60)} h`
+        : `${Math.floor(abs / (24 * 60))} d`;
+  if (minutesUntil === 0) return "ahora";
+  return minutesUntil < 0 ? `hace ${unit}` : `en ${unit}`;
+}
+
+/** Nombres legibles de las personas afectadas, sin inventar identidades. */
+function peopleNames(workers: HubWorkerLike[] | undefined, ids: string[]): string[] {
+  if (!workers?.length) return [];
+  return ids
+    .map((id) => workers.find((w) => w.employee_id === id))
+    .map((w) => (w?.name ?? "").trim())
+    .filter((n) => n.length > 0);
+}
+
+/** Severidad visual derivada de la prioridad operativa. */
+const SEVERITY_BY_PRIORITY: Record<HubPriority, HubAlertSeverity> = {
+  critical: "critical",
+  high: "attention",
+  medium: "prep",
+  low: "info",
+};
+
+const SEVERITY_WEIGHT: Record<HubAlertSeverity, number> = {
+  critical: 0,
+  attention: 1,
+  prep: 2,
+  info: 3,
+};
+
+
 function sortByPriority<T extends { priority: HubPriority }>(items: T[]): T[] {
   return [...items].sort(
     (a, b) => PRIORITY_WEIGHT[a.priority] - PRIORITY_WEIGHT[b.priority],
