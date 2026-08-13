@@ -6,6 +6,7 @@ import { usePageView } from "@/hooks/useAuditLog";
 import { supabase } from "@/integrations/supabase/client";
 import { versionedAssignmentTransition } from "@/lib/data/assignment-write";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { useEmployeeAvailability } from "@/hooks/useEmployeeAvailability";
 import { useEmployeeRoster } from "@/hooks/useEmployeeRoster";
@@ -356,11 +357,12 @@ function DesktopShifts() {
   usePageView("Programación");
   const navigate = useNavigate();
   const { role, hasModuleAccess, user } = useAuth();
+  const { can } = usePermissions();
   const { selectedCompanyId, selectedCompany } = useCompany();
   const { config: payrollConfig } = usePayrollConfig();
   const { config: shiftsConfig, updateConfig: updateShiftsConfig, loading: shiftsConfigLoading } = useShiftsConfig();
   const payrollWeekStart = payrollConfig.payroll_week_start_day as 0 | 1 | 2 | 3 | 4 | 5 | 6;
-  const canEdit = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
+  const canEdit = can("service.edit");
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const shiftSettingsSections: SettingsSection[] = [

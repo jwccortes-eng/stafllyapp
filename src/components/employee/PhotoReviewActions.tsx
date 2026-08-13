@@ -18,6 +18,7 @@ import { useState } from "react";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,10 +80,11 @@ export function PhotoReviewActions({
   className,
 }: PhotoReviewActionsProps) {
   const { user, role } = useAuth();
+  const { canAny } = usePermissions();
   const { toast } = useToast();
 
   const isPrivileged =
-    role === "developer" || role === "owner" || role === "admin";
+    canAny(["time_entries.review", "time_entries.approve"]);
 
   const [busy, setBusy] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);

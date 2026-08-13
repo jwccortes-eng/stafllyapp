@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, Fragment } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -155,8 +156,9 @@ function clockMethodIcon(method: string) {
 
 export function TimesheetView() {
   const { role, hasModuleAccess } = useAuth();
+  const { canAny } = usePermissions();
   const { selectedCompanyId } = useCompany();
-  const canApprove = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
+  const canApprove = canAny(["time_entries.approve", "service.edit"]);
 
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);

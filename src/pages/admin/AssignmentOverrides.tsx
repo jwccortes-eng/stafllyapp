@@ -32,6 +32,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 
@@ -165,10 +166,11 @@ function buildAuditRow(o: OverrideRow): string {
 
 export default function AssignmentOverrides() {
   const { role } = useAuth();
+  const { canAny } = usePermissions();
   const { selectedCompanyId } = useCompany();
   const { toast } = useToast();
 
-  const isPrivileged = role === "developer" || role === "owner" || role === "company_owner" || role === "admin";
+  const isPrivileged = canAny(["staffing.assign", "service.edit"]);
 
   const [rows, setRows] = useState<OverrideRow[]>([]);
   const [loading, setLoading] = useState(true);

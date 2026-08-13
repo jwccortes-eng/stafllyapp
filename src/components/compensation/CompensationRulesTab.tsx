@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCompensationRules, useCompensationMutations, type CompensationRule, type CompRuleType } from "@/hooks/useCompensation";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,12 +27,13 @@ const UNIT_LABELS: Record<string, string> = { hour: "Hora", day: "Día", half_da
 
 export default function CompensationRulesTab() {
   const { role, hasActionPermission } = useAuth();
+  const { can } = usePermissions();
   const { data: rules, isLoading } = useCompensationRules();
   const { saveRule, deleteRule } = useCompensationMutations();
   const [editRule, setEditRule] = useState<Partial<CompensationRule> | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const canEdit = role === "owner" || role === "admin" || role === "developer" || hasActionPermission("manage_compensation");
+  const canEdit = can("payroll.manage") || hasActionPermission("manage_compensation");
 
   const grouped = (rules ?? []).reduce<Record<string, CompensationRule[]>>((acc, r) => {
     (acc[r.rule_type] ??= []).push(r);

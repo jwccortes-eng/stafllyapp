@@ -1,5 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { usePayrollConfig, DAY_NAMES, DEFAULT_CONFIG, type PayrollConfig } from "@/hooks/usePayrollConfig";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -42,13 +43,14 @@ const TIMEZONES = [
 
 export default function PayrollSettings() {
   const { user, role, hasActionPermission } = useAuth();
+  const { can } = usePermissions();
   const { selectedCompany } = useCompany();
   const { config, loading, saveConfig } = usePayrollConfig();
   const [form, setForm] = useState<PayrollConfig>(DEFAULT_CONFIG);
   const [saving, setSaving] = useState(false);
   const [applyToOpen, setApplyToOpen] = useState(false);
 
-  const canEdit = role === "owner" || role === "admin" || hasActionPermission("configurar_nomina");
+  const canEdit = can("payroll.settings");
 
   useEffect(() => {
     if (!loading) setForm(config);
