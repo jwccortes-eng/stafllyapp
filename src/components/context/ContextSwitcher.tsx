@@ -621,18 +621,9 @@ export const ContextSwitcher = forwardRef<HTMLDivElement, ContextSwitcherProps>(
         });
         return;
       }
-      // Usuarios sin modo global confirman el cambio con PIN.
-      if (!canUseGlobalMode && companies.length > 1) {
-        setOpen(false);
-        setPendingCompany({
-          id: c.id,
-          name: c.name,
-          logo_url: c.logoUrl,
-          brand_color: c.brandColor,
-        });
-        setPinDialogOpen(true);
-        return;
-      }
+      // P0 AUTH PIN CANONICALIZATION: el cambio de compañía no pide PIN.
+      // La membresía ya está resuelta por el acceso; un segundo PIN solo
+      // reintroducía credenciales divergentes.
       performSwitch(c.id);
     };
 
