@@ -485,6 +485,11 @@ Deno.serve(async (req) => {
         await adminClient.auth.admin.updateUserById(employee.user_id, { password: pwd });
       }
 
+      // Escritor único: la credencial canónica se crea contra el Auth User.
+      if (employee.user_id) {
+        await setCanonicalPin(adminClient, employee.user_id, pin, "activation");
+      }
+
       await ensureEmployeeRole(adminClient, employee.user_id);
 
       const loginEmail = await resolveAuthEmail(adminClient, employee.user_id, empEmail);
