@@ -17,6 +17,7 @@
  */
 
 import { getShiftDisplayIdentity } from "./shift-identity";
+import { lookupShiftRef } from "./service-ref-registry";
 
 export interface ShiftRefSource {
   shift_ref?: string | null;
