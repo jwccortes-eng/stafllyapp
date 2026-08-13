@@ -2,6 +2,7 @@ import { getShiftStaffingMetrics } from "@/lib/shifts/staffing-metrics";
 import { CalendarX2 } from "lucide-react";
 import { CancelShiftDialog } from "@/components/shifts/CancelShiftDialog";
 import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
+import { ServiceSegmentsPanel } from "@/components/shifts/ServiceSegmentsPanel";
 import { Sheet, SheetContent, SheetTitle, OpsSheetHeader, OpsSheetBody, OpsSheetFooter } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
