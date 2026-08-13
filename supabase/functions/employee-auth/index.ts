@@ -978,20 +978,17 @@ Deno.serve(async (req) => {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const { data: emps } = await adminClient
-        .from("employees")
-        .select("id, first_name, last_name, access_pin, user_id")
-        .not("access_pin", "is", null)
-        .not("user_id", "is", null);
-
-      let updated = 0;
-      for (const e of emps ?? []) {
-        if (e.access_pin && e.user_id) {
-          const pwd = authPassword(e.access_pin);
-          const { error } = await adminClient.auth.admin.updateUserById(e.user_id, { password: pwd });
-          if (!error) updated++;
-        }
-      }
+      // RETIRADO (P0 AUTH PIN CANONICALIZATION): este escritor propagaba el PIN
+      // legacy de una ficha arbitraria a la contraseña de autenticación.
+      return new Response(
+        JSON.stringify({
+          error: "Operación retirada. El PIN es único por persona y se gestiona con reset de PIN.",
+          code: "retired",
+        }),
+        { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+      // deno-lint-ignore no-unreachable
+      const updated = 0;
 
       return new Response(
         JSON.stringify({ success: true, updated }),
