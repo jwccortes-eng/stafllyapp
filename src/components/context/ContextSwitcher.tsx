@@ -490,13 +490,6 @@ export const ContextSwitcher = forwardRef<HTMLDivElement, ContextSwitcherProps>(
     const [online, setOnline] = useState(
       typeof navigator === "undefined" ? true : navigator.onLine,
     );
-    const [pinDialogOpen, setPinDialogOpen] = useState(false);
-    const [pendingCompany, setPendingCompany] = useState<{
-      id: string;
-      name: string;
-      logo_url?: string | null;
-      brand_color?: string | null;
-    } | null>(null);
 
     const pendingCompanyRef = useRef<string | null>(null);
 
