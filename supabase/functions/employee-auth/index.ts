@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPinAuthMode, PIN_AUTH_MODE_DEFAULT, type PinAuthMode } from "../_shared/security-flags.ts";
 import { validatePinDual } from "../_shared/pin-validation.ts";
+import { resolveMultiCompanyAccess, accessDeniedMessage } from "../_shared/multi-company-access.ts";
 
 // Internal prefix to meet Supabase min-password-length (6 chars) while keeping 4-digit PINs
 const AUTH_PWD_PREFIX = "SF_";
