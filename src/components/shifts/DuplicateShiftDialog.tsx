@@ -325,7 +325,7 @@ export function DuplicateShiftDialog({
     });
     const intent = buildSeriesIntentFromSnapshot({ snapshot, baseDate: dateStr });
     const sourceRef = intent.recurrence.occurrences[0]?.sourceRef ?? null;
-    const insertPayload = buildCanonicalServiceInsert({
+    const basePayload = buildCanonicalServiceInsert({
       snapshot,
       date: dateStr,
       sourceRef,
@@ -333,6 +333,18 @@ export function DuplicateShiftDialog({
       // Explicitly draft. Never auto-publish.
       draft: true,
     });
+    /**
+     * MISMO SERVICIO: el nuevo registro es un HORARIO del servicio raíz.
+     * Conserva QK/cliente/job site del evento y estrena su propio ciclo
+     * operativo (clock, time entries, asistencia, cierre y payroll aparte).
+     */
+    const insertPayload = mode === "same"
+      ? {
+          ...basePayload,
+          parent_shift_id: parentServiceId,
+          segment_label: segmentName.trim() || null,
+        }
+      : basePayload;
 
 
     const { data: created, error: insertErr } = await supabase
