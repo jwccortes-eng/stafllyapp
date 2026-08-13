@@ -113,6 +113,7 @@ import type { Shift, Assignment, SelectOption, ClientOption, Employee, ViewMode 
 import { formatShiftCode } from "@/components/shifts/types";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
+import { useServiceRootRefs } from "@/hooks/useServiceRootRefs";
 
 // Fields that affect ALL assigned employees (broadcast notification)
 const BROADCAST_FIELDS = ["date", "start_time", "end_time", "location_id", "client_id"];
@@ -441,6 +442,8 @@ function DesktopShifts() {
   }, []);
 
   const [shifts, setShifts] = useState<Shift[]>([]);
+  // P0 · SERVICE ROOT QK: el QK visible siempre es el del servicio raíz.
+  useServiceRootRefs(shifts);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   // `loading` reflects ONLY the very first load. Background refetches use `isRefetching`
   // so the previous data stays visible — no skeleton flash, no layout shift.

@@ -2,6 +2,7 @@ import { getShiftStaffingMetrics } from "@/lib/shifts/staffing-metrics";
 import { CalendarX2 } from "lucide-react";
 import { CancelShiftDialog } from "@/components/shifts/CancelShiftDialog";
 import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
+import { useServiceRootRefs } from "@/hooks/useServiceRootRefs";
 import { ServiceSegmentsPanel } from "@/components/shifts/ServiceSegmentsPanel";
 import { Sheet, SheetContent, SheetTitle, OpsSheetHeader, OpsSheetBody, OpsSheetFooter } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
@@ -205,6 +206,8 @@ export function ShiftDetailDialog({
   });
   const shift = (canonicalShift ?? shiftProp) as Shift | null;
 
+  // P0 · SERVICE ROOT QK: la cabecera muestra el QK del servicio raíz.
+  useServiceRootRefs(shift ? [shift as any] : []);
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [tab, setTab] = useState(initialTab || "details");
@@ -580,11 +583,21 @@ export function ShiftDetailDialog({
               {getShiftDisplayIdentity(shift).primaryRefKind !== "none" && (
                 <span
                   className="text-[9.5px] font-mono font-semibold text-muted-foreground bg-muted/60 rounded px-1.5 py-px shrink-0"
-                  title={getShiftDisplayIdentity(shift).legacyLabel ?? undefined}
+                  title={
+                    getShiftDisplayIdentity(shift).segmentRef
+                      ? `Referencia técnica del horario: ${getShiftDisplayIdentity(shift).segmentRef}`
+                      : getShiftDisplayIdentity(shift).legacyLabel ?? undefined
+                  }
                 >
                   {getShiftDisplayIdentity(shift).primaryRef}
                 </span>
               )}
+              {getShiftDisplayIdentity(shift).isServiceSegment && (
+                <span className="text-[9.5px] font-semibold text-primary bg-primary/10 rounded px-1.5 py-px shrink-0">
+                  {getShiftDisplayIdentity(shift).segmentLabel ?? "Horario del servicio"}
+                </span>
+              )}
+
             </div>
           }
           subtitle={

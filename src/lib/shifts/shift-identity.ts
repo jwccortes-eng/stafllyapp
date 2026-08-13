@@ -22,17 +22,25 @@
  *   - este módulo es puro: sin React, sin red, sin escrituras.
  */
 
+import { lookupShiftRef } from "./service-ref-registry";
+
 export interface ShiftIdentitySource {
   id?: string | null;
   shift_ref?: string | null;
   shift_number?: number | null;
   shift_code?: string | null;
   company_id?: string | null;
+  /** P0 · SERVICE ROOT QK: horario interno de un servicio raíz. */
+  parent_shift_id?: string | null;
+  /** Nombre operativo del horario ("Setup", "Service"…). */
+  segment_label?: string | null;
 }
 
 export type PrimaryRefKind =
   /** `shift_ref` real, emitido por la secuencia de la empresa. */
   | "canonical"
+  /** QK heredado del servicio raíz (este turno es un horario del servicio). */
+  | "service_root"
   /** Turno histórico sin `shift_ref`: se muestra el código legado, etiquetado. */
   | "legacy_fallback"
   /** Ni referencia ni código: no hay identidad visible. */
@@ -54,7 +62,18 @@ export interface ShiftDisplayIdentity {
   internalId: string | null;
   /** `true` cuando existe `shift_ref`. */
   hasCanonicalRef: boolean;
+  /** `true` cuando este turno es un horario dentro de un servicio raíz. */
+  isServiceSegment: boolean;
+  /** QK del servicio raíz cuando se conoce. */
+  serviceRef: string | null;
+  /** UUID del servicio raíz (él mismo cuando no es segmento). */
+  serviceId: string | null;
+  /** Nombre del horario ("Setup"); sólo para segmentos. */
+  segmentLabel: string | null;
+  /** `shift_ref` técnico propio del hijo. Nunca es el identificador principal. */
+  segmentRef: string | null;
 }
+
 
 const EMPTY: ShiftDisplayIdentity = {
   primaryRef: "—",
@@ -65,15 +84,30 @@ const EMPTY: ShiftDisplayIdentity = {
   companyName: null,
   internalId: null,
   hasCanonicalRef: false,
+  isServiceSegment: false,
+  serviceRef: null,
+  serviceId: null,
+  segmentLabel: null,
+  segmentRef: null,
 };
 
 function clean(v: unknown): string {
   return typeof v === "string" ? v.trim() : v == null ? "" : String(v).trim();
 }
 
+export interface ShiftIdentityOptions {
+  companyName?: string | null;
+  /**
+   * QK del servicio raíz. Cuando no se pasa, se resuelve con el registro en
+   * memoria (`service-ref-registry`). Nunca se inventa: si no se conoce, el
+   * turno muestra su propia referencia.
+   */
+  serviceRef?: string | null;
+}
+
 export function getShiftDisplayIdentity(
   shift: ShiftIdentitySource | null | undefined,
-  opts?: { companyName?: string | null },
+  opts?: ShiftIdentityOptions,
 ): ShiftDisplayIdentity {
   if (!shift) return { ...EMPTY, companyName: opts?.companyName?.trim() || null };
 
@@ -82,17 +116,49 @@ export function getShiftDisplayIdentity(
   const companyName = opts?.companyName?.trim() || null;
   const internalId = clean(shift.id) || null;
 
-  if (ref) {
+  const parentId = clean(shift.parent_shift_id) || null;
+  const isSegment = !!parentId;
+  const serviceId = parentId ?? internalId;
+  const segmentLabel = clean(shift.segment_label) || null;
+  const resolvedServiceRef = isSegment
+    ? clean(opts?.serviceRef) || lookupShiftRef(parentId) || null
+    : ref || null;
+
+  if (isSegment && resolvedServiceRef) {
     return {
-      primaryRef: ref,
-      primaryRefKind: "canonical",
-      primaryRefNote: null,
-      // El código legado sólo se conserva si dice algo distinto a la referencia.
-      legacyRef: legacy && !ref.endsWith(legacy.padStart(6, "0")) ? legacy : null,
-      legacyLabel: legacy && !ref.endsWith(legacy.padStart(6, "0")) ? `Referencia anterior: ${legacy}` : null,
+      primaryRef: resolvedServiceRef,
+      primaryRefKind: "service_root",
+      primaryRefNote: segmentLabel,
+      legacyRef: null,
+      legacyLabel: null,
       companyName,
       internalId,
       hasCanonicalRef: true,
+      isServiceSegment: true,
+      serviceRef: resolvedServiceRef,
+      serviceId,
+      segmentLabel,
+      segmentRef: ref || null,
+    };
+  }
+
+  if (ref) {
+    const showLegacy = !!legacy && !ref.endsWith(legacy.padStart(6, "0"));
+    return {
+      primaryRef: ref,
+      primaryRefKind: "canonical",
+      primaryRefNote: isSegment ? segmentLabel : null,
+      // El código legado sólo se conserva si dice algo distinto a la referencia.
+      legacyRef: showLegacy ? legacy : null,
+      legacyLabel: showLegacy ? `Referencia anterior: ${legacy}` : null,
+      companyName,
+      internalId,
+      hasCanonicalRef: true,
+      isServiceSegment: isSegment,
+      serviceRef: isSegment ? null : ref,
+      serviceId,
+      segmentLabel,
+      segmentRef: isSegment ? ref : null,
     };
   }
 
@@ -106,11 +172,17 @@ export function getShiftDisplayIdentity(
       companyName,
       internalId,
       hasCanonicalRef: false,
+      isServiceSegment: isSegment,
+      serviceRef: null,
+      serviceId,
+      segmentLabel,
+      segmentRef: null,
     };
   }
 
-  return { ...EMPTY, companyName, internalId };
+  return { ...EMPTY, companyName, internalId, isServiceSegment: isSegment, serviceId, segmentLabel };
 }
+
 
 /** Atajo para listas y cabeceras: sólo el texto de la referencia visible. */
 export function shiftRefLabel(

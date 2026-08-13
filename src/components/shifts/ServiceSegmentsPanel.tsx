@@ -3,6 +3,7 @@ import { Layers } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { rememberShiftRefs } from "@/lib/shifts/service-ref-registry";
 import {
   buildServiceGroups,
   describeServiceGroup,
@@ -38,6 +39,7 @@ export function ServiceSegmentsPanel({ shift, companyId, onOpenSegment, classNam
         .or(`id.eq.${rootId},parent_shift_id.eq.${rootId}`);
       if (cancelled) return;
       const rows = (data ?? []) as SegmentShiftLike[];
+      rememberShiftRefs(rows as { id?: string | null; shift_ref?: string | null }[]);
       if (rows.length < 2) return;
       const groups = buildServiceGroups(rows);
       setGroup(groups.find((g) => g.key === rootId) ?? null);

@@ -45,6 +45,7 @@ import { BulkServiceCreationDialog } from "@/components/shifts/bulk/BulkServiceC
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { buildShiftPeopleIndex, shiftMatchesPersonQuery, normalizeSearchText } from "@/lib/shifts/shift-people-search";
 import { displayShiftRef } from "@/lib/shifts/shift-ref";
+import { useServiceRootRefs } from "@/hooks/useServiceRootRefs";
 import { clientAccentColor } from "@/lib/clients/client-accent";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
@@ -133,6 +134,7 @@ export default function MobileShiftsView() {
   );
 
   const [shifts, setShifts] = useState<Shift[]>([]);
+  useServiceRootRefs(shifts);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [clients, setClients] = useState<SelectOption[]>([]);
   const [locations, setLocations] = useState<SelectOption[]>([]);

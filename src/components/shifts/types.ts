@@ -21,6 +21,10 @@ export interface Shift {
   shift_number?: number | null;
   /** Número visible por empresa, p. ej. `QK-001573`. */
   shift_ref?: string | null;
+  /** Servicio raíz cuando este turno es un horario interno (Setup, VIP…). */
+  parent_shift_id?: string | null;
+  /** Nombre operativo del horario dentro del servicio. */
+  segment_label?: string | null;
   // ── Optional traceability fields (read-only).
   // Present in scheduled_shifts schema. Loaded by views that need lineage
   // (e.g. MobileShiftOperationsSheet). Safe to omit elsewhere.
