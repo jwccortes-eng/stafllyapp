@@ -31,6 +31,7 @@
  *   • Same-tenant identity trigger (Phase 1) still enforces resolution rules.
  */
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,7 +47,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, ShieldOff, ShieldAlert, Building2 } from "lucide-react";
+import { AlertTriangle, ShieldOff, ShieldAlert, Building2, Search, UserCheck, Globe2, Loader2 } from "lucide-react";
+import {
+  ACTION_LABELS,
+  actionsForMatch,
+  classifyPhoneMatches,
+  isSearchablePhone,
+  personDisplayName,
+  type LookupOutcome,
+  type PhoneMatch,
+} from "@/lib/people/existing-person-flow";
 
 // ── Validation schema (client-side; DB trigger is the hard guard) ─────────
 const schema = z.object({
