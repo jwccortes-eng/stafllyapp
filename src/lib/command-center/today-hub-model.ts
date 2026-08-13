@@ -19,6 +19,21 @@
 import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { readAttendance } from "./attendance-semantics";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
+import {
+  serviceDeepLink,
+  hoursDeepLink,
+  timeclockDeepLink,
+  type ServiceStage,
+} from "./deep-link";
+import {
+  resolveShiftPublicationTruth,
+  type ShiftTruthShiftInput,
+} from "@/lib/shifts/publication-truth";
+import {
+  resolveServiceLocationTruth,
+  type ServiceLocationInput,
+} from "@/lib/shifts/service-location";
+
 
 export interface HubShiftOpsLike {
   bucket: string;
