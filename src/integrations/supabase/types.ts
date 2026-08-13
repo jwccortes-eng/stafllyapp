@@ -18599,6 +18599,35 @@ export type Database = {
         Returns: Json
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      emergency_worker_add_company_membership: {
+        Args: {
+          _company_id: string
+          _note?: string
+          _source_employee_id: string
+        }
+        Returns: {
+          created: boolean
+          employee_id: string
+        }[]
+      }
+      emergency_worker_phone_lookup: {
+        Args: { _company_id: string; _phone: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          employee_id: string
+          first_name: string
+          has_portal_user: boolean
+          identity_status: string
+          is_active: boolean
+          last_name: string
+          merged_into_employee_id: string
+          phone_number: string
+          portal_access_enabled: boolean
+          same_company: boolean
+          worker_type: string
+        }[]
+      }
       employee_has_access_pin: {
         Args: { _employee_id: string }
         Returns: boolean

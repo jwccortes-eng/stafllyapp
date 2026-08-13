@@ -31,12 +31,14 @@
  *   • Same-tenant identity trigger (Phase 1) still enforces resolution rules.
  */
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 import { normalizePhone } from "@/lib/phone";
+import { cn } from "@/lib/utils";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -46,7 +48,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, ShieldOff, ShieldAlert, Building2 } from "lucide-react";
+import { AlertTriangle, ShieldOff, ShieldAlert, Building2, Search, UserCheck, Globe2, Loader2 } from "lucide-react";
+import {
+  ACTION_LABELS,
+  actionsForMatch,
+  classifyPhoneMatches,
+  isSearchablePhone,
+  personDisplayName,
+  type LookupOutcome,
+  type PhoneMatch,
+} from "@/lib/people/existing-person-flow";
 
 // ── Validation schema (client-side; DB trigger is the hard guard) ─────────
 const schema = z.object({
@@ -111,6 +122,12 @@ export default function EmergencyWorkerDialog({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
+
+  // P0 · PERSONA EXISTENTE: nunca se inserta antes de buscar por teléfono.
+  const [searching, setSearching] = useState(false);
+  const [acting, setActing] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<LookupOutcome | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -121,11 +138,100 @@ export default function EmergencyWorkerDialog({
       });
       setErrors({});
       setSaving(false);
+      setOutcome(null);
+      setSearching(false);
+      setActing(null);
     }
   }, [open]);
 
-  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => {
+    if (k === "phone" || k === "noPhone") setOutcome(null);
     setForm((prev) => ({ ...prev, [k]: v }));
+  };
+
+  const closeWith = (employeeId: string, first: string, last: string | null, phone: string | null) => {
+    onCreated?.({
+      id: employeeId,
+      first_name: first,
+      last_name: last,
+      phone_number: phone,
+    } as unknown as EmergencyWorkerCreated);
+    onOpenChange(false);
+  };
+
+  /** Paso 1 obligatorio: buscar por teléfono antes de cualquier INSERT. */
+  const runLookup = async () => {
+    if (!selectedCompanyId) return;
+    if (form.noPhone) {
+      setOutcome(classifyPhoneMatches([], { hasPhone: false }));
+      return;
+    }
+    if (!isSearchablePhone(form.phone)) {
+      setErrors((e) => ({ ...e, phone: "Escribe un teléfono válido para buscar." }));
+      return;
+    }
+    setErrors((e) => ({ ...e, phone: "" }));
+    setSearching(true);
+    const { data, error } = await (supabase as any).rpc("emergency_worker_phone_lookup", {
+      _company_id: selectedCompanyId,
+      _phone: form.phone,
+    });
+    setSearching(false);
+    if (error) {
+      toast({ title: "No se pudo verificar el teléfono", description: error.message, variant: "destructive" });
+      return;
+    }
+    setOutcome(classifyPhoneMatches((data ?? []) as PhoneMatch[], { hasPhone: true }));
+  };
+
+  const runAction = async (action: string, match: PhoneMatch) => {
+    if (!selectedCompanyId) return;
+    if (action === "assign_to_service") {
+      closeWith(match.employee_id, match.first_name ?? "", match.last_name, match.phone_number);
+      return;
+    }
+    if (action === "view_profile" || action === "update_data" || action === "open_canonical") {
+      const target = action === "open_canonical" ? match.merged_into_employee_id! : match.employee_id;
+      onOpenChange(false);
+      navigate(`/app/employees/${target}`);
+      return;
+    }
+    if (action === "reactivate_access") {
+      setActing(match.employee_id);
+      const { error } = await (supabase as any)
+        .from("employees")
+        .update({ is_active: true })
+        .eq("id", match.employee_id)
+        .eq("company_id", selectedCompanyId);
+      setActing(null);
+      if (error) {
+        toast({ title: "No se pudo reactivar", description: error.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Acceso reactivado", description: `${personDisplayName(match)} vuelve a estar disponible.` });
+      await runLookup();
+      return;
+    }
+    if (action === "add_membership") {
+      setActing(match.employee_id);
+      const { data, error } = await (supabase as any).rpc("emergency_worker_add_company_membership", {
+        _company_id: selectedCompanyId,
+        _source_employee_id: match.employee_id,
+        _note: `emergency flow · shift=${shiftId ?? "unpublished"} · by=${user?.id ?? "unknown"}`,
+      });
+      setActing(null);
+      if (error) {
+        toast({ title: "No se pudo agregar a esta empresa", description: error.message, variant: "destructive" });
+        return;
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      toast({
+        title: row?.created ? "Persona agregada a esta empresa" : "Ya existía en esta empresa",
+        description: "Misma identidad, sin duplicar teléfono ni perfil.",
+      });
+      closeWith(row.employee_id, match.first_name ?? "", match.last_name, match.phone_number);
+    }
+  };
 
   const submit = async () => {
     setErrors({});
@@ -137,6 +243,14 @@ export default function EmergencyWorkerDialog({
       toast({
         title: "Sin permisos",
         description: "Solo admins/supervisores pueden crear trabajadores de emergencia.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!outcome?.canCreateNew) {
+      toast({
+        title: "Verifica primero el teléfono",
+        description: "Busca a la persona antes de crear un registro nuevo.",
         variant: "destructive",
       });
       return;
@@ -282,6 +396,16 @@ export default function EmergencyWorkerDialog({
               onChange={(e) => set("phone", e.target.value.slice(0, 30))}
               className="h-8 text-sm" placeholder="(555) 555-0100" />
             {errors.phone && <p className="text-[11px] text-destructive mt-1">{errors.phone}</p>}
+            <Button
+              type="button" variant="outline" size="sm"
+              className="mt-2 h-8 w-full text-xs"
+              onClick={runLookup}
+              disabled={searching || (!form.noPhone && !isSearchablePhone(form.phone))}
+            >
+              {searching
+                ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Buscando…</>
+                : <><Search className="h-3.5 w-3.5 mr-1.5" /> Buscar persona por teléfono</>}
+            </Button>
             <div className="flex items-start gap-2 mt-2">
               <Checkbox id="ew-nophone" checked={form.noPhone}
                 onCheckedChange={(c) => set("noPhone", !!c)} />
@@ -303,6 +427,43 @@ export default function EmergencyWorkerDialog({
               </div>
             </div>
           </div>
+
+          {outcome && (
+            <div className={cn(
+              "rounded-md border p-3 text-xs space-y-2",
+              outcome.decision === "create_new" ? "bg-muted/30" : "border-primary/40 bg-primary/5",
+            )}>
+              <div className="flex items-center gap-1.5 font-semibold">
+                {outcome.decision === "reuse_in_company" && <UserCheck className="h-3.5 w-3.5 text-primary" />}
+                {outcome.decision === "add_membership" && <Globe2 className="h-3.5 w-3.5 text-primary" />}
+                {outcome.decision === "reuse_in_company" ? "✓ " : ""}{outcome.headline}
+              </div>
+              <p className="text-muted-foreground leading-snug">{outcome.detail}</p>
+
+              {[...outcome.sameCompany, ...outcome.otherCompanies].map((m) => (
+                <div key={m.employee_id} className="rounded border bg-background p-2 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium truncate">{personDisplayName(m)}</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">
+                      {m.same_company ? (m.is_active === false ? "Inactivo aquí" : "Activo aquí") : m.company_name ?? "Otra empresa"}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {actionsForMatch(m).map((a) => (
+                      <Button
+                        key={a} type="button" size="sm" variant={a === "assign_to_service" || a === "add_membership" ? "default" : "outline"}
+                        className="h-7 text-[11px]"
+                        disabled={acting === m.employee_id}
+                        onClick={() => runAction(a, m)}
+                      >
+                        {ACTION_LABELS[a]}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div>
             <Label htmlFor="ew-reason" className="text-xs">Motivo de emergencia *</Label>
@@ -346,9 +507,9 @@ export default function EmergencyWorkerDialog({
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button size="sm" onClick={submit} disabled={saving || !isAdmin}
+          <Button size="sm" onClick={submit} disabled={saving || !isAdmin || !outcome?.canCreateNew}
             className="bg-amber-600 hover:bg-amber-700 text-white">
-            {saving ? "Creando…" : "Crear trabajador de emergencia"}
+            {saving ? "Creando…" : outcome?.canCreateNew ? "Crear trabajador de emergencia" : "Busca el teléfono primero"}
           </Button>
         </DialogFooter>
       </DialogContent>
