@@ -609,6 +609,11 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
         attendance.state === "missing_checkin" ||
         attendance.state === "awaiting_checkin")
     ) {
+      // A QUIÉN afecta: personas activas sin fichaje de entrada.
+      const pendingIds = (shift.workers ?? [])
+        .filter((w) => (w.clock_state ?? "none") === "none")
+        .map((w) => w.employee_id);
+      const names = peopleNames(shift.workers, pendingIds);
       push(
         {
           id: `${shift.id}:attendance`,
@@ -622,11 +627,35 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
               ? "Cobertura real menor a la comprometida con el cliente."
               : "La cobertura real aún no está confirmada en sitio.",
           action: perms.canManageAttendance
-            ? { label: "Revisar asistencia", href: ROUTES.shiftOps(shift.id) }
+            ? {
+                label:
+                  attendance.state === "no_show_confirmed"
+                    ? "Reemplazar"
+                    : "Revisar asistencia",
+                href: ROUTES.shiftOps(
+                  shift.id,
+                  "attendance",
+                  pendingIds.length === 1 ? pendingIds[0] : null,
+                ),
+              }
             : undefined,
           shiftId: shift.id,
         },
         attendance.state === "no_show_confirmed" ? "no_show" : "attendance",
+        {
+          type: "attendance_risk",
+          title: attendance.label,
+          stage: "attendance",
+          context: {
+            people: names,
+            peopleCount: attendance.count,
+            expected: `Check-in a las ${hhmm(shift.start_time)}`,
+            current:
+              attendance.state === "no_show_confirmed"
+                ? `${attendance.count} ausencia(s) confirmada(s)`
+                : `${attendance.count} sin fichaje de entrada`,
+          },
+        },
       );
     }
 
@@ -644,17 +673,35 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           because: `${range}${where ? ` · ${where}` : ""} — ${startsInLabel(mins)}.`,
           impact: "El turno no puede considerarse cubierto.",
           action: perms.canAssign
-            ? { label: "Completar equipo", href: ROUTES.shiftOps(shift.id) }
+            ? { label: "Completar equipo", href: ROUTES.shiftOps(shift.id, "team") }
             : undefined,
           shiftId: shift.id,
         },
         "coverage",
+        {
+          type: "coverage_gap",
+          title: "Cobertura incompleta",
+          stage: "team",
+          context: {
+            peopleCount: 0,
+            expected: `${required} persona(s) asignada(s)`,
+            current: `${assigned} de ${required} · faltan ${missing}`,
+          },
+        },
       );
     }
 
     /* — Sin confirmar antes de empezar — */
     const unconfirmed = Math.max(0, assigned - ops.confirmed);
     if (unconfirmed > 0 && mins > 0 && mins <= 12 * 60) {
+      const pendingIds = (shift.workers ?? [])
+        .filter(
+          (w) =>
+            !["confirmed", "accepted"].includes(
+              String(w.assignment_status ?? "").toLowerCase(),
+            ),
+        )
+        .map((w) => w.employee_id);
       push(
         {
           id: `${shift.id}:unconfirmed`,
@@ -665,12 +712,31 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           because: `El turno ${startsInLabel(mins)} y aún no responden.`,
           impact: "Riesgo de arrancar sin equipo completo.",
           action: perms.canConfirmTeam
-            ? { label: "Contactar pendientes", href: ROUTES.shiftOps(shift.id) }
+            ? {
+                label: "Contactar pendientes",
+                href: ROUTES.shiftOps(
+                  shift.id,
+                  "team",
+                  pendingIds.length === 1 ? pendingIds[0] : null,
+                ),
+              }
             : undefined,
 
           shiftId: shift.id,
         },
         "unconfirmed",
+        {
+          type: "unconfirmed_team",
+          title: "Equipo sin confirmar",
+          stage: "team",
+          severity: "prep",
+          context: {
+            people: peopleNames(shift.workers, pendingIds),
+            peopleCount: unconfirmed,
+            expected: `${assigned} confirmación(es) antes de ${hhmm(shift.start_time)}`,
+            current: `${ops.confirmed} de ${assigned} confirmados`,
+          },
+        },
       );
     }
 
@@ -686,16 +752,29 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           because: "El turno requiere transporte y no hay conductor.",
           impact: "El equipo puede no llegar al punto de encuentro.",
           action: perms.canAssign
-            ? { label: "Asignar conductor", href: ROUTES.shiftOps(shift.id) }
+            ? { label: "Asignar conductor", href: ROUTES.shiftOps(shift.id, "operation") }
             : undefined,
           shiftId: shift.id,
         },
         "transport",
+        {
+          type: "missing_driver",
+          title: "Sin conductor",
+          stage: "operation",
+          context: {
+            peopleCount: 0,
+            expected: "1 conductor asignado",
+            current: "Sin conductor",
+          },
+        },
       );
     }
 
     /* — Fichajes abiertos sin salida — */
     if (ops.missing_clock_outs > 0) {
+      const openIds = (shift.workers ?? [])
+        .filter((w) => (w.clock_state ?? "") === "missing_out")
+        .map((w) => w.employee_id);
       push(
         {
           id: `${shift.id}:open-clock`,
@@ -706,13 +785,141 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           because: "El turno terminó y los relojes siguen abiertos.",
           impact: "Las horas no pueden revisarse hasta cerrarlos.",
           action: perms.canManageAttendance
-            ? { label: "Cerrar clock-out", href: ROUTES.timeclock(shift.id) }
+            ? {
+                label: "Cerrar clock-out",
+                href: ROUTES.timeclock(
+                  shift.id,
+                  openIds.length === 1 ? openIds[0] : null,
+                ),
+              }
             : undefined,
           shiftId: shift.id,
         },
         "open_clock",
+        {
+          type: "missing_clock_out",
+          title: "Fichajes sin salida",
+          stage: "time",
+          context: {
+            people: peopleNames(shift.workers, openIds),
+            peopleCount: ops.missing_clock_outs,
+            expected: `Clock-out a las ${hhmm(shift.end_time)}`,
+            current: `${ops.missing_clock_outs} reloj(es) abierto(s)`,
+          },
+        },
       );
     }
+
+    /* — Publicación pendiente (Publication Truth, resolver canónico) — */
+    if (shift.publication_status !== undefined && assigned > 0) {
+      const truth = resolveShiftPublicationTruth({
+        shift: {
+          id: shift.id,
+          slots: shift.slots ?? null,
+          status: shift.status ?? null,
+          publication_status: shift.publication_status ?? null,
+          claimable: shift.claimable ?? null,
+        } as ShiftTruthShiftInput,
+        assignments: (shift.workers ?? []).map((w) => ({
+          status: w.assignment_status ?? "assigned",
+          response_status: w.response_status ?? null,
+        })) as never,
+      });
+      if (!truth.is_published && !truth.is_cancelled) {
+        push(
+          {
+            id: `${shift.id}:not-published`,
+            kind: "risk",
+            priority: mins <= 12 * 60 ? "high" : "medium",
+            status: "draft",
+            headline: `${shift.title} asignado pero sin publicar`,
+            because:
+              truth.admin_blocking_reason ??
+              "El equipo está asignado internamente y el servicio no está publicado.",
+            impact: "Nadie del equipo ve este servicio en su portal.",
+            action: perms.canOperate
+              ? { label: "Publicar", href: ROUTES.shiftOps(shift.id, "summary") }
+              : undefined,
+            shiftId: shift.id,
+          },
+          "coverage",
+          {
+            type: "not_published",
+            title: "Sin publicar",
+            stage: "summary",
+            severity: mins <= 12 * 60 ? "attention" : "prep",
+            context: {
+              peopleCount: assigned,
+              expected: "Servicio publicado y visible para el equipo",
+              current: truth.admin_label,
+            },
+          },
+        );
+      }
+    }
+
+    /* — Ubicación (Location Truth). Sólo si el llamador hidrató la entrada:
+         sin datos NO se declara "falta ubicación" (anti falso positivo). — */
+    if (shift.location) {
+      const loc = resolveServiceLocationTruth(shift.location);
+      if (loc.destinationStatus === "MISSING_DESTINATION") {
+        push(
+          {
+            id: `${shift.id}:destination`,
+            kind: "risk",
+            priority: mins <= 4 * 60 ? "critical" : "high",
+            status: "blocked",
+            headline: `Sin destino operativo en ${shift.title}`,
+            because: "El servicio no tiene sitio, dirección ni punto declarado.",
+            impact: "El equipo no sabe a dónde ir.",
+            action: perms.canOperate
+              ? { label: "Definir ubicación", href: ROUTES.shiftOps(shift.id, "operation") }
+              : undefined,
+            shiftId: shift.id,
+          },
+          "coverage",
+          {
+            type: "missing_destination",
+            title: "Falta ubicación",
+            stage: "operation",
+            context: {
+              peopleCount: assigned,
+              expected: "Un destino operativo declarado",
+              current: "Sin destino",
+            },
+          },
+        );
+      } else if (loc.meetingPointMissing) {
+        push(
+          {
+            id: `${shift.id}:meeting-point`,
+            kind: "risk",
+            priority: "medium",
+            status: "warning",
+            headline: `Falta punto de encuentro en ${shift.title}`,
+            because: "El servicio requiere transporte y no hay punto de encuentro.",
+            impact: "El equipo no sabe dónde abordar.",
+            action: perms.canOperate
+              ? { label: "Definir punto", href: ROUTES.shiftOps(shift.id, "operation") }
+              : undefined,
+            shiftId: shift.id,
+          },
+          "transport",
+          {
+            type: "missing_meeting_point",
+            title: "Sin punto de encuentro",
+            stage: "operation",
+            severity: "prep",
+            context: {
+              peopleCount: assigned,
+              expected: "Punto de encuentro declarado",
+              current: "Sin punto de encuentro",
+            },
+          },
+        );
+      }
+    }
+
 
     /* — Solicitudes pendientes (decisión) — */
     if ((shift.pending_claims ?? 0) > 0) {
