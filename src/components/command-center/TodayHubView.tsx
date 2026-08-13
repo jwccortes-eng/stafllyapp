@@ -373,7 +373,12 @@ export default function TodayHubView() {
           jobSiteV2: s.job_site_location_name
             ? { name: s.job_site_location_name }
             : null,
-          legacyVenue: s.job_site_name ? { name: s.job_site_name } : null,
+          // `job_site_name` ya resuelve V2 primero; sólo es venue legado
+          // cuando no hay Job Site V2.
+          legacyVenue:
+            !s.job_site_location_name && s.job_site_name
+              ? { name: s.job_site_name }
+              : null,
           meetingV2: s.meeting_point_location_name
             ? { name: s.meeting_point_location_name }
             : null,
