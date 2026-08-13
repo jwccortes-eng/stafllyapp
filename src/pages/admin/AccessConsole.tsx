@@ -75,8 +75,10 @@ export default function AccessConsole() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [actions, setActions] = useState<Record<string, boolean>>({});
-  const [modules, setModules] = useState<ModuleState>({});
+  /** Capa 2: overrides explícitos de esta compañía. ÚNICO estado editable. */
+  const [draft, setDraft] = useState<OverrideDraft>(EMPTY_DRAFT);
+  /** Copia de lo persistido, para detectar cambios sin guardar y revertir. */
+  const [baseline, setBaseline] = useState<OverrideDraft>(EMPTY_DRAFT);
   const [legacyRows, setLegacyRows] = useState<ModulePermissionRow[]>([]);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
