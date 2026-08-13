@@ -28,11 +28,17 @@ export interface ShiftIdentitySource {
   shift_number?: number | null;
   shift_code?: string | null;
   company_id?: string | null;
+  /** P0 · SERVICE ROOT QK: horario interno de un servicio raíz. */
+  parent_shift_id?: string | null;
+  /** Nombre operativo del horario ("Setup", "Service"…). */
+  segment_label?: string | null;
 }
 
 export type PrimaryRefKind =
   /** `shift_ref` real, emitido por la secuencia de la empresa. */
   | "canonical"
+  /** QK heredado del servicio raíz (este turno es un horario del servicio). */
+  | "service_root"
   /** Turno histórico sin `shift_ref`: se muestra el código legado, etiquetado. */
   | "legacy_fallback"
   /** Ni referencia ni código: no hay identidad visible. */
@@ -54,7 +60,18 @@ export interface ShiftDisplayIdentity {
   internalId: string | null;
   /** `true` cuando existe `shift_ref`. */
   hasCanonicalRef: boolean;
+  /** `true` cuando este turno es un horario dentro de un servicio raíz. */
+  isServiceSegment: boolean;
+  /** QK del servicio raíz cuando se conoce. */
+  serviceRef: string | null;
+  /** UUID del servicio raíz (él mismo cuando no es segmento). */
+  serviceId: string | null;
+  /** Nombre del horario ("Setup"); sólo para segmentos. */
+  segmentLabel: string | null;
+  /** `shift_ref` técnico propio del hijo. Nunca es el identificador principal. */
+  segmentRef: string | null;
 }
+
 
 const EMPTY: ShiftDisplayIdentity = {
   primaryRef: "—",
