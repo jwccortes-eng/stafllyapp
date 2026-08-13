@@ -215,6 +215,21 @@ export default function AccessConsole() {
 
   const target = members.find((m) => m.user_id === selectedUser) ?? null;
 
+  /** Personas de la empresa mapeadas a la cadena operativa (solo lectura). */
+  const operatingPeople: OperatingPerson[] = useMemo(
+    () =>
+      members.map((m) => {
+        const p = resolvePrimaryRole(m.role, m.overrides);
+        return {
+          userId: m.user_id,
+          name: m.full_name ?? m.email ?? "Sin nombre",
+          role: p.role?.key ?? null,
+          custom: p.custom,
+        };
+      }),
+    [members],
+  );
+
   /* ---------------- capas: role defaults · overrides · effective ---------------- */
   const evaluateWith = useCallback(
     (source: OverrideDraft) => {
