@@ -212,7 +212,7 @@ export default function TodayHubView() {
   const isMobile = useIsMobile();
   const { selectedCompanyId } = useCompany();
   const today = useMemo(() => new Date(), []);
-  const { loading, error, shifts, refresh } = useTodayOperations(
+  const { loading, error, shifts, employeesById, refresh } = useTodayOperations(
     selectedCompanyId ?? null,
     today,
   );
