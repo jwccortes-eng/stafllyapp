@@ -62,14 +62,19 @@ const MODE_LABELS: Record<RepeatMode, string> = {
   next_n: "Próximos N días",
 };
 
-/** Compute concrete dates from repeat config + base date */
+/**
+ * Compute concrete dates from repeat config + base date.
+ *
+ * Regla operativa: si el operador definió un rango válido y NO impuso una
+ * restricción adicional (días de la semana), se generan TODAS las fechas del
+ * rango. Un rango sin días marcados nunca puede degradar la serie a 1 Servicio.
+ */
 export function computeRepeatDates(baseDate: string, config: RepeatConfig): string[] {
   if (!config.enabled || !baseDate) return [];
 
   const base = parse(baseDate, "yyyy-MM-dd", new Date());
 
   if (config.mode === "weekdays") {
-    if (config.selectedDays.length === 0) return [];
     const start = config.rangeStart
       ? parse(config.rangeStart, "yyyy-MM-dd", new Date())
       : base;
@@ -78,23 +83,33 @@ export function computeRepeatDates(baseDate: string, config: RepeatConfig): stri
       : addDays(start, 13); // default 2 weeks
     if (isAfter(start, end)) return [];
 
+    // Sin días marcados = sin restricción: todo el rango.
+    const noRestriction = config.selectedDays.length === 0;
+    // Sin rango explícito y sin días marcados no hay intención de repetir.
+    if (noRestriction && !config.rangeEnd && !config.rangeStart) return [];
+
     const allDays = eachDayOfInterval({ start, end });
     return allDays
-      .filter(d => config.selectedDays.includes(getDay(d)))
+      .filter(d => noRestriction || config.selectedDays.includes(getDay(d)))
       .filter(d => format(d, "yyyy-MM-dd") !== baseDate) // exclude base date
       .map(d => format(d, "yyyy-MM-dd"));
   }
 
   if (config.mode === "range") {
-    if (!config.rangeStart || !config.rangeEnd) return [];
-    const start = parse(config.rangeStart, "yyyy-MM-dd", new Date());
-    const end = parse(config.rangeEnd, "yyyy-MM-dd", new Date());
+    if (!config.rangeStart && !config.rangeEnd) return [];
+    const start = config.rangeStart
+      ? parse(config.rangeStart, "yyyy-MM-dd", new Date())
+      : base;
+    const end = config.rangeEnd
+      ? parse(config.rangeEnd, "yyyy-MM-dd", new Date())
+      : start;
     if (isAfter(start, end)) return [];
 
     return eachDayOfInterval({ start, end })
       .filter(d => format(d, "yyyy-MM-dd") !== baseDate)
       .map(d => format(d, "yyyy-MM-dd"));
   }
+
 
   if (config.mode === "next_n") {
     const n = Math.max(1, Math.min(config.nextNDays, 60));
