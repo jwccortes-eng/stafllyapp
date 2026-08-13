@@ -656,6 +656,14 @@ export function ShiftDetailDialog({
           </div>
         </div>
 
+        {/* ── Horarios del mismo servicio (mismo QK) ── */}
+        <div className="px-4 pt-3 empty:hidden">
+          <ServiceSegmentsPanel
+            shift={shift as unknown as { id: string; parent_shift_id?: string | null }}
+            companyId={(shift as unknown as { company_id?: string | null }).company_id ?? null}
+          />
+        </div>
+
         {/* ── Unstaffed import alert (FASE 1: visibilidad de imports rotos) ── */}
         <div className="px-4 pt-3">
           <UnstaffedAlert
