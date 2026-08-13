@@ -121,6 +121,12 @@ export default function EmergencyWorkerDialog({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
+
+  // P0 · PERSONA EXISTENTE: nunca se inserta antes de buscar por teléfono.
+  const [searching, setSearching] = useState(false);
+  const [acting, setActing] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<LookupOutcome | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -131,11 +137,100 @@ export default function EmergencyWorkerDialog({
       });
       setErrors({});
       setSaving(false);
+      setOutcome(null);
+      setSearching(false);
+      setActing(null);
     }
   }, [open]);
 
-  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => {
+    if (k === "phone" || k === "noPhone") setOutcome(null);
     setForm((prev) => ({ ...prev, [k]: v }));
+  };
+
+  const closeWith = (employeeId: string, first: string, last: string | null, phone: string | null) => {
+    onCreated?.({
+      id: employeeId,
+      first_name: first,
+      last_name: last,
+      phone_number: phone,
+    } as unknown as EmergencyWorkerCreated);
+    onOpenChange(false);
+  };
+
+  /** Paso 1 obligatorio: buscar por teléfono antes de cualquier INSERT. */
+  const runLookup = async () => {
+    if (!selectedCompanyId) return;
+    if (form.noPhone) {
+      setOutcome(classifyPhoneMatches([], { hasPhone: false }));
+      return;
+    }
+    if (!isSearchablePhone(form.phone)) {
+      setErrors((e) => ({ ...e, phone: "Escribe un teléfono válido para buscar." }));
+      return;
+    }
+    setErrors((e) => ({ ...e, phone: "" }));
+    setSearching(true);
+    const { data, error } = await (supabase as any).rpc("emergency_worker_phone_lookup", {
+      _company_id: selectedCompanyId,
+      _phone: form.phone,
+    });
+    setSearching(false);
+    if (error) {
+      toast({ title: "No se pudo verificar el teléfono", description: error.message, variant: "destructive" });
+      return;
+    }
+    setOutcome(classifyPhoneMatches((data ?? []) as PhoneMatch[], { hasPhone: true }));
+  };
+
+  const runAction = async (action: string, match: PhoneMatch) => {
+    if (!selectedCompanyId) return;
+    if (action === "assign_to_service") {
+      closeWith(match.employee_id, match.first_name ?? "", match.last_name, match.phone_number);
+      return;
+    }
+    if (action === "view_profile" || action === "update_data" || action === "open_canonical") {
+      const target = action === "open_canonical" ? match.merged_into_employee_id! : match.employee_id;
+      onOpenChange(false);
+      navigate(`/app/employees/${target}`);
+      return;
+    }
+    if (action === "reactivate_access") {
+      setActing(match.employee_id);
+      const { error } = await (supabase as any)
+        .from("employees")
+        .update({ is_active: true })
+        .eq("id", match.employee_id)
+        .eq("company_id", selectedCompanyId);
+      setActing(null);
+      if (error) {
+        toast({ title: "No se pudo reactivar", description: error.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Acceso reactivado", description: `${personDisplayName(match)} vuelve a estar disponible.` });
+      await runLookup();
+      return;
+    }
+    if (action === "add_membership") {
+      setActing(match.employee_id);
+      const { data, error } = await (supabase as any).rpc("emergency_worker_add_company_membership", {
+        _company_id: selectedCompanyId,
+        _source_employee_id: match.employee_id,
+        _note: `emergency flow · shift=${shiftId ?? "unpublished"} · by=${user?.id ?? "unknown"}`,
+      });
+      setActing(null);
+      if (error) {
+        toast({ title: "No se pudo agregar a esta empresa", description: error.message, variant: "destructive" });
+        return;
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      toast({
+        title: row?.created ? "Persona agregada a esta empresa" : "Ya existía en esta empresa",
+        description: "Misma identidad, sin duplicar teléfono ni perfil.",
+      });
+      closeWith(row.employee_id, match.first_name ?? "", match.last_name, match.phone_number);
+    }
+  };
 
   const submit = async () => {
     setErrors({});
@@ -147,6 +242,14 @@ export default function EmergencyWorkerDialog({
       toast({
         title: "Sin permisos",
         description: "Solo admins/supervisores pueden crear trabajadores de emergencia.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!outcome?.canCreateNew) {
+      toast({
+        title: "Verifica primero el teléfono",
+        description: "Busca a la persona antes de crear un registro nuevo.",
         variant: "destructive",
       });
       return;
