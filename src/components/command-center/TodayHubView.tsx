@@ -422,26 +422,42 @@ export default function TodayHubView() {
     );
   }
 
+  /* P1 — La bandeja manda: alertas con contexto, agrupadas por servicio.
+     Los KPIs sin servicio siguen siendo items de atención. */
+  const inboxGroups = model.alertGroups.filter(
+    (g) => g.severity === "critical" || g.severity === "attention",
+  );
+  const alertIds = new Set(model.alerts.map((a) => a.id));
   const attention = model.attentionItems.filter(
-    (i) => i.priority === "critical" || i.priority === "high",
+    (i) =>
+      !alertIds.has(i.id) &&
+      (i.priority === "critical" || i.priority === "high"),
   );
   const secondaryKpis = model.attentionItems.filter(
-    (i) => i.priority === "medium" || i.priority === "low",
+    (i) =>
+      !alertIds.has(i.id) &&
+      (i.priority === "medium" || i.priority === "low"),
   );
+  const inboxCount =
+    inboxGroups.reduce((n, g) => n + g.alerts.length, 0) + attention.length;
 
-  /* Bloque 1 — Atención */
+  /* Bloque 1 — Bandeja operativa */
   const attentionBlock =
-    attention.length > 0 ? (
+    inboxCount > 0 ? (
       <Section
         eyebrow="Prioridad"
         title="Atención"
-        helper="Sólo lo que requiere una decisión ahora."
-        count={attention.length}
+        helper="Qué pasó, dónde, a quién afecta y qué hacer ahora."
+        count={inboxCount}
       >
+        {inboxGroups.map((group) => (
+          <AlertGroupBlock key={group.shiftId} group={group} go={go} />
+        ))}
         {attention.map((item) => (
           <AttentionEntry key={item.id} item={item} go={go} />
         ))}
       </Section>
+
     ) : (
       <Section eyebrow="Estado" title={model.emptyState.headline}>
         <OperationalCard
