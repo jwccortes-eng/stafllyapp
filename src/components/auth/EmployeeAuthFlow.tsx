@@ -18,6 +18,7 @@ type EmployeeStep = "phone" | "activate_pin" | "activate_profile" | "login_pin" 
 
 interface EmployeeInfo {
   found: boolean;
+  access_disabled?: boolean;
   requires_activation: boolean;
   is_active: boolean;
 }
@@ -68,12 +69,17 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
         return;
       }
 
-      if (data?.error) {
-        toast({ title: "Error", description: data.error, variant: "destructive" });
-      } else if (!data?.found) {
+      if (!data?.found) {
         toast({ title: "Not found", description: "No account linked to this number. Check with your administrator.", variant: "destructive" });
-      } else if (!data.is_active) {
-        toast({ title: "Account inactive", description: "Your account is inactive. Contact your administrator.", variant: "destructive" });
+      } else if (data?.access_disabled) {
+        // Identidad válida, pero sin ninguna empresa activa.
+        toast({
+          title: "Access disabled",
+          description: data.error || "Your access is disabled in all your companies. Contact your coordinator.",
+          variant: "destructive",
+        });
+      } else if (data?.error) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
       } else {
         setEmployeeInfo(data);
         if (!data.requires_activation) {
