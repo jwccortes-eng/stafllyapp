@@ -223,25 +223,26 @@ export default function AccessConsole() {
 
   const save = async () => {
     if (!selectedUser || !selectedCompanyId) return;
+    const attempted = draft;
     setSaving(true);
-    const modulePayload: Record<string, { view: boolean; edit: boolean; delete: boolean }> = {};
-    for (const [k, v] of Object.entries(modules)) modulePayload[k] = v;
 
     const { error } = await supabase.rpc("admin_set_user_access", {
       _user_id: selectedUser,
       _company_id: selectedCompanyId,
-      _actions: actions,
-      _modules: modulePayload,
+      _actions: attempted.actions,
+      _modules: attempted.modules,
       _reason: reason || null,
     } as never);
 
     setSaving(false);
     if (error) {
+      // Revertir: el estado editable vuelve a lo persistido.
+      setDraft(baseline);
       notifyError({
         key: "access-save",
         title: "No se guardaron los permisos",
         fact: error.message,
-        consequence: "El acceso de esta persona sigue como estaba.",
+        consequence: "El acceso de esta persona sigue como estaba y los cambios se descartaron.",
         action: { label: "Reintentar", onClick: () => void save() },
         cause: error,
       });
@@ -255,6 +256,7 @@ export default function AccessConsole() {
     });
     void loadProfile(selectedUser);
   };
+
 
   /* ---------------- render ---------------- */
   if (status === "loading") return <AuthorizationLoading />;
