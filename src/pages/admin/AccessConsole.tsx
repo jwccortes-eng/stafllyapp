@@ -596,8 +596,9 @@ export default function AccessConsole() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Roles como plantillas</CardTitle>
               <CardDescription className="text-xs">
-                Un rol es un punto de partida de permisos, no la autoridad final. Aplícalo a la persona
-                seleccionada en la pestaña Usuarios y luego ajusta excepciones.
+                Un rol es un punto de partida de permisos, no la autoridad final. Aquí ves qué hace, qué
+                alcance tiene y quién lo tiene. Al aplicarlo se abre Usuarios, la única superficie donde se
+                edita el acceso de una persona.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
