@@ -24,6 +24,11 @@ import {
   switchValue,
   type OverrideDraft,
 } from "@/lib/auth/permission-overrides";
+import {
+  SCOPE_LABELS,
+  roleFromTemplateName,
+  rolesForMembership,
+} from "@/lib/auth/role-model";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
