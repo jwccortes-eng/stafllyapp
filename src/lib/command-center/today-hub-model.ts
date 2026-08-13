@@ -1090,13 +1090,68 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
   }
 
 
-  const attentionItems = attention
-    .sort(
-      (a, b) =>
-        PRIORITY_WEIGHT[a.priority] + a._boost -
-        (PRIORITY_WEIGHT[b.priority] + b._boost),
-    )
-    .map(({ _boost, ...item }) => item);
+  const sortedAttention = attention.sort(
+    (a, b) =>
+      PRIORITY_WEIGHT[a.priority] + a._boost -
+      (PRIORITY_WEIGHT[b.priority] + b._boost),
+  );
+
+  /* — Bandeja operativa: proyección de los mismos items, con contexto —
+     No hay una segunda derivación: las alertas SON los items de atención
+     que declararon metadatos de alerta. Una sola verdad, dos formatos. */
+  const alerts: HubAlert[] = sortedAttention
+    .filter((a) => a._alert && a.shiftId && a.context)
+    .map((a) => ({
+      id: a.id,
+      shiftId: a.shiftId!,
+      type: a._alert!.type,
+      severity: a._alert!.severity,
+      priority: a.priority,
+      status: a.status,
+      title: a._alert!.title,
+      headline: a.headline,
+      because: a.because,
+      impact: a.impact,
+      context: a.context!,
+      stage: a._alert!.stage,
+      cta: a.action,
+      secondary: a.alternatives ?? [],
+    }));
+
+  const groupIndex = new Map<string, HubAlertGroup>();
+  for (const alert of alerts) {
+    const shift = input.shifts.find((s) => s.id === alert.shiftId);
+    const existing = groupIndex.get(alert.shiftId);
+    if (existing) {
+      existing.alerts.push(alert);
+      if (SEVERITY_WEIGHT[alert.severity] < SEVERITY_WEIGHT[existing.severity]) {
+        existing.severity = alert.severity;
+        existing.priority = alert.priority;
+        existing.action = alert.cta ?? existing.action;
+      }
+      continue;
+    }
+    groupIndex.set(alert.shiftId, {
+      shiftId: alert.shiftId,
+      serviceRef: alert.context.serviceRef,
+      title: shift?.title ?? alert.context.serviceRef ?? "Servicio",
+      clientName: alert.context.clientName,
+      whenLabel: alert.context.whenLabel,
+      locationName: alert.context.locationName,
+      severity: alert.severity,
+      priority: alert.priority,
+      alerts: [alert],
+      action: alert.cta,
+    });
+  }
+  const alertGroups = [...groupIndex.values()].sort(
+    (a, b) => SEVERITY_WEIGHT[a.severity] - SEVERITY_WEIGHT[b.severity],
+  );
+
+  const attentionItems = sortedAttention.map(
+    ({ _boost, _alert, ...item }) => item,
+  );
+
 
   const activeOperations = sortByPriority(operations);
   const teamSummaries = sortByPriority(teams);
