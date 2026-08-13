@@ -133,6 +133,7 @@ export default function MobileShiftsView() {
   );
 
   const [shifts, setShifts] = useState<Shift[]>([]);
+  useServiceRootRefs(shifts);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [clients, setClients] = useState<SelectOption[]>([]);
   const [locations, setLocations] = useState<SelectOption[]>([]);
