@@ -113,6 +113,7 @@ import type { Shift, Assignment, SelectOption, ClientOption, Employee, ViewMode 
 import { formatShiftCode } from "@/components/shifts/types";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
+import { useServiceRootRefs } from "@/hooks/useServiceRootRefs";
 
 // Fields that affect ALL assigned employees (broadcast notification)
 const BROADCAST_FIELDS = ["date", "start_time", "end_time", "location_id", "client_id"];
