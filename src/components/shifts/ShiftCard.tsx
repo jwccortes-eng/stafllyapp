@@ -8,6 +8,7 @@ import type { Shift } from "./types";
 import { getClientColor, isDraftShift } from "./types";
 import { buildShiftCardTitle } from "@/lib/shifts/card-display";
 import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
+import { isServiceSegment, segmentLabel } from "@/lib/shifts/service-segments";
 import { UnstaffedAlert } from "./UnstaffedAlert";
 
 export interface AssignedEmployee {
