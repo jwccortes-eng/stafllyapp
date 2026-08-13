@@ -564,6 +564,18 @@ export default function AccessConsole() {
                       </p>
                     </div>
 
+                    {/* RESPONSABILIDAD — el mismo acceso, en lenguaje de negocio */}
+                    <ResponsibilityCard
+                      roleKey={primary?.role?.key ?? null}
+                      displayRole={primary?.label ?? "Acceso personalizado"}
+                      companyName={selectedCompany?.name ?? "esta empresa"}
+                      people={operatingPeople}
+                      grantedCount={grantedSet.size}
+                      overrideCount={exceptions}
+                    />
+
+
+
                     {(target.role === "company_owner" || target.role === "admin") && (
                       <p className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
                         Esta persona es <strong>{target.role}</strong> en {selectedCompany?.name}: su membresía concede
