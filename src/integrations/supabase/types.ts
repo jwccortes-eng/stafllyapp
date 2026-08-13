@@ -18599,6 +18599,17 @@ export type Database = {
         Returns: Json
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      emergency_worker_add_company_membership: {
+        Args: {
+          _company_id: string
+          _note?: string
+          _source_employee_id: string
+        }
+        Returns: {
+          created: boolean
+          employee_id: string
+        }[]
+      }
       emergency_worker_phone_lookup: {
         Args: { _company_id: string; _phone: string }
         Returns: {
