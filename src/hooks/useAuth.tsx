@@ -185,7 +185,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetAuthState = useCallback(() => {
+    setAuthorizationStatus("loading");
     setRole(null);
+
     setAllRoles(new Set());
     setCompanyRoles({});
     setEmployeeId(null);
@@ -337,6 +339,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cause: err,
       });
       resetAuthState();
+      // FASE 2 — el fallo de autorización es un estado explícito, no un "deny silencioso".
+      setAuthorizationStatus("error");
+
     }
   }, [resetAuthState]);
 
