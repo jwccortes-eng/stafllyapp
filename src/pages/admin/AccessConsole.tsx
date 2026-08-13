@@ -97,6 +97,8 @@ export default function AccessConsole() {
   const [draft, setDraft] = useState<OverrideDraft>(EMPTY_DRAFT);
   /** Copia de lo persistido, para detectar cambios sin guardar y revertir. */
   const [baseline, setBaseline] = useState<OverrideDraft>(EMPTY_DRAFT);
+  /** ROL OPERATIVO explícito en edición (SSOT al guardar). */
+  const [roleDraft, setRoleDraft] = useState<string | null>(null);
   const [legacyRows, setLegacyRows] = useState<ModulePermissionRow[]>([]);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
@@ -215,6 +217,12 @@ export default function AccessConsole() {
   useEffect(() => {
     if (selectedUser) void loadProfile(selectedUser);
   }, [selectedUser, loadProfile]);
+
+  // El rol en edición siempre parte del rol explícito persistido de esta empresa.
+  useEffect(() => {
+    const m = members.find((x) => x.user_id === selectedUser) ?? null;
+    setRoleDraft(m?.operating_role_key ?? null);
+  }, [selectedUser, members]);
 
   const target = members.find((m) => m.user_id === selectedUser) ?? null;
 
@@ -335,7 +343,10 @@ export default function AccessConsole() {
     });
   };
 
-  const discard = () => setDraft(baseline);
+  const discard = () => {
+    setDraft(baseline);
+    setRoleDraft(target?.operating_role_key ?? null);
+  };
 
 
 
@@ -350,6 +361,7 @@ export default function AccessConsole() {
       _actions: attempted.actions,
       _modules: attempted.modules,
       _reason: reason || null,
+      _operating_role: roleDraft ?? "",
     } as never);
 
     setSaving(false);
@@ -373,6 +385,12 @@ export default function AccessConsole() {
       consequence: "Aplica solo a esta empresa y queda registrado en Actividad.",
     });
     void loadProfile(selectedUser);
+    // Refresca la membresía para que Roles y Modelo operativo lean el rol nuevo.
+    setMembers((prev) =>
+      prev.map((m) =>
+        m.user_id === selectedUser ? { ...m, operating_role_key: roleDraft ?? null } : m,
+      ),
+    );
   };
 
 
