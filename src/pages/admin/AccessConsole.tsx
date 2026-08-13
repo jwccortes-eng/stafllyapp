@@ -131,6 +131,8 @@ export default function AccessConsole() {
         supabase.from("module_permissions").select("module, company_id, can_view, can_edit, can_delete").eq("user_id", userId),
       ]);
 
+      // OVERRIDES = solo lo explícito de ESTA compañía. Lo heredado
+      // (company_id NULL) alimenta el preview, nunca el estado editable.
       const nextActions: Record<string, boolean> = {};
       for (const a of acts ?? []) nextActions[a.action] = a.granted;
 
@@ -140,14 +142,10 @@ export default function AccessConsole() {
       for (const m of scoped) {
         nextModules[m.module] = { view: m.can_view, edit: m.can_edit, delete: m.can_delete };
       }
-      // Heredado (sin compañía): se muestra como punto de partida, pero al
-      // guardar queda escrito explícitamente para ESTA compañía.
-      for (const m of legacy) {
-        nextModules[m.module] ??= { view: m.can_view, edit: m.can_edit, delete: m.can_delete };
-      }
 
-      setActions(nextActions);
-      setModules(nextModules);
+      const loaded: OverrideDraft = { actions: nextActions, modules: nextModules };
+      setDraft(loaded);
+      setBaseline(loaded);
       setLegacyRows(legacy);
       setReason("");
       setLoadingProfile(false);
@@ -161,75 +159,56 @@ export default function AccessConsole() {
 
   const target = members.find((m) => m.user_id === selectedUser) ?? null;
 
-  /* ---------------- evaluación efectiva (misma lógica que backend) ---------------- */
-  const preview = useMemo(() => {
-    if (!target || !selectedCompanyId) return {} as Record<string, boolean>;
-    const actionRows: ActionPermissionRow[] = Object.entries(actions).map(([action, granted]) => ({
-      action,
-      company_id: selectedCompanyId,
-      granted,
-    }));
-    const moduleRows: ModulePermissionRow[] = Object.entries(modules).map(([module, v]) => ({
-      module,
-      company_id: selectedCompanyId,
-      can_view: v.view,
-      can_edit: v.edit,
-      can_delete: v.delete,
-    }));
-    return evaluateAccessPreview(
-      {
-        globalRoles: new Set<string>(),
-        companyRoles: { [selectedCompanyId]: target.role },
-        modulePermissions: [...moduleRows, ...legacyRows],
-        actionPermissions: actionRows,
-      },
-      selectedCompanyId,
-    );
-  }, [target, selectedCompanyId, actions, modules, legacyRows]);
+  /* ---------------- capas: role defaults · overrides · effective ---------------- */
+  const evaluateWith = useCallback(
+    (source: OverrideDraft) => {
+      if (!target || !selectedCompanyId) return {} as Record<string, boolean>;
+      const actionRows: ActionPermissionRow[] = Object.entries(source.actions).map(([action, granted]) => ({
+        action,
+        company_id: selectedCompanyId,
+        granted,
+      }));
+      const moduleRows: ModulePermissionRow[] = Object.entries(source.modules).map(([module, v]) => ({
+        module,
+        company_id: selectedCompanyId,
+        can_view: v.view,
+        can_edit: v.edit,
+        can_delete: v.delete,
+      }));
+      return evaluateAccessPreview(
+        {
+          globalRoles: new Set<string>(),
+          companyRoles: { [selectedCompanyId]: target.role },
+          modulePermissions: [...moduleRows, ...legacyRows],
+          actionPermissions: actionRows,
+        },
+        selectedCompanyId,
+      );
+    },
+    [target, selectedCompanyId, legacyRows],
+  );
+
+  /** Capa 1: lo que concede el rol por sí solo (sin overrides). */
+  const roleDefaults = useMemo(() => evaluateWith(EMPTY_DRAFT), [evaluateWith]);
+  /** Capa 3: acceso efectivo = rol + overrides. SOLO LECTURA. */
+  const preview = useMemo(() => evaluateWith(draft), [evaluateWith, draft]);
 
   const grantedSet = useMemo(
     () => new Set(Object.entries(preview).filter(([, v]) => v).map(([k]) => k)),
     [preview],
   );
 
-  /* ---------------- edición ---------------- */
+  const dirty = useMemo(() => isDirty(draft, baseline), [draft, baseline]);
+  const changedCount = useMemo(() => changedPermissions(draft, baseline).length, [draft, baseline]);
+
+  /* ---------------- edición (capa 2: overrides) ---------------- */
   const togglePermission = (spec: PermissionSpec, next: boolean) => {
-    if (spec.legacyAction) {
-      setActions((prev) => ({ ...prev, [spec.legacyAction as string]: next }));
-    }
-    if (spec.legacyModule && spec.legacyLevel) {
-      setModules((prev) => {
-        const cur = prev[spec.legacyModule as string] ?? { view: false, edit: false, delete: false };
-        const updated = { ...cur, [spec.legacyLevel as string]: next };
-        // editar/eliminar implican poder ver
-        if (next && spec.legacyLevel !== "view") updated.view = true;
-        if (!next && spec.legacyLevel === "view") {
-          updated.edit = false;
-          updated.delete = false;
-        }
-        return { ...prev, [spec.legacyModule as string]: updated };
-      });
-    }
+    if (isProtected(target?.role, spec)) return;
+    setDraft((prev) => applyToggle(prev, spec, next));
   };
 
   const applyTemplate = (tpl: RoleTemplate) => {
-    const next: Record<string, boolean> = { ...actions };
-    for (const spec of PERMISSION_CATALOG) if (spec.legacyAction) next[spec.legacyAction] = false;
-    for (const a of tpl.actions) next[a] = true;
-    setActions(next);
-    // los módulos siguen a las acciones del catálogo
-    const nextModules: ModuleState = { ...modules };
-    for (const spec of PERMISSION_CATALOG) {
-      if (!spec.legacyModule || !spec.legacyLevel || !spec.legacyAction) continue;
-      const on = !!next[spec.legacyAction];
-      const cur = nextModules[spec.legacyModule] ?? { view: false, edit: false, delete: false };
-      nextModules[spec.legacyModule] = {
-        ...cur,
-        [spec.legacyLevel]: on || cur[spec.legacyLevel],
-        view: on ? true : cur.view,
-      };
-    }
-    setModules(nextModules);
+    setDraft((prev) => applyTemplateToDraft(prev, tpl.actions));
     notifySuccess({
       key: "access-template",
       title: `Plantilla "${tpl.name}" aplicada`,
@@ -237,6 +216,10 @@ export default function AccessConsole() {
       consequence: "Revisa el perfil y pulsa Guardar cambios.",
     });
   };
+
+  const discard = () => setDraft(baseline);
+
+
 
   const save = async () => {
     if (!selectedUser || !selectedCompanyId) return;
