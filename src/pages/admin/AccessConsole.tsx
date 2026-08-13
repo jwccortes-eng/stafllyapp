@@ -27,7 +27,7 @@ import {
 import {
   SCOPE_LABELS,
   roleFromTemplateName,
-  rolesForMembership,
+  
   templateActionsFor,
 } from "@/lib/auth/role-model";
 import { assignableRoles, resolvePrimaryRole } from "@/lib/auth/primary-role";
