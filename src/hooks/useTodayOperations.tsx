@@ -279,7 +279,13 @@ export function useTodayOperations(
         missing_driver: required && driverIds.size === 0,
         capacity_short: required && slots > capacity_total,
       };
-
+      // Destino canónico: Job Site V2 manda sobre el venue legado.
+      const jobSiteName: string | null = s.job_site_location_id
+        ? ((locV2Map.get(s.job_site_location_id) as string | undefined) ?? null)
+        : null;
+      const legacyVenueName: string | null = s.location_id
+        ? ((locMap.get(s.location_id) as string | undefined) ?? null)
+        : null;
 
       return {
         id: s.id,
