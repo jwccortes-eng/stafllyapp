@@ -821,6 +821,24 @@ export default function AccessConsole() {
           </Card>
         </TabsContent>
 
+        {/* ---------------- MODELO OPERATIVO ---------------- */}
+        <TabsContent value="model" className="mt-4">
+          <Card>
+            <CardContent className="pt-6">
+              <CompanyOperatingModel
+                companyName={selectedCompany?.name ?? "esta empresa"}
+                people={operatingPeople}
+                onSelectPerson={(id) => {
+                  setSelectedUser(id);
+                  setTab("users");
+                }}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+
+
         {/* ---------------- CATÁLOGO ---------------- */}
         <TabsContent value="catalog" className="mt-4">
           <Card>
