@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { SEGMENT_PRESETS } from "@/lib/shifts/service-segments";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -64,6 +66,10 @@ interface SourceShift {
   meeting_point_location_id?: string | null;
   job_site_location_id?: string | null;
   claimable?: boolean | null;
+  /** QK visible del servicio. Se conserva cuando se agrega otro horario. */
+  shift_ref?: string | null;
+  /** Si ya es un horario interno, el nuevo cuelga del MISMO servicio raíz. */
+  parent_shift_id?: string | null;
 }
 
 interface SourceAssignment {
@@ -107,6 +113,12 @@ export function DuplicateShiftDialog({
   open, onOpenChange, shift, assignments, companyId, userId,
   defaultCopyWorkers = false, onDuplicated,
 }: Props) {
+  /**
+   * P1 — MISMO SERVICIO vs NUEVO SERVICIO.
+   * `choose` es la primera pantalla: nunca se escribe sin decidir la intención.
+   */
+  const [mode, setMode] = useState<"choose" | "same" | "new">("choose");
+  const [segmentName, setSegmentName] = useState("");
   const [targetDate, setTargetDate] = useState<Date | undefined>(undefined);
   const [copyClient, setCopyClient] = useState(true);
   const [copyTime, setCopyTime] = useState(true);
@@ -119,6 +131,10 @@ export function DuplicateShiftDialog({
   const [submitting, setSubmitting] = useState(false);
   const [pendingForceEmployee, setPendingForceEmployee] = useState<OverlapRow | null>(null);
 
+  /** Servicio raíz al que pertenecería el nuevo horario. */
+  const parentServiceId = shift.parent_shift_id ?? shift.id;
+  const serviceRef = (shift.shift_ref ?? "").trim() || null;
+
   // Reset when reopened
   useEffect(() => {
     if (open) {
@@ -128,6 +144,8 @@ export function DuplicateShiftDialog({
         employee_ids_received: assignments.map((assignment) => assignment.employee_id),
         default_copy_workers_received: defaultCopyWorkers,
       });
+      setMode("choose");
+      setSegmentName("");
       setTargetDate(undefined);
       setCopyClient(true);
       setCopyTime(true);
@@ -138,6 +156,7 @@ export function DuplicateShiftDialog({
       setOverlaps([]);
     }
   }, [open, defaultCopyWorkers]);
+
 
   // Población base = SOLO los employee_id del Servicio origen. Nunca se consulta
   // el roster completo. De esos ids se verifica la elegibilidad canónica actual.
@@ -308,7 +327,7 @@ export function DuplicateShiftDialog({
     });
     const intent = buildSeriesIntentFromSnapshot({ snapshot, baseDate: dateStr });
     const sourceRef = intent.recurrence.occurrences[0]?.sourceRef ?? null;
-    const insertPayload = buildCanonicalServiceInsert({
+    const basePayload = buildCanonicalServiceInsert({
       snapshot,
       date: dateStr,
       sourceRef,
@@ -316,6 +335,18 @@ export function DuplicateShiftDialog({
       // Explicitly draft. Never auto-publish.
       draft: true,
     });
+    /**
+     * MISMO SERVICIO: el nuevo registro es un HORARIO del servicio raíz.
+     * Conserva QK/cliente/job site del evento y estrena su propio ciclo
+     * operativo (clock, time entries, asistencia, cierre y payroll aparte).
+     */
+    const insertPayload = mode === "same"
+      ? {
+          ...basePayload,
+          parent_shift_id: parentServiceId,
+          segment_label: segmentName.trim() || null,
+        }
+      : basePayload;
 
 
     const { data: created, error: insertErr } = await supabase
@@ -417,28 +448,115 @@ export function DuplicateShiftDialog({
     }
 
     setSubmitting(false);
-    toast.success("Turno duplicado como borrador.", {
-      description: copyWorkers
-        ? `Se copiaron ${workersToCopy.length} trabajador${workersToCopy.length === 1 ? "" : "es"} como pending.`
-        : "Sin trabajadores. Asigna desde Staffing.",
-    });
+    const workersLine = copyWorkers
+      ? `Se copiaron ${workersToCopy.length} trabajador${workersToCopy.length === 1 ? "" : "es"} como pending.`
+      : "Sin trabajadores. Asigna desde Staffing.";
+    toast.success(
+      mode === "same" ? "Horario agregado al mismo servicio." : "Servicio nuevo creado como borrador.",
+      {
+        description: mode === "same"
+          ? `${serviceRef ? `${serviceRef} · ` : ""}Nuevo horario con su propio reloj y horas. ${workersLine}`
+          : `Nuevo consecutivo asignado. ${workersLine}`,
+      },
+    );
     onOpenChange(false);
     onDuplicated?.(newShiftId);
   };
+
+  if (mode === "choose") {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="h-4 w-4 text-primary" /> Duplicar servicio
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              ¿Cómo quieres duplicarlo? Nada se escribe hasta que elijas.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setMode("same")}
+              className="w-full rounded-xl border border-border bg-card p-4 text-left transition hover:border-primary hover:bg-accent/40"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">Mismo servicio</p>
+                <Badge variant="secondary" className="text-[10px]">
+                  {serviceRef ? `Mantiene ${serviceRef}` : "Mantiene la referencia"}
+                </Badge>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Agregar otro horario o equipo al mismo evento (Setup, Service, VIP, Breakdown
+                o una jornada más). Cada horario lleva su propio reloj y sus propias horas.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMode("new")}
+              className="w-full rounded-xl border border-border bg-card p-4 text-left transition hover:border-primary hover:bg-accent/40"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">Nuevo servicio</p>
+                <Badge variant="outline" className="text-[10px]">Nuevo consecutivo</Badge>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Crear un trabajo independiente usando este como plantilla. Genera un
+                consecutivo nuevo y un ciclo operativo aparte.
+              </p>
+            </button>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Copy className="h-4 w-4 text-primary" /> Duplicar turno
+            <Copy className="h-4 w-4 text-primary" />
+            {mode === "same" ? "Agregar horario al mismo servicio" : "Nuevo servicio desde plantilla"}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Siempre crea un borrador nuevo. Nunca publica ni envía notificaciones.
+            {mode === "same"
+              ? `${serviceRef ? `${serviceRef} · ` : ""}Conserva cliente, job site y contexto comercial. No copia reloj, horas, asistencia, cierre ni notificaciones.`
+              : "Siempre crea un borrador nuevo con consecutivo propio. Nunca publica ni envía notificaciones."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          {mode === "same" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Nombre del horario</Label>
+              <Input
+                value={segmentName}
+                onChange={(e) => setSegmentName(e.target.value)}
+                placeholder="Setup, Service, VIP, Breakdown…"
+                className="h-9"
+              />
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {SEGMENT_PRESETS.map((p) => (
+                  <Badge
+                    key={p}
+                    variant={segmentName === p ? "default" : "outline"}
+                    className="cursor-pointer text-[10px]"
+                    onClick={() => setSegmentName(p)}
+                  >
+                    {p}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Target date */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Fecha destino</Label>
@@ -601,12 +719,12 @@ export function DuplicateShiftDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Cancelar
+          <Button variant="ghost" onClick={() => setMode("choose")} disabled={submitting}>
+            Volver
           </Button>
           <Button onClick={handleSubmit} disabled={submitting || !targetDate || (copyWorkers && !checkingOverlap && workersToCopy.length === 0)}>
             {submitting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Copy className="h-4 w-4 mr-1.5" />}
-            Duplicar como borrador
+            {mode === "same" ? "Agregar horario" : "Crear servicio nuevo"}
           </Button>
         </DialogFooter>
       </DialogContent>

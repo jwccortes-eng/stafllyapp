@@ -2,6 +2,7 @@ import { getShiftStaffingMetrics } from "@/lib/shifts/staffing-metrics";
 import { CalendarX2 } from "lucide-react";
 import { CancelShiftDialog } from "@/components/shifts/CancelShiftDialog";
 import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
+import { ServiceSegmentsPanel } from "@/components/shifts/ServiceSegmentsPanel";
 import { Sheet, SheetContent, SheetTitle, OpsSheetHeader, OpsSheetBody, OpsSheetFooter } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -654,6 +655,14 @@ export function ShiftDetailDialog({
               {staffing.assignedActive}/{slotsNum}
             </span>
           </div>
+        </div>
+
+        {/* ── Horarios del mismo servicio (mismo QK) ── */}
+        <div className="px-4 pt-3 empty:hidden">
+          <ServiceSegmentsPanel
+            shift={shift as unknown as { id: string; parent_shift_id?: string | null }}
+            companyId={(shift as unknown as { company_id?: string | null }).company_id ?? null}
+          />
         </div>
 
         {/* ── Unstaffed import alert (FASE 1: visibilidad de imports rotos) ── */}
