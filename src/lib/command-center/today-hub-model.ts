@@ -51,6 +51,21 @@ export interface HubShiftOpsLike {
 }
 
 
+/**
+ * Persona del turno tal como la produce `deriveShiftOpsState` + nombre ya
+ * resuelto por el llamador. Permite que la alerta diga A QUIÉN afecta.
+ */
+export interface HubWorkerLike {
+  employee_id: string;
+  name?: string | null;
+  assignment_status?: string | null;
+  /** none | open | closed | missing_out | unlinked */
+  clock_state?: string | null;
+  clock_in?: string | null;
+  clock_out?: string | null;
+  response_status?: string | null;
+}
+
 export interface HubShiftLike {
   id: string;
   title: string;
@@ -65,6 +80,18 @@ export interface HubShiftLike {
   meeting_point?: string | null;
   meeting_point_location_name?: string | null;
   pending_claims?: number;
+  /** Estado de publicación crudo. Si viene, se evalúa Publication Truth. */
+  publication_status?: string | null;
+  status?: string | null;
+  claimable?: boolean | null;
+  /**
+   * Entrada del resolver canónico de ubicación. SÓLO si el llamador la
+   * hidrata se evalúa la alerta de ubicación: sin datos no se inventa un
+   * "Falta ubicación" (regla dura contra falsos positivos).
+   */
+  location?: ServiceLocationInput | null;
+  /** Personas del turno, para nombrar a quién afecta cada alerta. */
+  workers?: HubWorkerLike[];
   transport?: {
     required: boolean;
     missing_driver: boolean;
@@ -72,6 +99,7 @@ export interface HubShiftLike {
   } | null;
   ops: HubShiftOpsLike;
 }
+
 
 /** Contadores globales ya existentes (tenant-scoped, sólo lectura). */
 export interface HubCounts {
