@@ -270,16 +270,9 @@ Deno.serve(async (req) => {
       };
       if (role === "supervisor") updateFields.employee_role = "Supervisor";
 
-      if (pin_enabled) {
-        const { data: empCheck } = await supabaseAdmin
-          .from("employees")
-          .select("access_pin")
-          .eq("id", employeeId)
-          .maybeSingle();
-        if (!empCheck?.access_pin && phone.length >= 4) {
-          updateFields.access_pin = phone.slice(-4);
-        }
-      }
+      // P0 AUTH PIN CANONICALIZATION: la aprobación no escribe PIN en la ficha.
+      // El PIN se crea una sola vez sobre la credencial del Auth User durante
+      // la activación del portal.
 
       const { error: updErr } = await supabaseAdmin
         .from("employees")
