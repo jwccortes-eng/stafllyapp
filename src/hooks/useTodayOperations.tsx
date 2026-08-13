@@ -143,7 +143,7 @@ export function useTodayOperations(
     const shiftsRes = await supabase
       .from("scheduled_shifts")
       .select(
-        "id, title, date, start_time, end_time, status, publication_status, slots, shift_code, shift_ref, client_id, location_id, meeting_point, meeting_point_location_id, meeting_time, shift_admin_id, transportation_required, car_capacity, driver_employee_id",
+        "id, title, date, start_time, end_time, status, publication_status, slots, shift_code, shift_ref, client_id, location_id, job_site_location_id, job_site_address, claimable, meeting_point, meeting_point_location_id, meeting_time, shift_admin_id, transportation_required, car_capacity, driver_employee_id",
       )
       .eq("company_id", companyId)
       .eq("date", dateStr)
