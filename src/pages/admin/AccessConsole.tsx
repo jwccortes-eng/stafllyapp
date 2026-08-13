@@ -31,7 +31,7 @@ import {
   templateActionsFor,
 } from "@/lib/auth/role-model";
 import { assignableRoles, resolvePrimaryRole } from "@/lib/auth/primary-role";
-import type { OperatingPerson } from "@/lib/auth/operating-model";
+import { RESPONSIBILITIES, type OperatingPerson } from "@/lib/auth/operating-model";
 import { ResponsibilityCard } from "@/components/access/ResponsibilityCard";
 import { CompanyOperatingModel } from "@/components/access/CompanyOperatingModel";
 import { resolvePortalStatus } from "@/lib/portal/portal-status";
