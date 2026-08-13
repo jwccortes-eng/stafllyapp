@@ -1198,7 +1198,10 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
 
 
   return {
+    alerts,
+    alertGroups,
     attentionItems,
+
     activeOperations,
     teamSummaries,
     closeoutItems,
