@@ -31,6 +31,9 @@ import {
   templateActionsFor,
 } from "@/lib/auth/role-model";
 import { assignableRoles, resolvePrimaryRole } from "@/lib/auth/primary-role";
+import type { OperatingPerson } from "@/lib/auth/operating-model";
+import { ResponsibilityCard } from "@/components/access/ResponsibilityCard";
+import { CompanyOperatingModel } from "@/components/access/CompanyOperatingModel";
 import { resolvePortalStatus } from "@/lib/portal/portal-status";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +45,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PageHeader } from "@/components/ui/page-header";
-import { Shield, Check, X, Loader2, Eye, Users, LayoutTemplate, ListChecks } from "lucide-react";
+import { Shield, Check, X, Loader2, Eye, Users, LayoutTemplate, ListChecks, Workflow } from "lucide-react";
 import { notifyError, notifySuccess } from "@/lib/feedback/notify";
 
 interface MemberRow {
@@ -212,6 +215,21 @@ export default function AccessConsole() {
 
   const target = members.find((m) => m.user_id === selectedUser) ?? null;
 
+  /** Personas de la empresa mapeadas a la cadena operativa (solo lectura). */
+  const operatingPeople: OperatingPerson[] = useMemo(
+    () =>
+      members.map((m) => {
+        const p = resolvePrimaryRole(m.role, m.overrides);
+        return {
+          userId: m.user_id,
+          name: m.full_name ?? m.email ?? "Sin nombre",
+          role: p.role?.key ?? null,
+          custom: p.custom,
+        };
+      }),
+    [members],
+  );
+
   /* ---------------- capas: role defaults · overrides · effective ---------------- */
   const evaluateWith = useCallback(
     (source: OverrideDraft) => {
@@ -374,6 +392,7 @@ export default function AccessConsole() {
         <TabsList>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" />Usuarios</TabsTrigger>
           <TabsTrigger value="roles" className="gap-1.5"><LayoutTemplate className="h-3.5 w-3.5" />Roles</TabsTrigger>
+          <TabsTrigger value="model" className="gap-1.5"><Workflow className="h-3.5 w-3.5" />Modelo operativo</TabsTrigger>
           <TabsTrigger value="catalog" className="gap-1.5"><ListChecks className="h-3.5 w-3.5" />Permisos</TabsTrigger>
         </TabsList>
 
@@ -563,6 +582,18 @@ export default function AccessConsole() {
                         a esta empresa.
                       </p>
                     </div>
+
+                    {/* RESPONSABILIDAD — el mismo acceso, en lenguaje de negocio */}
+                    <ResponsibilityCard
+                      roleKey={primary?.role?.key ?? null}
+                      displayRole={primary?.label ?? "Acceso personalizado"}
+                      companyName={selectedCompany?.name ?? "esta empresa"}
+                      people={operatingPeople}
+                      grantedCount={grantedSet.size}
+                      overrideCount={exceptions}
+                    />
+
+
 
                     {(target.role === "company_owner" || target.role === "admin") && (
                       <p className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
@@ -789,6 +820,24 @@ export default function AccessConsole() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ---------------- MODELO OPERATIVO ---------------- */}
+        <TabsContent value="model" className="mt-4">
+          <Card>
+            <CardContent className="pt-6">
+              <CompanyOperatingModel
+                companyName={selectedCompany?.name ?? "esta empresa"}
+                people={operatingPeople}
+                onSelectPerson={(id) => {
+                  setSelectedUser(id);
+                  setTab("users");
+                }}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+
 
         {/* ---------------- CATÁLOGO ---------------- */}
         <TabsContent value="catalog" className="mt-4">
