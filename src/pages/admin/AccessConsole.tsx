@@ -12,6 +12,18 @@ import {
   type PermissionSpec,
 } from "@/lib/auth/permission-catalog";
 import type { ActionPermissionRow, ModulePermissionRow } from "@/lib/auth/permission-resolver";
+import {
+  EMPTY_DRAFT,
+  applyToggle,
+  applyTemplateToDraft,
+  changedPermissions,
+  isConfigurable,
+  isDirty,
+  isProtected,
+  overrideValue,
+  switchValue,
+  type OverrideDraft,
+} from "@/lib/auth/permission-overrides";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
