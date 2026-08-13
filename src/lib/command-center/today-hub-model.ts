@@ -212,6 +212,93 @@ export interface HubLink {
   href: string;
 }
 
+/**
+ * P1 — Bandeja operativa. Severidad visual del Command Center.
+ *  - critical  : rompe el servicio ahora (cobertura, no-show, sin ubicación).
+ *  - attention : se degrada si nadie actúa hoy.
+ *  - prep      : preparación previa (confirmaciones, publicación).
+ *  - info      : contexto, sin acción obligatoria.
+ */
+export type HubAlertSeverity = "critical" | "attention" | "prep" | "info";
+
+/** Tipos canónicos de incidencia. Uno por causa raíz, nunca por pantalla. */
+export type HubAlertType =
+  | "coverage_gap"
+  | "unconfirmed_team"
+  | "attendance_risk"
+  | "missing_clock_out"
+  | "missing_driver"
+  | "not_published"
+  | "missing_destination"
+  | "missing_meeting_point";
+
+/**
+ * Contexto obligatorio de toda alerta. Responde en <3 s:
+ * QUÉ pasó · DÓNDE · A QUIÉN afecta · CUÁNDO.
+ */
+export interface HubAlertContext {
+  /** Referencia canónica visible (QK-00xxxx). Nunca el UUID. */
+  serviceRef: string | null;
+  /** Cliente del servicio. */
+  clientName: string | null;
+  /** Sitio / punto de encuentro legible. */
+  locationName: string | null;
+  /** "Hoy" · "Mañana" · "Ayer" · "12 mar". */
+  dateLabel: string;
+  /** "08:00–16:00". */
+  timeLabel: string;
+  /** "Hoy · 08:00–16:00". */
+  whenLabel: string;
+  /** Antigüedad humana: "hace 32 min" / "en 2 h". */
+  ageLabel: string;
+  /** Personas afectadas, ya nombradas. Vacío si es del servicio completo. */
+  people: string[];
+  /** Cuántas personas afecta. 0 = afecta al servicio. */
+  peopleCount: number;
+  /** Qué se esperaba. */
+  expected: string;
+  /** Qué está pasando realmente. */
+  current: string;
+}
+
+export interface HubAlert {
+  id: string;
+  shiftId: string;
+  type: HubAlertType;
+  severity: HubAlertSeverity;
+  priority: HubPriority;
+  status: string;
+  /** Título corto y humano: "Cobertura incompleta". */
+  title: string;
+  /** Lectura accionable en una frase. */
+  headline: string;
+  /** Por qué el sistema lo señala. */
+  because: string;
+  /** Qué pasa si no se actúa. */
+  impact?: string;
+  context: HubAlertContext;
+  /** Etapa exacta del Service Command Center donde se resuelve. */
+  stage: ServiceStage;
+  /** ÚNICA acción principal. Ausente ⇒ sin permiso (fail-closed). */
+  cta?: HubLink;
+  secondary: HubLink[];
+}
+
+/** Alertas del mismo servicio, agrupadas para no repetir contexto. */
+export interface HubAlertGroup {
+  shiftId: string;
+  serviceRef: string | null;
+  title: string;
+  clientName: string | null;
+  whenLabel: string;
+  locationName: string | null;
+  severity: HubAlertSeverity;
+  priority: HubPriority;
+  alerts: HubAlert[];
+  /** Acción principal del grupo = CTA de la alerta más severa. */
+  action?: HubLink;
+}
+
 export interface HubAttentionItem {
   id: string;
   /** `risk` → InsightCard · `validation` → ValidationCard · `kpi` → KpiCard */
@@ -229,7 +316,10 @@ export interface HubAttentionItem {
   action?: HubLink;
   alternatives?: HubLink[];
   shiftId?: string;
+  /** Presente en items derivados de una alerta operativa. */
+  context?: HubAlertContext;
 }
+
 
 export interface HubOperation {
   shiftId: string;
