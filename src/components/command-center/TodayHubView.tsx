@@ -143,7 +143,109 @@ function Section({
 
 /* ── Renderers OCS ───────────────────────────────────────────────────── */
 
+/* ── P1 — Bandeja operativa accionable ──────────────────────────────── */
+
+const SEVERITY_LABEL: Record<HubAlertSeverity, string> = {
+  critical: "Crítico",
+  attention: "Requiere acción",
+  prep: "Preparación",
+  info: "Contexto",
+};
+
+const SEVERITY_STATUS: Record<HubAlertSeverity, string> = {
+  critical: "blocked",
+  attention: "warning",
+  prep: "pending",
+  info: "info",
+};
+
+/**
+ * Una alerta = una lectura completa en <3 s.
+ * QUÉ (title) · DÓNDE (QK + cliente + sitio) · A QUIÉN (personas) ·
+ * QUÉ HAGO AHORA (una sola acción principal).
+ */
+function AlertEntry({ alert, go }: { alert: HubAlert; go: (href: string) => void }) {
+  const ctx = alert.context;
+  const who =
+    ctx.people.length > 0
+      ? ctx.people.length <= 2
+        ? ctx.people.join(" · ")
+        : `${ctx.people.slice(0, 2).join(" · ")} +${ctx.people.length - 2}`
+      : ctx.peopleCount > 0
+        ? `${ctx.peopleCount} persona(s)`
+        : "Servicio completo";
+
+  return (
+    <OperationalCard
+      status={SEVERITY_STATUS[alert.severity]}
+      statusLabel={SEVERITY_LABEL[alert.severity]}
+      title={alert.title}
+      primary={
+        <div className="space-y-1.5">
+          <p className={cn(MT.body)}>{alert.headline}</p>
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
+            <ContextCell label="Dónde" value={ctx.locationName ?? ctx.clientName ?? "Sin sitio"} />
+            <ContextCell label="Cuándo" value={`${ctx.whenLabel} · ${ctx.ageLabel}`} />
+            <ContextCell label="A quién" value={who} />
+            <ContextCell label="Ahora" value={ctx.current} />
+          </dl>
+        </div>
+      }
+      secondary={
+        alert.cta
+          ? alert.impact
+          : `${alert.impact ?? alert.because} No tienes permiso para resolverlo.`
+      }
+      action={
+        alert.cta
+          ? { label: alert.cta.label, onClick: () => go(alert.cta!.href) }
+          : undefined
+      }
+    />
+  );
+}
+
+function ContextCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className={cn(MT_EYEBROW, "text-muted-foreground")}>{label}</dt>
+      <dd className={cn(MT.caption, "truncate font-medium")}>{value}</dd>
+    </div>
+  );
+}
+
+/** Cabecera de servicio: el contexto se dice una vez, no en cada alerta. */
+function AlertGroupBlock({
+  group,
+  go,
+}: {
+  group: HubAlertGroup;
+  go: (href: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-0.5">
+        <span className={cn(MT.body, "font-semibold")}>
+          {group.serviceRef ?? group.title}
+        </span>
+        {group.clientName ? (
+          <span className={cn(MT.caption, "text-muted-foreground")}>
+            {group.clientName}
+          </span>
+        ) : null}
+        <span className={cn(MT.caption, "text-muted-foreground")}>
+          · {group.whenLabel}
+        </span>
+      </div>
+      {group.alerts.map((a) => (
+        <AlertEntry key={a.id} alert={a} go={go} />
+      ))}
+    </div>
+  );
+}
+
 function AttentionEntry({
+
   item,
   go,
 }: {
