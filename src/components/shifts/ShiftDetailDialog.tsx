@@ -583,11 +583,21 @@ export function ShiftDetailDialog({
               {getShiftDisplayIdentity(shift).primaryRefKind !== "none" && (
                 <span
                   className="text-[9.5px] font-mono font-semibold text-muted-foreground bg-muted/60 rounded px-1.5 py-px shrink-0"
-                  title={getShiftDisplayIdentity(shift).legacyLabel ?? undefined}
+                  title={
+                    getShiftDisplayIdentity(shift).segmentRef
+                      ? `Referencia técnica del horario: ${getShiftDisplayIdentity(shift).segmentRef}`
+                      : getShiftDisplayIdentity(shift).legacyLabel ?? undefined
+                  }
                 >
                   {getShiftDisplayIdentity(shift).primaryRef}
                 </span>
               )}
+              {getShiftDisplayIdentity(shift).isServiceSegment && (
+                <span className="text-[9.5px] font-semibold text-primary bg-primary/10 rounded px-1.5 py-px shrink-0">
+                  {getShiftDisplayIdentity(shift).segmentLabel ?? "Horario del servicio"}
+                </span>
+              )}
+
             </div>
           }
           subtitle={
