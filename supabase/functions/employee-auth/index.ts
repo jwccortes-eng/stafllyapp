@@ -257,20 +257,34 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Fetch all employees with this phone (may exist in multiple companies)
+      // P0 — MULTI-COMPANY AUTH ACCESS TRUTH: la identidad NO se filtra por
+      // `is_active`. Se traen todas las fichas del teléfono y el resolver
+      // canónico separa identidad (AUTH) de acceso por compañía (MEMBERSHIP).
       const { data: employees } = await adminClient
         .from("employees")
-        .select("id, access_pin, is_active")
+        .select("id, company_id, access_pin, access_pin_hash, is_active, user_id, portal_access_enabled, merged_into_employee_id, created_at")
         .in("phone_number", phoneVariants)
-        .eq("is_active", true)
         .order("created_at", { ascending: true });
 
-      // Prioritize: has PIN + active > active without PIN
-      const employee = employees?.find(e => e.access_pin) || employees?.[0] || null;
+      const access = resolveMultiCompanyAccess(employees ?? []);
 
-      if (!employee) {
+      if (access.outcome === "no_identity") {
         return new Response(
           JSON.stringify({ found: false }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (access.outcome === "access_disabled") {
+        return new Response(
+          JSON.stringify({
+            found: true,
+            access_disabled: true,
+            is_active: false,
+            requires_activation: false,
+            error: accessDeniedMessage("access_disabled"),
+            code: "access_disabled",
+          }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -279,8 +293,9 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           found: true,
-          requires_activation: !employee.access_pin,
-          is_active: employee.is_active,
+          requires_activation: access.requiresActivation,
+          is_active: true,
+          active_companies: access.activeCompanyIds.length,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
