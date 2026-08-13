@@ -762,15 +762,6 @@ export const ContextSwitcher = forwardRef<HTMLDivElement, ContextSwitcherProps>(
           </Popover>
         )}
 
-        <CompanySwitchPinDialog
-          open={pinDialogOpen}
-          onOpenChange={setPinDialogOpen}
-          targetCompany={pendingCompany}
-          onConfirm={(companyId: string) => {
-            performSwitch(companyId);
-            setPendingCompany(null);
-          }}
-        />
       </>
     );
   },
