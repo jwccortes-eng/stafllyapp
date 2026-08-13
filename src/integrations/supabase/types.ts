@@ -14438,6 +14438,7 @@ export type Database = {
           meeting_time: string | null
           notes: string | null
           operational_version: number
+          parent_shift_id: string | null
           pay_override: boolean
           pay_type: string
           publication_status: Database["public"]["Enums"]["shift_publication_status"]
@@ -14446,6 +14447,7 @@ export type Database = {
           qr_attendance_mode: string
           qr_token: string | null
           reconciliation_hash: string | null
+          segment_label: string | null
           shift_admin_id: string | null
           shift_code: string | null
           shift_link_token: string | null
@@ -14490,6 +14492,7 @@ export type Database = {
           meeting_time?: string | null
           notes?: string | null
           operational_version?: number
+          parent_shift_id?: string | null
           pay_override?: boolean
           pay_type?: string
           publication_status?: Database["public"]["Enums"]["shift_publication_status"]
@@ -14498,6 +14501,7 @@ export type Database = {
           qr_attendance_mode?: string
           qr_token?: string | null
           reconciliation_hash?: string | null
+          segment_label?: string | null
           shift_admin_id?: string | null
           shift_code?: string | null
           shift_link_token?: string | null
@@ -14542,6 +14546,7 @@ export type Database = {
           meeting_time?: string | null
           notes?: string | null
           operational_version?: number
+          parent_shift_id?: string | null
           pay_override?: boolean
           pay_type?: string
           publication_status?: Database["public"]["Enums"]["shift_publication_status"]
@@ -14550,6 +14555,7 @@ export type Database = {
           qr_attendance_mode?: string
           qr_token?: string | null
           reconciliation_hash?: string | null
+          segment_label?: string | null
           shift_admin_id?: string | null
           shift_code?: string | null
           shift_link_token?: string | null
@@ -14635,6 +14641,13 @@ export type Database = {
             columns: ["meeting_point_location_id"]
             isOneToOne: false
             referencedRelation: "locations_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_shifts_parent_shift_id_fkey"
+            columns: ["parent_shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
             referencedColumns: ["id"]
           },
           {
