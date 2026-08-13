@@ -38,6 +38,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 import { normalizePhone } from "@/lib/phone";
+import { cn } from "@/lib/utils";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -395,6 +396,16 @@ export default function EmergencyWorkerDialog({
               onChange={(e) => set("phone", e.target.value.slice(0, 30))}
               className="h-8 text-sm" placeholder="(555) 555-0100" />
             {errors.phone && <p className="text-[11px] text-destructive mt-1">{errors.phone}</p>}
+            <Button
+              type="button" variant="outline" size="sm"
+              className="mt-2 h-8 w-full text-xs"
+              onClick={runLookup}
+              disabled={searching || (!form.noPhone && !isSearchablePhone(form.phone))}
+            >
+              {searching
+                ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Buscando…</>
+                : <><Search className="h-3.5 w-3.5 mr-1.5" /> Buscar persona por teléfono</>}
+            </Button>
             <div className="flex items-start gap-2 mt-2">
               <Checkbox id="ew-nophone" checked={form.noPhone}
                 onCheckedChange={(c) => set("noPhone", !!c)} />
@@ -416,6 +427,43 @@ export default function EmergencyWorkerDialog({
               </div>
             </div>
           </div>
+
+          {outcome && (
+            <div className={cn(
+              "rounded-md border p-3 text-xs space-y-2",
+              outcome.decision === "create_new" ? "bg-muted/30" : "border-primary/40 bg-primary/5",
+            )}>
+              <div className="flex items-center gap-1.5 font-semibold">
+                {outcome.decision === "reuse_in_company" && <UserCheck className="h-3.5 w-3.5 text-primary" />}
+                {outcome.decision === "add_membership" && <Globe2 className="h-3.5 w-3.5 text-primary" />}
+                {outcome.decision === "reuse_in_company" ? "✓ " : ""}{outcome.headline}
+              </div>
+              <p className="text-muted-foreground leading-snug">{outcome.detail}</p>
+
+              {[...outcome.sameCompany, ...outcome.otherCompanies].map((m) => (
+                <div key={m.employee_id} className="rounded border bg-background p-2 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium truncate">{personDisplayName(m)}</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">
+                      {m.same_company ? (m.is_active === false ? "Inactivo aquí" : "Activo aquí") : m.company_name ?? "Otra empresa"}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {actionsForMatch(m).map((a) => (
+                      <Button
+                        key={a} type="button" size="sm" variant={a === "assign_to_service" || a === "add_membership" ? "default" : "outline"}
+                        className="h-7 text-[11px]"
+                        disabled={acting === m.employee_id}
+                        onClick={() => runAction(a, m)}
+                      >
+                        {ACTION_LABELS[a]}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div>
             <Label htmlFor="ew-reason" className="text-xs">Motivo de emergencia *</Label>
@@ -459,9 +507,9 @@ export default function EmergencyWorkerDialog({
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button size="sm" onClick={submit} disabled={saving || !isAdmin}
+          <Button size="sm" onClick={submit} disabled={saving || !isAdmin || !outcome?.canCreateNew}
             className="bg-amber-600 hover:bg-amber-700 text-white">
-            {saving ? "Creando…" : "Crear trabajador de emergencia"}
+            {saving ? "Creando…" : outcome?.canCreateNew ? "Crear trabajador de emergencia" : "Busca el teléfono primero"}
           </Button>
         </DialogFooter>
       </DialogContent>
