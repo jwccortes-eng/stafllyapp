@@ -18,6 +18,7 @@ type EmployeeStep = "phone" | "activate_pin" | "activate_profile" | "login_pin" 
 
 interface EmployeeInfo {
   found: boolean;
+  access_disabled?: boolean;
   requires_activation: boolean;
   is_active: boolean;
 }
