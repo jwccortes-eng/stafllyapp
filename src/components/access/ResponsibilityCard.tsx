@@ -52,7 +52,7 @@ export function ResponsibilityCard({
     );
   }
 
-  const key = spec.role as CanonicalRoleKeyLike;
+  const key = spec.role as CanonicalRoleKey;
   const { upstream, downstream } = operatingChainFor(key, people);
   const aliases = visibleAliases(key);
 
