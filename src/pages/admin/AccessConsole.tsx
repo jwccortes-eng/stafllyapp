@@ -369,10 +369,17 @@ export default function AccessConsole() {
                   <>
                     {(target.role === "company_owner" || target.role === "admin") && (
                       <p className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
-                        Esta persona es <strong>{target.role}</strong> de la empresa: tiene acceso completo dentro de
-                        {" "}{selectedCompany?.name}. Los permisos de abajo solo aplicarían si cambia a un rol acotado.
+                        Esta persona es <strong>{target.role}</strong> en {selectedCompany?.name}: su rol concede todo
+                        por defecto. Puedes quitarle permisos concretos aquí y la excepción aplica solo a esta empresa.
+                        {target.role === "company_owner" && (
+                          <>
+                            {" "}Como dueña de la empresa conserva siempre <strong>administrar usuarios</strong>,{" "}
+                            <strong>administrar roles y permisos</strong> y <strong>configuración de empresa</strong>.
+                          </>
+                        )}
                       </p>
                     )}
+
 
                     <Accordion type="multiple" className="w-full">
                       {DOMAIN_ORDER.filter((d) => byDomain[d]?.length).map((domain) => {
