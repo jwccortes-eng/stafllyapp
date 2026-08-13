@@ -540,10 +540,50 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
       shift.meeting_point ??
       null;
 
+    /* — Identidad y contexto humano compartidos por todas las alertas — */
+    const identity = getShiftDisplayIdentity(shift);
+    const serviceRef =
+      identity.primaryRefKind === "none" ? null : identity.primaryRef;
+    const dateLabel = dateLabelFor(shift.date, now);
+    const baseContext: HubAlertContext = {
+      serviceRef,
+      clientName: shift.client_name ?? null,
+      locationName: where,
+      dateLabel,
+      timeLabel: range,
+      whenLabel: `${dateLabel} · ${range}`,
+      ageLabel: ageLabelFor(mins),
+      people: [],
+      peopleCount: 0,
+      expected: "",
+      current: "",
+    };
+
     const push = (
       item: Omit<HubAttentionItem, "id"> & { id: string; kind: HubAttentionItem["kind"] },
       boostKind: string,
-    ) => attention.push({ ...item, _boost: roleBoost(role, boostKind) });
+      alert?: {
+        type: HubAlertType;
+        title: string;
+        stage: ServiceStage;
+        severity?: HubAlertSeverity;
+        context: Partial<HubAlertContext>;
+      },
+    ) =>
+      attention.push({
+        ...item,
+        context: alert ? { ...baseContext, ...alert.context } : undefined,
+        _boost: roleBoost(role, boostKind),
+        _alert: alert
+          ? {
+              type: alert.type,
+              title: alert.title,
+              stage: alert.stage,
+              severity: alert.severity ?? SEVERITY_BY_PRIORITY[item.priority],
+            }
+          : undefined,
+      });
+
 
     /* — Asistencia: NUNCA se asume no-show (OX-4.3.1) — */
     const attendance = readAttendance({
