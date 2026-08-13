@@ -382,6 +382,10 @@ export interface HubEmptyState {
 }
 
 export interface TodayHubModel {
+  /** Bandeja operativa: toda incidencia con contexto y una acción. */
+  alerts: HubAlert[];
+  /** Las mismas alertas agrupadas por servicio. */
+  alertGroups: HubAlertGroup[];
   attentionItems: HubAttentionItem[];
   activeOperations: HubOperation[];
   teamSummaries: HubTeamSummary[];
@@ -394,13 +398,15 @@ export interface TodayHubModel {
 /* ── Rutas canónicas (deep links, sin menús intermedios) ─────────────── */
 
 const ROUTES = {
-  shiftOps: (id: string) => `/app/shift-ops?id=${id}`,
+  /** Deep link a la etapa exacta del Service Command Center. */
+  shiftOps: (id: string, stage: ServiceStage = "summary", focus?: string | null) =>
+    serviceDeepLink({ shiftId: id, stage, focusEmployeeId: focus ?? null }),
   closeout: "/app/daily-close",
-  hours: (id?: string) =>
-    id ? `/app/payroll-review-queue?shiftId=${id}` : "/app/payroll-review-queue",
-  timeclock: (id: string) => `/app/timeclock?shiftId=${id}`,
+  hours: (id?: string) => hoursDeepLink(id ?? null),
+  timeclock: (id: string, focus?: string | null) => timeclockDeepLink(id, focus ?? null),
   documents: "/app/documents",
 };
+
 
 /* ── Helpers puros ───────────────────────────────────────────────────── */
 
