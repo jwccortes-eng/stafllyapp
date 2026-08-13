@@ -385,6 +385,20 @@ export default function AccessConsole() {
                       </p>
                     )}
 
+                    {(() => {
+                      const candidates = rolesForMembership(target.role);
+                      if (!candidates.length) return null;
+                      return (
+                        <p className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
+                          Roles canónicos disponibles para <strong>{target.role}</strong>:{" "}
+                          {candidates.map((r) => `${r.label} (${SCOPE_LABELS[r.scope]})`).join(" · ")}. Aplica una
+                          plantilla desde la pestaña Roles y luego ajusta excepciones aquí.
+                        </p>
+                      );
+                    })()}
+
+
+
 
                     <Accordion type="multiple" className="w-full">
                       {DOMAIN_ORDER.filter((d) => byDomain[d]?.length).map((domain) => {
