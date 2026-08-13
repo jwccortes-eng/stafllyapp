@@ -770,8 +770,11 @@ export default function AccessConsole() {
 
                   {(() => {
                     const roster = canonical
-                      ? members.filter((m) => m.role === canonical.membershipRole)
+                      ? members.filter(
+                          (m) => resolvePrimaryRole(m.role, m.overrides).role?.key === canonical.key,
+                        )
                       : [];
+                    const mission = canonical ? RESPONSIBILITIES[canonical.key]?.mission : null;
                     const open = rosterFor === tpl.id;
                     return (
                       <>
@@ -784,16 +787,16 @@ export default function AccessConsole() {
                             variant="outline"
                             onClick={() => setRosterFor(open ? null : tpl.id)}
                           >
-                            {open ? "Ocultar personas" : `Ver personas con este rol (${roster.length})`}
+                            {open ? "Ocultar responsables" : `Responsables actuales (${roster.length})`}
                           </Button>
                         </div>
                         {open && (
                           <div className="mt-3 space-y-1.5 rounded-lg border bg-muted/30 p-3">
                             <p className="text-[11px] text-muted-foreground">
-                              Miembros de {selectedCompany?.name ?? "esta empresa"} con este nivel de membresía.
+                              Personas de {selectedCompany?.name ?? "esta empresa"} que hoy ejercen esta responsabilidad.
                             </p>
                             {roster.length === 0 ? (
-                              <p className="text-xs text-muted-foreground">Nadie con este rol todavía.</p>
+                              <p className="text-xs text-muted-foreground">Sin responsable asignado todavía.</p>
                             ) : (
                               roster.map((m) => (
                                 <button
@@ -802,14 +805,20 @@ export default function AccessConsole() {
                                     setSelectedUser(m.user_id);
                                     setTab("users");
                                   }}
-                                  className="block w-full truncate rounded-md px-2 py-1 text-left text-xs hover:bg-accent/60"
+                                  className="block w-full rounded-md px-2 py-1 text-left hover:bg-accent/60"
                                 >
-                                  {m.full_name ?? m.email ?? m.user_id}
+                                  <span className="block truncate text-xs font-medium">
+                                    {m.full_name ?? m.email ?? m.user_id}
+                                  </span>
+                                  {mission && (
+                                    <span className="block text-[11px] text-muted-foreground">{mission}</span>
+                                  )}
                                 </button>
                               ))
                             )}
                           </div>
                         )}
+
                       </>
                     );
                   })()}
