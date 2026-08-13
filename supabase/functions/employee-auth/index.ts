@@ -341,11 +341,22 @@ Deno.serve(async (req) => {
         console.info("[phone-login]", { normalizedPhone: cleanPhone, step: "activate_lookup" });
         const { data: byPhone } = await adminClient
           .from("employees")
-          .select("id, first_name, last_name, access_pin, is_active, user_id, phone_number, company_id")
+          .select("id, first_name, last_name, access_pin, access_pin_hash, is_active, user_id, phone_number, company_id, merged_into_employee_id, created_at")
           .in("phone_number", phoneVariants)
-          .eq("is_active", true)
           .order("created_at", { ascending: true });
-        employee = byPhone?.find((e: any) => !e.access_pin) || byPhone?.[0] || null;
+        // Activación: sólo sobre fichas activas, pero la identidad se resuelve
+        // completa para poder distinguir "no existe" de "acceso desactivado".
+        const activateAccess = resolveMultiCompanyAccess(byPhone ?? []);
+        if (activateAccess.outcome === "access_disabled") {
+          return new Response(
+            JSON.stringify({ error: accessDeniedMessage("access_disabled"), code: "access_disabled" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        employee = activateAccess.activeRecords.find((e: any) => !e.access_pin)
+          || activateAccess.primaryRecord
+          || activateAccess.activeRecords[0]
+          || null;
       }
 
       if (!employee && employee_id) {
