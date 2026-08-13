@@ -89,6 +89,12 @@ export default function AccessConsole() {
   const [saving, setSaving] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  /** Pestaña activa: Roles necesita poder llevar a Usuarios sin perder contexto. */
+  const [tab, setTab] = useState("users");
+  /** Plantilla elegida en Roles que espera persona en Usuarios. NO persiste nada. */
+  const [pendingTemplate, setPendingTemplate] = useState<RoleTemplate | null>(null);
+  /** Tarjeta de rol con el listado de personas desplegado. */
+  const [rosterFor, setRosterFor] = useState<string | null>(null);
 
   const byDomain = useMemo(() => permissionsByDomain(), []);
 
@@ -226,6 +232,13 @@ export default function AccessConsole() {
     setDraft((prev) => applyToggle(prev, spec, next));
   };
 
+  /** Roles → Usuarios: conserva la plantilla y pide persona en la superficie canónica. */
+  const startTemplateFlow = (tpl: RoleTemplate) => {
+    setPendingTemplate(tpl);
+    setRosterFor(null);
+    setTab("users");
+  };
+
   const applyTemplate = (tpl: RoleTemplate) => {
     setDraft((prev) => applyTemplateToDraft(prev, tpl.actions));
     notifySuccess({
@@ -305,7 +318,7 @@ export default function AccessConsole() {
         subtitle={`Quién puede hacer qué en ${selectedCompany?.name ?? "esta empresa"}. Los permisos aplican solo a esta empresa.`}
       />
 
-      <Tabs defaultValue="users">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" />Usuarios</TabsTrigger>
           <TabsTrigger value="roles" className="gap-1.5"><LayoutTemplate className="h-3.5 w-3.5" />Roles</TabsTrigger>
@@ -313,7 +326,62 @@ export default function AccessConsole() {
         </TabsList>
 
         {/* ---------------- USUARIOS ---------------- */}
-        <TabsContent value="users" className="mt-4">
+        <TabsContent value="users" className="mt-4 space-y-4">
+          {pendingTemplate && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Aplicar plantilla
+                  </p>
+                  <p className="text-sm font-semibold">{pendingTemplate.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    A: <strong>{target ? (target.full_name ?? target.email ?? "—") : "elige una persona en la lista"}</strong>
+                    {" · Empresa: "}
+                    <strong>{selectedCompany?.name ?? "—"}</strong>
+                    {(() => {
+                      const c = roleFromTemplateName(pendingTemplate.name);
+                      return c ? ` · Alcance: ${SCOPE_LABELS[c.scope]}` : "";
+                    })()}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {pendingTemplate.actions.length} permisos · se cargan como excepciones de esta empresa y
+                    no cambian nada en otras empresas.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowPreview(true)}
+                    disabled={!target}
+                    className="gap-1.5"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Ver permisos efectivos
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={!target}
+                    onClick={() => {
+                      applyTemplate(pendingTemplate);
+                      setPendingTemplate(null);
+                    }}
+                  >
+                    Confirmar
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setPendingTemplate(null)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+              {!target && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Elige a la persona en la lista de la izquierda para continuar.
+                </p>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-1">
               <CardHeader className="pb-3">
@@ -550,15 +618,51 @@ export default function AccessConsole() {
                   )}
                   <p className="mt-2 text-[11px] text-muted-foreground">{tpl.actions.length} permisos</p>
 
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="mt-3"
-                    disabled={!selectedUser}
-                    onClick={() => applyTemplate(tpl)}
-                  >
-                    {selectedUser ? "Aplicar a la persona seleccionada" : "Selecciona una persona"}
-                  </Button>
+                  {(() => {
+                    const roster = canonical
+                      ? members.filter((m) => m.role === canonical.membershipRole)
+                      : [];
+                    const open = rosterFor === tpl.id;
+                    return (
+                      <>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button size="sm" onClick={() => startTemplateFlow(tpl)}>
+                            Aplicar a persona
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setRosterFor(open ? null : tpl.id)}
+                          >
+                            {open ? "Ocultar personas" : `Ver personas con este rol (${roster.length})`}
+                          </Button>
+                        </div>
+                        {open && (
+                          <div className="mt-3 space-y-1.5 rounded-lg border bg-muted/30 p-3">
+                            <p className="text-[11px] text-muted-foreground">
+                              Miembros de {selectedCompany?.name ?? "esta empresa"} con este nivel de membresía.
+                            </p>
+                            {roster.length === 0 ? (
+                              <p className="text-xs text-muted-foreground">Nadie con este rol todavía.</p>
+                            ) : (
+                              roster.map((m) => (
+                                <button
+                                  key={m.user_id}
+                                  onClick={() => {
+                                    setSelectedUser(m.user_id);
+                                    setTab("users");
+                                  }}
+                                  className="block w-full truncate rounded-md px-2 py-1 text-left text-xs hover:bg-accent/60"
+                                >
+                                  {m.full_name ?? m.email ?? m.user_id}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
                 );
               })}
