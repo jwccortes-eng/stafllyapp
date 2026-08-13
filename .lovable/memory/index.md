@@ -5,3 +5,4 @@
 - [Estado de persona en 4 dimensiones](mem://features/person-status-truth) — resolvePersonStatus: identidad, portal, cumplimiento y asignabilidad separadas; prohibido inferir una desde otra
 - [Ubicación de Servicio](mem://features/service-location-truth) — Resolver canónico `service-location.ts`, destino vs geo vs punto de encuentro, regla de transporte
 - [Acceso multi-empresa](mem://features/multi-company-auth-access-truth) — AUTH vs MEMBERSHIP vs EMPLOYEE en login por teléfono; resolveMultiCompanyAccess, outcome access_disabled
+- [Stafly Operating Model](mem://features/stafly-operating-model) — Cadena operativa de 8 etapas, responsabilidades canónicas, ResponsibilityCard y pestaña Modelo operativo
