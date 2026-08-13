@@ -120,7 +120,7 @@ export default function AccessConsole() {
 
     (async () => {
       const [{ data: cu }, { data: tmpl }] = await Promise.all([
-        supabase.from("company_users").select("user_id, role").eq("company_id", selectedCompanyId),
+        supabase.from("company_users").select("user_id, role, operating_role_key").eq("company_id", selectedCompanyId),
         supabase.from("role_templates").select("*").or(`company_id.eq.${selectedCompanyId},is_system.eq.true`),
       ]);
 
@@ -158,6 +158,7 @@ export default function AccessConsole() {
           return {
             user_id: row.user_id,
             role: row.role,
+            operating_role_key: (row as { operating_role_key?: string | null }).operating_role_key ?? null,
             full_name: p?.full_name ?? null,
             email: p?.email ?? null,
             updated_at: overrideRows?.find((c) => c.user_id === row.user_id)?.updated_at ?? null,
@@ -221,7 +222,7 @@ export default function AccessConsole() {
   const operatingPeople: OperatingPerson[] = useMemo(
     () =>
       members.map((m) => {
-        const p = resolvePrimaryRole(m.role, m.overrides);
+        const p = resolvePrimaryRole(m.role, m.overrides, m.operating_role_key);
         return {
           userId: m.user_id,
           name: m.full_name ?? m.email ?? "Sin nombre",
@@ -486,7 +487,7 @@ export default function AccessConsole() {
                 )}
                 <div className="max-h-[420px] space-y-1.5 overflow-y-auto">
                   {filtered.map((m) => {
-                    const p = resolvePrimaryRole(m.role, m.overrides);
+                    const p = resolvePrimaryRole(m.role, m.overrides, m.operating_role_key);
                     return (
                       <button
                         key={m.user_id}
@@ -773,7 +774,9 @@ export default function AccessConsole() {
                   {(() => {
                     const roster = canonical
                       ? members.filter(
-                          (m) => resolvePrimaryRole(m.role, m.overrides).role?.key === canonical.key,
+                          (m) =>
+                            resolvePrimaryRole(m.role, m.overrides, m.operating_role_key).role?.key ===
+                            canonical.key,
                         )
                       : [];
                     const mission = canonical ? RESPONSIBILITIES[canonical.key]?.mission : null;
