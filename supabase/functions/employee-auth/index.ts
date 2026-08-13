@@ -644,21 +644,17 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Fetch all employees with this phone; pick the one with matching PIN
+      // P0 — MULTI-COMPANY AUTH ACCESS TRUTH: identidad completa por teléfono
+      // (sin filtrar por `is_active`); el resolver decide si hay acceso.
       const { data: loginEmployees } = await adminClient
         .from("employees")
-        .select("id, first_name, last_name, phone_number, access_pin, access_pin_hash, pin_hash_version, is_active, user_id, must_change_pin, company_id, portal_access_enabled")
+        .select("id, first_name, last_name, phone_number, access_pin, access_pin_hash, pin_hash_version, is_active, user_id, must_change_pin, company_id, portal_access_enabled, merged_into_employee_id, created_at")
         .in("phone_number", phoneVariants)
-        .eq("is_active", true)
         .order("created_at", { ascending: true });
 
-      // Prioritize: match by PIN first, then fallback to first with PIN
-      const employee = loginEmployees?.find(e => e.access_pin === pin)
-        || loginEmployees?.find(e => !!e.access_pin)
-        || loginEmployees?.[0]
-        || null;
+      const loginAccess = resolveMultiCompanyAccess(loginEmployees ?? []);
 
-      if (!employee) {
+      if (loginAccess.outcome === "no_identity") {
         await recordFailedAttempt(adminClient, cleanPhone);
         return new Response(
           JSON.stringify({ error: "Credenciales inválidas" }),
@@ -666,12 +662,28 @@ Deno.serve(async (req) => {
         );
       }
 
-      if (!employee.is_active) {
+      if (loginAccess.outcome === "access_disabled") {
         return new Response(
-          JSON.stringify({ error: "Tu cuenta está inactiva. Contacta al administrador." }),
+          JSON.stringify({ error: accessDeniedMessage("access_disabled"), code: "access_disabled" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // Credencial: se valida el PIN sobre las fichas ACTIVAS de la persona.
+      // Una ficha inactiva en otra compañía no puede secuestrar el login.
+      const activeLogin = loginAccess.activeRecords;
+      const employee = activeLogin.find((e) => e.access_pin === pin)
+        || activeLogin.find((e) => !!e.access_pin || !!e.access_pin_hash)
+        || loginAccess.primaryRecord
+        || activeLogin[0]!;
+
+      console.info("[multi-company-auth]", {
+        step: "login_access_truth",
+        outcome: loginAccess.outcome,
+        active_companies: loginAccess.activeCompanyIds.length,
+        inactive_companies: loginAccess.inactiveCompanyIds.length,
+        selected_company_id: employee.company_id,
+      });
 
       // S7-D / S7-K: resolve effective mode BEFORE the PIN gate. Real tenants
       // and any resolver error force "legacy". Stafly Demo may resolve to
