@@ -12,28 +12,39 @@
 import {
   CANONICAL_ROLES,
   SCOPE_LABELS,
+  getCanonicalRole,
   templateActionsFor,
   type CanonicalRole,
   type PermissionScope,
 } from "./role-model";
 
+export interface RoleSuggestion {
+  role: CanonicalRole;
+  /** Similitud Jaccard 0..1 entre overrides concedidos y la plantilla. */
+  score: number;
+}
+
 export interface PrimaryRoleResult {
-  /** Rol canónico reconocido, si el acceso coincide con una plantilla. */
+  /** Rol canónico vigente (explícito o derivado de la membresía). */
   role: CanonicalRole | null;
   /** Etiqueta lista para mostrar (nunca vacía). */
   label: string;
   scope: PermissionScope;
   scopeLabel: string;
-  /** El acceso no coincide con ninguna plantilla: está personalizado. */
+  /** No hay rol explícito y el acceso no coincide con ninguna plantilla. */
   custom: boolean;
+  /** true cuando el rol viene de `company_users.operating_role_key`. */
+  explicit: boolean;
+  /** Diagnóstico Jaccard. NUNCA reasigna el rol; solo informa. */
+  suggestion: RoleSuggestion | null;
 }
 
-/** Rol por defecto de una membresía cuando no hay overrides explícitos. */
+/** Rol por defecto de una membresía cuando no hay rol explícito. */
 function defaultForMembership(membershipRole: string): CanonicalRole | null {
   if (membershipRole === "company_owner") return CANONICAL_ROLES.find((r) => r.key === "company_owner") ?? null;
   if (membershipRole === "manager") return CANONICAL_ROLES.find((r) => r.key === "service_supervisor") ?? null;
   if (membershipRole === "employee") return CANONICAL_ROLES.find((r) => r.key === "worker") ?? null;
-  return null; // admin: acceso total de empresa hasta que se aplique una plantilla
+  return null; // admin: acceso total de empresa hasta que se asigne un rol operativo
 }
 
 const jaccard = (a: Set<string>, b: Set<string>): number => {
@@ -44,62 +55,83 @@ const jaccard = (a: Set<string>, b: Set<string>): number => {
 };
 
 /**
- * Deriva el rol principal a partir de la membresía y de los overrides de
- * acción explícitos de la empresa (mapa acción → concedida).
+ * DIAGNÓSTICO. Rol al que más se parecen los overrides concedidos.
+ * Solo se usa para sugerir/migrar, nunca como fuente de verdad del rol.
  */
-export function resolvePrimaryRole(
-  membershipRole: string,
+export function suggestRoleFromOverrides(
   actionOverrides: Record<string, boolean> = {},
-): PrimaryRoleResult {
+): RoleSuggestion | null {
   const entries = Object.entries(actionOverrides);
+  if (entries.length === 0) return null;
   const granted = new Set(entries.filter(([, v]) => v).map(([k]) => k));
+  if (granted.size === 0) return null;
 
-  if (entries.length === 0) {
-    const fallback = defaultForMembership(membershipRole);
-    if (fallback) {
-      return {
-        role: fallback,
-        label: fallback.label,
-        scope: fallback.scope,
-        scopeLabel: SCOPE_LABELS[fallback.scope],
-        custom: false,
-      };
-    }
-    return {
-      role: null,
-      label: "Administrador de empresa",
-      scope: "COMPANY",
-      scopeLabel: SCOPE_LABELS.COMPANY,
-      custom: false,
-    };
-  }
-
-  let best: { role: CanonicalRole; score: number } | null = null;
+  let best: RoleSuggestion | null = null;
   for (const role of CANONICAL_ROLES) {
     if (role.key === "company_owner") continue;
     const score = jaccard(granted, new Set(templateActionsFor(role)));
     if (!best || score > best.score) best = { role, score };
   }
+  return best;
+}
 
-  if (best && best.score >= 0.75) {
-    return {
-      role: best.role,
-      label: best.role.label,
-      scope: best.role.scope,
-      scopeLabel: SCOPE_LABELS[best.role.scope],
-      custom: false,
-    };
+const result = (
+  role: CanonicalRole | null,
+  opts: { label?: string; custom?: boolean; explicit: boolean; suggestion: RoleSuggestion | null; scope?: PermissionScope },
+): PrimaryRoleResult => {
+  const scope = role?.scope ?? opts.scope ?? "COMPANY";
+  return {
+    role,
+    label: opts.label ?? role?.label ?? "Acceso personalizado",
+    scope,
+    scopeLabel: SCOPE_LABELS[scope],
+    custom: opts.custom ?? false,
+    explicit: opts.explicit,
+    suggestion: opts.suggestion,
+  };
+};
+
+/**
+ * ROL OPERATIVO VIGENTE.
+ *
+ * Prioridad:
+ *   1. Rol explícito de la membresía (`company_users.operating_role_key`).
+ *   2. Owner: nunca se degrada por overrides.
+ *   3. Default de la membresía cuando no hay rol explícito.
+ *
+ * Los overrides NO determinan el rol: solo alimentan la sugerencia.
+ */
+export function resolvePrimaryRole(
+  membershipRole: string,
+  actionOverrides: Record<string, boolean> = {},
+  explicitRoleKey?: string | null,
+): PrimaryRoleResult {
+  const suggestion = suggestRoleFromOverrides(actionOverrides);
+
+  // 2. Owner protegido.
+  if (membershipRole === "company_owner") {
+    const owner = CANONICAL_ROLES.find((r) => r.key === "company_owner") ?? null;
+    return result(owner, { explicit: true, suggestion });
   }
 
+  // 1. Rol explícito.
+  if (explicitRoleKey) {
+    const explicit = getCanonicalRole(explicitRoleKey) ?? null;
+    if (explicit) return result(explicit, { explicit: true, suggestion });
+  }
+
+  // 3. Default de membresía.
   const fallback = defaultForMembership(membershipRole);
-  return {
-    role: null,
-    label: "Acceso personalizado",
-    scope: fallback?.scope ?? "COMPANY",
-    scopeLabel: SCOPE_LABELS[fallback?.scope ?? "COMPANY"],
-    custom: true,
-  };
+  if (fallback) return result(fallback, { explicit: false, suggestion });
+
+  return result(null, {
+    label: "Administrador de empresa",
+    explicit: false,
+    suggestion,
+    scope: "COMPANY",
+  });
 }
+
 
 /**
  * Roles que se pueden asignar como rol principal desde la consola.
