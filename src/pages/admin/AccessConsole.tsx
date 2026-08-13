@@ -45,7 +45,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PageHeader } from "@/components/ui/page-header";
-import { Shield, Check, X, Loader2, Eye, Users, LayoutTemplate, ListChecks } from "lucide-react";
+import { Shield, Check, X, Loader2, Eye, Users, LayoutTemplate, ListChecks, Workflow } from "lucide-react";
 import { notifyError, notifySuccess } from "@/lib/feedback/notify";
 
 interface MemberRow {
