@@ -568,24 +568,24 @@ export default function AccessConsole() {
 
                 {target && !loadingProfile && (
                   <>
-                    {/* REGLA — rol principal */}
+                    {/* ROL — responsabilidad explícita (no se infiere de permisos) */}
                     <div className="rounded-xl border bg-muted/20 p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Rol principal
+                        Rol operativo
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-3">
                         {assignableRoles(target.role).length > 0 ? (
                           <Select
-                            value={primary?.role?.key ?? "custom"}
+                            value={roleDraft ?? primary?.role?.key ?? "unassigned"}
                             onValueChange={changePrimaryRole}
                           >
                             <SelectTrigger className="h-9 w-full max-w-xs">
                               <SelectValue placeholder="Elige un rol" />
                             </SelectTrigger>
                             <SelectContent>
-                              {primary?.custom && (
-                                <SelectItem value="custom" disabled>
-                                  Acceso personalizado
+                              {!roleDraft && (
+                                <SelectItem value="unassigned" disabled>
+                                  Sin rol asignado
                                 </SelectItem>
                               )}
                               {assignableRoles(target.role).map((r) => (
@@ -602,6 +602,25 @@ export default function AccessConsole() {
                           <p className="text-xs text-muted-foreground">{primary.role.description}</p>
                         )}
                       </div>
+                      {primary?.role && assignableRoles(target.role).length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-2 h-8"
+                          onClick={loadRoleDefaultsIntoDraft}
+                        >
+                          Cargar permisos base de este rol
+                        </Button>
+                      )}
+                      {primary?.suggestion && primary.suggestion.role.key !== primary.role?.key && (
+                        <p className="mt-2 text-[11px] text-muted-foreground">
+                          Diagnóstico: sus permisos se parecen{" "}
+                          {Math.round(primary.suggestion.score * 100)}% a{" "}
+                          <strong>{primary.suggestion.role.label}</strong>. Es solo una sugerencia; el rol
+                          no cambia solo.
+                        </p>
+                      )}
+
                       <p className="mt-3 text-xs text-muted-foreground">
                         Empresa: <strong>{selectedCompany?.name ?? "—"}</strong>
                         {" · Alcance: "}
