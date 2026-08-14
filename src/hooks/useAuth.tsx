@@ -719,26 +719,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return allEmployeeIds.some(e => e.companyId === companyId);
   }, [allEmployeeIds]);
 
+  /**
+   * LEGACY (en retiro) — `usePermissions().can()` es la API canónica.
+   *
+   * P0 Legacy Bypass Retirement: la membresía `admin` YA NO concede acceso
+   * total, y las filas legacy sin compañía (`company_id IS NULL`) se ignoran.
+   */
   const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
-    if (role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin') return true;
-    if (role === 'manager' || role === 'supervisor') {
-      const perm = permissions.find(p => p.module === module);
-      if (!perm) return false;
-      if (permission === 'view') return perm.can_view;
-      if (permission === 'edit') return perm.can_edit;
-      if (permission === 'delete') return perm.can_delete;
-    }
-    return false;
+    if (role === 'developer' || role === 'owner' || role === 'company_owner') return true;
+    const perm = permissions.find(p => p.module === module && !!p.company_id);
+    if (!perm) return false;
+    if (permission === 'view') return perm.can_view;
+    if (permission === 'edit') return perm.can_edit;
+    return perm.can_delete;
   };
 
   const hasActionPermission = (action: string): boolean => {
-    if (role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin') return true;
-    if (role === 'manager' || role === 'supervisor') {
-      const perm = actionPermissions.find(p => p.action === action);
-      return perm?.granted ?? false;
-    }
-    return false;
+    if (role === 'developer' || role === 'owner' || role === 'company_owner') return true;
+    const perm = actionPermissions.find(p => p.action === action && !!p.company_id);
+    return perm?.granted ?? false;
   };
+
 
   return (
     <AuthContext.Provider value={{
