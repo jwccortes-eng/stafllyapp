@@ -265,7 +265,10 @@ export function MobileShiftOperationsSheet({
     return () => { cancelled = true; };
   }, [shift?.id, open, reloadKey]);
 
-  const canValidate = canManageShifts({ allRoles, canAccessAdminForCompany, companyId: selectedCompanyId });
+  // P0 Domain boundary — validar horas exige permisos del dominio de horas.
+  const canValidate =
+    canManageShifts({ allRoles, canAccessAdminForCompany, companyId: selectedCompanyId }) &&
+    canAnyPermission([...TIME_DOMAIN_WRITE_PERMISSIONS], selectedCompanyId);
   const editLocked = ["locked", "archived", "cancelled"].includes(shift?.status ?? "");
   // P0 — Cancelación segura del turno (misma operación canónica que desktop).
   const [cancelOpen, setCancelOpen] = useState(false);
