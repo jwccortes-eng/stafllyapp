@@ -278,7 +278,7 @@ export function useNotifications() {
     } else {
       toast(newNotif.title, { description: newNotif.body, duration: 5000 });
     }
-  }, [play, getSoundType, showSystemNotification]);
+  }, [play, getSoundType, showSystemNotification, canAny]);
 
   // Realtime subscription — scoped per active company
   useEffect(() => {
