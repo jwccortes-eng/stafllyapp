@@ -18,6 +18,8 @@ import { useNavPreferences } from "@/hooks/useNavPreferences";
 import { supabase } from "@/integrations/supabase/client";
 import { NavItem } from "@/components/navigation/nav-items";
 import { ContextSwitcher } from "@/components/context/ContextSwitcher";
+import { usePermissions } from "@/hooks/usePermissions";
+import { isNavItemVisible } from "@/lib/auth/nav-permissions";
 
 import { safeLocalStorage } from "@/lib/safe-storage";
 import { SHELL_GUTTER_X } from "@/lib/ux/shell-spacing";
@@ -91,6 +93,9 @@ export default function AdminLayout() {
   const location = useLocation();
   const [launcherOpen, setLauncherOpen] = useState(false);
   const { pinnedIds, togglePin, maxPins } = useNavPreferences(isMobile ? ADMIN_DEFAULT_PINS_MOBILE : ADMIN_DEFAULT_PINS);
+  const { canAny, status: permissionStatus } = usePermissions();
+  const isPlatformStaffUser = allRoles.has("developer") || allRoles.has("owner");
+
 
   useEffect(() => {
     const id = logMount("AdminLayout");
