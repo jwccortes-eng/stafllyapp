@@ -159,16 +159,23 @@ export function evaluatePermission(
   // 1) Staff de plataforma: acceso total, nunca restringible por compañía.
   if (hasGlobalFullAccess(input)) return true;
 
-  // 2) Dueño de la compañía: acceso total dentro de SU compañía.
-  if (isCompanyOwner(input, companyId)) return true;
-
   if (!companyId) return false;
 
-  // 3) Permisos reservados al dueño: ningún rol ni override los concede.
+  const override = explicitOverride(input, permission, companyId);
+
+  // 2) Dueño de la compañía: acceso total dentro de SU compañía.
+  //    Sus permisos críticos son irrevocables (anti-lockout); el resto puede
+  //    restringirse con un override explícito de esa misma compañía.
+  if (isCompanyOwner(input, companyId)) {
+    if (PROTECTED_OWNER_PERMISSIONS.has(permission)) return true;
+    return override ?? true;
+  }
+
+  // 3) Permisos reservados al dueño: ningún rol operativo ni override los
+  //    concede a una membresía que no sea dueña de la compañía.
   if (OWNER_ONLY_PERMISSIONS.has(permission)) return false;
 
   // 4) Override explícito de esta compañía (concede o deniega).
-  const override = explicitOverride(input, permission, companyId);
   if (override !== undefined) return override;
 
   // 5) Default del rol operativo (allowlist). Deny by default.
