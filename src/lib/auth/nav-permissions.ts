@@ -18,8 +18,17 @@
 const ROUTE_PERMISSIONS: Record<string, string[]> = {
   // Operación / servicios
   "/app/shifts": ["service.view"],
+  "/app/shift-ops": ["service.view"],
+  "/app/shift-requests": ["service.view"],
+  "/app/backfill-shift": ["service.edit"],
+  "/app/bulk-import-shifts": ["service.create"],
   "/app/ops": ["service.view"],
   "/app/ops-center": ["service.view"],
+  "/app/daily-ops": ["service.view"],
+  "/app/daily-close": ["closeout.close_day", "service.close"],
+  "/app/command-center": ["service.view", "attendance.view", "time_entries.view"],
+  "/app/needs-attention": ["service.view", "attendance.view", "time_entries.view"],
+  "/app/today": ["service.view", "attendance.view", "time_entries.view"],
   "/app/staffing-center": ["staffing.view"],
   "/app/staffing-requests": ["staffing.view"],
   "/app/comparison": ["service.view"],
@@ -29,6 +38,7 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   "/app/service-requests": ["service.view"],
   "/app/service-categories": ["company.settings"],
   "/app/ai-workforce": ["staffing.view"],
+
 
   // Horas y cierre
   "/app/timeclock": ["time_entries.view", "attendance.view"],
