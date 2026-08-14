@@ -13,6 +13,7 @@
  *  - La UI no reemplaza la seguridad: RPC/RLS siguen validando autorización.
  */
 import { useMemo } from "react";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { isAdminLevelRole, isGatedAdminRole } from "@/lib/roles";

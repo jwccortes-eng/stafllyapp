@@ -10,6 +10,8 @@ import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
+import { isNavItemVisible } from "@/lib/auth/nav-permissions";
 import { useCompany } from "@/hooks/useCompany";
 import CompanyActionGuard from "@/components/CompanyActionGuard";
 
@@ -59,7 +61,9 @@ const OWNER_SEARCHABLE: SearchableLink[] = [
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const { role, hasModuleAccess } = useAuth();
+  const { role, allRoles } = useAuth();
+  const { canAny, status: permissionStatus } = usePermissions();
+  const isPlatformStaff = allRoles.has('developer') || allRoles.has('owner');
   const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
   const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
 
