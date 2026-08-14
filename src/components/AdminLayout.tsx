@@ -20,6 +20,7 @@ import { NavItem } from "@/components/navigation/nav-items";
 import { ContextSwitcher } from "@/components/context/ContextSwitcher";
 import { usePermissions } from "@/hooks/usePermissions";
 import { isNavItemVisible } from "@/lib/auth/nav-permissions";
+import { RouteAuthorizationGate } from "@/components/auth/RouteAuthorizationGate";
 
 import { safeLocalStorage } from "@/lib/safe-storage";
 import { SHELL_GUTTER_X } from "@/lib/ux/shell-spacing";
@@ -230,7 +231,7 @@ export default function AdminLayout() {
         <div className="min-h-screen bg-background">
           <main className="p-6 lg:p-10 pt-6">
             <div className="animate-fade-in max-w-[1500px] mx-auto">
-              <Outlet />
+              <RouteAuthorizationGate><Outlet /></RouteAuthorizationGate>
             </div>
           </main>
         </div>
@@ -293,7 +294,7 @@ export default function AdminLayout() {
         </header>
 
         <main className={cn(SHELL_GUTTER_X, "py-4 animate-fade-in")}>
-          <Outlet />
+          <RouteAuthorizationGate><Outlet /></RouteAuthorizationGate>
         </main>
 
         {useLegacyNav ? (
@@ -353,7 +354,7 @@ export default function AdminLayout() {
 
         )}>
           <div className="animate-fade-in w-full max-w-[1600px] 2xl:max-w-[1760px] mx-auto min-w-0">
-            <Outlet />
+            <RouteAuthorizationGate><Outlet /></RouteAuthorizationGate>
           </div>
         </main>
       </div>
