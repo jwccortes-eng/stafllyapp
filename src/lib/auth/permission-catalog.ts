@@ -66,8 +66,8 @@ export const PERMISSION_CATALOG: readonly PermissionSpec[] = [
   P("service.edit", "services", "Editar servicios", "editar_turno", "shifts", "edit", true),
   P("service.publish", "services", "Publicar servicios", "editar_turno", "shifts", "edit", true),
   P("service.cancel", "services", "Cancelar / eliminar servicios", "eliminar_turno", "shifts", "delete", true),
-  P("service.close", "services", "Cerrar servicios", "cerrar_turno", "shifts", "edit", true),
-  P("service.reopen", "services", "Reabrir servicios", "reabrir_turno", "shifts", "edit", true),
+  P("service.close", "services", "Cerrar servicios", "cerrar_turno", null, null, true),
+  P("service.reopen", "services", "Reabrir servicios", "reabrir_turno", null, null, true),
 
   // Staffing
   P("staffing.view", "staffing", "Ver staffing", null, "shifts", "view", false),
@@ -80,9 +80,9 @@ export const PERMISSION_CATALOG: readonly PermissionSpec[] = [
   P("time_entries.view", "attendance", "Ver registros de horas", null, "timeclock", "view", false),
   P("time_entries.review", "attendance", "Revisar registros", "editar_clock", "timeclock", "edit", true),
   P("time_entries.adjust", "attendance", "Ajustar horas", "editar_clock", "timeclock", "edit", true),
-  P("time_entries.approve", "attendance", "Aprobar horas", "aprobar_clock", "timeclock", "edit", true),
-  P("closeout.close_day", "attendance", "Cerrar día", "cerrar_dia", "timeclock", "edit", true),
-  P("closeout.reopen_day", "attendance", "Reabrir día", "reabrir_dia", "timeclock", "edit", true),
+  P("time_entries.approve", "attendance", "Aprobar horas", "aprobar_clock", null, null, true),
+  P("closeout.close_day", "attendance", "Cerrar día", "cerrar_dia", null, null, true),
+  P("closeout.reopen_day", "attendance", "Reabrir día", "reabrir_dia", null, null, true),
 
   // Equipo
   P("workers.view", "people", "Ver personas", null, "employees", "view", false),
@@ -109,7 +109,7 @@ export const PERMISSION_CATALOG: readonly PermissionSpec[] = [
   // Payroll
   P("payroll.view", "payroll", "Ver payroll y salarios", "ver_salarios", "summary", "view", false),
   P("payroll.manage", "payroll", "Gestionar payroll", "editar_nomina", "periods", "edit", true),
-  P("payroll.approve", "payroll", "Aprobar payroll", "aprobar_nomina", "periods", "edit", true),
+  P("payroll.approve", "payroll", "Aprobar payroll", "aprobar_nomina", null, null, true),
   P("payroll.export", "payroll", "Exportar payroll", "exportar_nomina", "summary", "view", false),
   P("reports.view", "payroll", "Ver reportes", "ver_reportes", "reports", "view", false),
 
