@@ -55,6 +55,8 @@ interface AuthContextType {
   allRoles: Set<string>;
   /** Map of companyId → role from public.company_users (per-tenant). */
   companyRoles: Record<string, string>;
+  /** Map of companyId → company_users.operating_role_key (autoridad de permisos). */
+  companyOperatingRoles: Record<string, string | null>;
   /** Resolve role a user has IN a specific company.
    *  Combines global cross-tenant roles (developer/owner) with per-company role. */
   getRoleForCompany: (companyId: string | null) => AppRole;
@@ -117,6 +119,7 @@ const AuthContext = createContext<AuthContextType>({
   canAccessAdmin: false,
   canAccessPortal: false,
   companyRoles: {},
+  companyOperatingRoles: {},
   getRoleForCompany: () => null,
   canAccessAdminForCompany: () => false,
   canAccessPortalForCompany: () => false,
@@ -154,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole>(null);
   const [allRoles, setAllRoles] = useState<Set<string>>(new Set());
   const [companyRoles, setCompanyRoles] = useState<Record<string, string>>({});
+  const [companyOperatingRoles, setCompanyOperatingRoles] = useState<Record<string, string | null>>({});
   const [activeMode, setActiveModeState] = useState<ActiveMode>(() => {
     return (safeLocalStorage.getItem("stafly-active-mode") as ActiveMode) || 'admin';
   });
@@ -190,6 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setAllRoles(new Set());
     setCompanyRoles({});
+    setCompanyOperatingRoles({});
     setEmployeeId(null);
     setAllEmployeeIds([]);
     setEmployeeActive(true);
@@ -215,14 +220,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Quality Staff. See `getRoleForCompany` / `canAccessAdminForCompany`.)
       const { data: companyUserRoles } = await supabase
         .from("company_users")
-        .select("company_id, role")
+        .select("company_id, role, operating_role_key")
         .eq("user_id", userId);
 
       const cRoles: Record<string, string> = {};
+      const cOperating: Record<string, string | null> = {};
       for (const cu of companyUserRoles ?? []) {
         if (cu.company_id && cu.role) cRoles[cu.company_id as string] = cu.role as string;
+        if (cu.company_id) {
+          cOperating[cu.company_id as string] =
+            ((cu as { operating_role_key?: string | null }).operating_role_key ?? null);
+        }
       }
       setCompanyRoles(cRoles);
+      setCompanyOperatingRoles(cOperating);
 
       const { data: empData } = await supabase
         .from("employees")
@@ -644,6 +655,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRole(null);
     setAllRoles(new Set());
     setCompanyRoles({});
+    setCompanyOperatingRoles({});
     setEmployeeId(null);
     setPermissions([]);
     setActionPermissions([]);
@@ -730,7 +742,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, session, authState, role, allRoles, companyRoles,
+      user, session, authState, role, allRoles, companyRoles, companyOperatingRoles,
       getRoleForCompany, canAccessAdminForCompany, canAccessPortalForCompany,
       activeMode, setActiveMode,
       canAccessAdmin, canAccessPortal,

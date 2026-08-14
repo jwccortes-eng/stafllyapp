@@ -3,8 +3,24 @@
  *
  * Espejo exacto de `public.has_permission(user, company, permission)`.
  * Frontend y backend deben responder lo mismo para la misma entrada.
+ *
+ * P0 AUTHORIZATION MODEL HARDENING — modelo vigente:
+ *
+ *   efectivo = override explícito (user + company real)
+ *              ?? default del rol operativo (allowlist)
+ *
+ *   - `company_users.role = 'admin'` NO concede acceso total.
+ *   - Solo `company_owner` (en su compañía) y el staff de plataforma
+ *     (`user_roles` developer/owner) tienen acceso total.
+ *   - Lo no concedido, se deniega. No hay fallback a "full" ni a filas
+ *     legacy con `company_id IS NULL`.
  */
-import { getPermissionSpec, type ModuleLevel } from "./permission-catalog";
+import { getPermissionSpec } from "./permission-catalog";
+import {
+  resolveOperatingRoleKey,
+  roleDefaultGrants,
+  type OperatingRoleKey,
+} from "./role-defaults";
 
 export type AuthorizationStatus = "loading" | "ready" | "error";
 
@@ -25,24 +41,33 @@ export interface ActionPermissionRow {
 export interface AuthorizationInput {
   /** Roles globales de `user_roles`. */
   globalRoles: ReadonlySet<string>;
-  /** Rol por compañía de `company_users`. */
+  /** Rol de membresía por compañía de `company_users.role`. */
   companyRoles: Readonly<Record<string, string>>;
+  /** Rol operativo explícito por compañía (`company_users.operating_role_key`). */
+  operatingRoles?: Readonly<Record<string, string | null>>;
   modulePermissions: readonly ModulePermissionRow[];
   actionPermissions: readonly ActionPermissionRow[];
 }
 
 /** Roles que otorgan acceso total (espejo de is_global_owner + developer/owner). */
 const GLOBAL_FULL_ACCESS = new Set(["developer", "owner"]);
-/** Roles por compañía con acceso total dentro de ESA compañía. */
-const COMPANY_FULL_ACCESS = new Set(["company_owner", "admin"]);
 
 /**
  * Permisos NO removibles para un `company_owner`.
  * Quitarlos dejaría a la empresa sin dueño operativo ni forma de recuperarse
- * (lockout administrativo). Documentado en
- * docs/qa/P0_PERMISSION_CONSOLE_EDITABLE_STATE_FIX.md
+ * (lockout administrativo).
  */
 export const PROTECTED_OWNER_PERMISSIONS: ReadonlySet<string> = new Set([
+  "users.manage",
+  "roles.manage",
+  "company.settings",
+]);
+
+/**
+ * Permisos que SOLO el dueño de la compañía o el staff de plataforma pueden
+ * ejercer. Ningún rol operativo ni override puede concederlos.
+ */
+export const OWNER_ONLY_PERMISSIONS: ReadonlySet<string> = new Set([
   "users.manage",
   "roles.manage",
   "company.settings",
@@ -53,42 +78,36 @@ export function hasGlobalFullAccess(input: AuthorizationInput): boolean {
   return false;
 }
 
-export function isFullAccess(input: AuthorizationInput, companyId: string | null): boolean {
-  if (hasGlobalFullAccess(input)) return true;
+/** Dueño de ESA compañía (membresía, nunca rol global). */
+export function isCompanyOwner(input: AuthorizationInput, companyId: string | null): boolean {
   if (!companyId) return false;
-  const cRole = input.companyRoles[companyId];
-  return !!cRole && COMPANY_FULL_ACCESS.has(cRole);
+  return input.companyRoles[companyId] === "company_owner";
 }
 
+/** Acceso total: staff de plataforma o dueño de la compañía. */
+export function isFullAccess(input: AuthorizationInput, companyId: string | null): boolean {
+  return hasGlobalFullAccess(input) || isCompanyOwner(input, companyId);
+}
 
-function moduleAllows(
+/** Rol operativo efectivo de la persona en la compañía indicada. */
+export function operatingRoleFor(
   input: AuthorizationInput,
   companyId: string | null,
-  module: string,
-  level: ModuleLevel,
-): boolean {
-  const pick = (row: ModulePermissionRow | undefined) =>
-    row
-      ? level === "view"
-        ? row.can_view
-        : level === "edit"
-          ? row.can_edit
-          : row.can_delete
-      : undefined;
-
-  // 1) fila explícita de la compañía activa
-  const scoped = input.modulePermissions.find((r) => r.module === module && r.company_id === companyId);
-  const scopedValue = pick(scoped);
-  if (scopedValue !== undefined) return scopedValue;
-
-  // 2) fallback heredado (company_id NULL) — preserva el comportamiento previo
-  const legacy = input.modulePermissions.find((r) => r.module === module && r.company_id === null);
-  return pick(legacy) ?? false;
+): OperatingRoleKey | null {
+  if (!companyId) return null;
+  return resolveOperatingRoleKey(
+    input.companyRoles[companyId] ?? null,
+    input.operatingRoles?.[companyId] ?? null,
+  );
 }
 
 /**
  * Override explícito para la compañía activa.
- * `undefined` = no hay fila explícita (se hereda del rol).
+ * `undefined` = no hay fila explícita (se hereda del rol operativo).
+ *
+ * Solo se consideran filas con el `company_id` REAL de la compañía activa.
+ * Las filas legacy (`company_id IS NULL`) y las escritas contra compañías
+ * placeholder no autorizan ni deniegan nada.
  */
 export function explicitOverride(
   input: AuthorizationInput,
@@ -137,34 +156,28 @@ export function evaluatePermission(
   const spec = getPermissionSpec(permission);
   if (!spec) return false;
 
-  const full = isFullAccess(input, companyId);
+  // 1) Staff de plataforma: acceso total, nunca restringible por compañía.
+  if (hasGlobalFullAccess(input)) return true;
 
-  // users.manage / roles.manage / configuración pura: solo administración de compañía.
-  if (!spec.legacyAction && !spec.legacyModule) return full;
+  if (!companyId) return false;
 
-  if (full) {
-    // Staff de plataforma (developer/owner global): nunca restringible por compañía.
-    if (hasGlobalFullAccess(input)) return true;
-    const cRole = companyId ? input.companyRoles[companyId] : undefined;
-    // El dueño conserva siempre sus permisos críticos (anti-lockout).
-    if (cRole === "company_owner" && PROTECTED_OWNER_PERMISSIONS.has(spec.permission)) return true;
-    // Un override explícito en NEGATIVO restringe también a admin / owner.
-    if (explicitOverride(input, permission, companyId) === false) return false;
-    return true;
+  const override = explicitOverride(input, permission, companyId);
+
+  // 2) Dueño de la compañía: acceso total dentro de SU compañía.
+  //    Sus permisos críticos son irrevocables (anti-lockout); el resto puede
+  //    restringirse con un override explícito de esa misma compañía.
+  if (isCompanyOwner(input, companyId)) {
+    if (PROTECTED_OWNER_PERMISSIONS.has(permission)) return true;
+    return override ?? true;
   }
 
-  if (spec.legacyAction) {
-    const row = input.actionPermissions.find(
-      (r) => r.action === spec.legacyAction && r.company_id === companyId,
-    );
-    if (row?.granted) return true;
-  }
+  // 3) Permisos reservados al dueño: ningún rol operativo ni override los
+  //    concede a una membresía que no sea dueña de la compañía.
+  if (OWNER_ONLY_PERMISSIONS.has(permission)) return false;
 
-  if (spec.legacyModule && spec.legacyLevel) {
-    if (moduleAllows(input, companyId, spec.legacyModule, spec.legacyLevel)) return true;
-  }
+  // 4) Override explícito de esta compañía (concede o deniega).
+  if (override !== undefined) return override;
 
-
-
-  return false;
+  // 5) Default del rol operativo (allowlist). Deny by default.
+  return roleDefaultGrants(operatingRoleFor(input, companyId), permission);
 }

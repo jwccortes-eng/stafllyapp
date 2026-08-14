@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -341,20 +342,20 @@ function App() {
                 <Route path="people/:id" element={<CompanyRequiredGuard><UnifiedPersonProfile /></CompanyRequiredGuard>} />
                 <Route path="employees/:id" element={<CompanyRequiredGuard><UnifiedPersonProfile /></CompanyRequiredGuard>} />
                 <Route path="workers/:id" element={<CompanyRequiredGuard><WorkerProfileRedirect /></CompanyRequiredGuard>} />
-                <Route path="periods" element={<CompanyRequiredGuard><ModuleGate moduleKey="periods"><PayPeriods /></ModuleGate></CompanyRequiredGuard>} />
-                <Route path="import" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportConnecteam /></ModuleGate></CompanyRequiredGuard>} />
-                <Route path="concepts" element={<CompanyRequiredGuard><Concepts /></CompanyRequiredGuard>} />
-                <Route path="movements" element={<CompanyRequiredGuard><ModuleGate moduleKey="movements"><Movements /></ModuleGate></CompanyRequiredGuard>} />
-                <Route path="summary" element={<CompanyRequiredGuard><ModuleGate moduleKey="summary"><PeriodSummary /></ModuleGate></CompanyRequiredGuard>} />
-                <Route path="summary/detail" element={<CompanyRequiredGuard><ModuleGate moduleKey="summary"><EmployeePeriodDetail /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="periods" element={<PermissionGate permission="payroll.view"><CompanyRequiredGuard><ModuleGate moduleKey="periods"><PayPeriods /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="import" element={<PermissionGate permission="payroll.manage"><CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportConnecteam /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="concepts" element={<PermissionGate permission="payroll.manage"><CompanyRequiredGuard><Concepts /></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="movements" element={<PermissionGate permission="payroll.manage"><CompanyRequiredGuard><ModuleGate moduleKey="movements"><Movements /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="summary" element={<PermissionGate permission="payroll.view"><CompanyRequiredGuard><ModuleGate moduleKey="summary"><PeriodSummary /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="summary/detail" element={<PermissionGate permission="payroll.view"><CompanyRequiredGuard><ModuleGate moduleKey="summary"><EmployeePeriodDetail /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="reports" element={<CompanyRequiredGuard><ModuleGate moduleKey="reports"><PeriodSummary /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="reports/employee" element={<CompanyRequiredGuard><ModuleGate moduleKey="reports"><EmployeeReport /></ModuleGate></CompanyRequiredGuard>} />
-                <Route path="users" element={<CompanyRequiredGuard><UsersPage /></CompanyRequiredGuard>} />
+                <Route path="users" element={<PermissionGate permission="users.manage"><CompanyRequiredGuard><UsersPage /></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="identity-quality" element={<CompanyRequiredGuard><IdentityQuality /></CompanyRequiredGuard>} />
 
                 <Route path="companies" element={<CompaniesPage />} />
                 <Route path="global" element={<OwnerDashboard />} />
-                <Route path="invite" element={<CompanyRequiredGuard><InviteEmployees /></CompanyRequiredGuard>} />
+                <Route path="invite" element={<PermissionGate permission="workers.invite"><CompanyRequiredGuard><InviteEmployees /></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="directory" element={<Directory />} />
                 <Route path="clients" element={<CompanyRequiredGuard><ModuleGate moduleKey="clients"><Clients /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="clients/:clientId" element={<CompanyRequiredGuard><ModuleGate moduleKey="clients"><ClientProfile /></ModuleGate></CompanyRequiredGuard>} />
@@ -365,10 +366,10 @@ function App() {
                 <Route path="company-dictionary" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><CompanyDictionary /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="import-review" element={<CompanyRequiredGuard><ImportReview /></CompanyRequiredGuard>} />
                 <Route path="backfill-shift/:shiftCode" element={<CompanyRequiredGuard><BackfillShift /></CompanyRequiredGuard>} />
-                <Route path="import-timeclock" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportTimeClock /></ModuleGate></CompanyRequiredGuard>} />
-                <Route path="import-extras" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportPayrollExtras /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="import-timeclock" element={<PermissionGate permission="time_entries.adjust"><CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportTimeClock /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="import-extras" element={<PermissionGate permission="payroll.manage"><CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportPayrollExtras /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="bulk-import-shifts" element={<CompanyRequiredGuard><BulkImportShifts /></CompanyRequiredGuard>} />
-                <Route path="import-wizard" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportWizard /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="import-wizard" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportWizard /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="shift-requests" element={<CompanyRequiredGuard><ShiftRequests /></CompanyRequiredGuard>} />
                 <Route path="timeclock" element={<CompanyRequiredGuard><ModuleGate moduleKey="timeclock"><TimeClock /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="announcements" element={<CompanyRequiredGuard><Announcements /></CompanyRequiredGuard>} />
@@ -376,35 +377,35 @@ function App() {
                 <Route path="settings" element={<PlatformSettings />} />
                 <Route path="activity" element={<ActivityLog />} />
                 <Route path="onboarding" element={<CompanyRequiredGuard><OnboardingWizard /></CompanyRequiredGuard>} />
-                <Route path="permissions" element={<CompanyRequiredGuard><Permissions /></CompanyRequiredGuard>} />
+                <Route path="permissions" element={<PermissionGate permission="roles.manage"><CompanyRequiredGuard><Permissions /></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="assignment-overrides" element={<CompanyRequiredGuard><AssignmentOverrides /></CompanyRequiredGuard>} />
                 <Route path="admin/assignment-overrides" element={<CompanyRequiredGuard><AssignmentOverrides /></CompanyRequiredGuard>} />
                 <Route path="workers/duplicates" element={<CompanyRequiredGuard><WorkerDuplicates /></CompanyRequiredGuard>} />
                 <Route path="employees/duplicates" element={<CompanyRequiredGuard><WorkerDuplicates /></CompanyRequiredGuard>} />
                 <Route path="admin/worker-duplicates" element={<CompanyRequiredGuard><WorkerDuplicates /></CompanyRequiredGuard>} />
-                <Route path="company-config" element={<CompanyRequiredGuard><CompanyConfig /></CompanyRequiredGuard>} />
-                <Route path="automations" element={<CompanyRequiredGuard><ModuleGate moduleKey="automations"><Automations /></ModuleGate></CompanyRequiredGuard>} />
-                <Route path="payroll-settings" element={<CompanyRequiredGuard><PayrollSettings /></CompanyRequiredGuard>} />
-                <Route path="monetization" element={<CompanyRequiredGuard><ModuleGate moduleKey="monetization"><MonetizationReport /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="company-config" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><CompanyConfig /></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="automations" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><ModuleGate moduleKey="automations"><Automations /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="payroll-settings" element={<PermissionGate permission="payroll.settings"><CompanyRequiredGuard><PayrollSettings /></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="monetization" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><ModuleGate moduleKey="monetization"><MonetizationReport /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="pricing" element={<Pricing />} />
-                <Route path="billing" element={<Billing />} />
+                <Route path="billing" element={<PermissionGate permission="company.settings"><Billing /></PermissionGate>} />
                 <Route path="system-health" element={<SystemHealth />} />
                 <Route path="implementations" element={<Implementations />} />
-                <Route path="notification-templates" element={<CompanyRequiredGuard><NotificationTemplates /></CompanyRequiredGuard>} />
+                <Route path="notification-templates" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><NotificationTemplates /></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="requests" element={<CompanyRequiredGuard><Requests /></CompanyRequiredGuard>} />
                 <Route path="leads" element={<Leads />} />
                 <Route path="admin" element={<AdminHub />} />
                 <Route path="discrepancies" element={<CompanyRequiredGuard><ModuleGate moduleKey="reports"><DiscrepancyReport /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="comparison" element={<CompanyRequiredGuard><ComparisonReport /></CompanyRequiredGuard>} />
-                <Route path="w9" element={<CompanyRequiredGuard><ContractorW9 /></CompanyRequiredGuard>} />
-                <Route path="1099" element={<CompanyRequiredGuard><TaxForms1099 /></CompanyRequiredGuard>} />
-                <Route path="import-inactive" element={<CompanyRequiredGuard><ImportInactiveEmployees /></CompanyRequiredGuard>} />
+                <Route path="w9" element={<PermissionGate permission="payroll.manage"><CompanyRequiredGuard><ContractorW9 /></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="1099" element={<PermissionGate permission="payroll.manage"><CompanyRequiredGuard><TaxForms1099 /></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="import-inactive" element={<PermissionGate permission="workers.edit"><CompanyRequiredGuard><ImportInactiveEmployees /></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="unpaid-shifts" element={<CompanyRequiredGuard><ModuleGate moduleKey="reports"><UnpaidShiftsReport /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="staffing-requests" element={<CompanyRequiredGuard><StaffingRequests /></CompanyRequiredGuard>} />
                 <Route path="service-requests" element={<CompanyRequiredGuard><ServiceRequests /></CompanyRequiredGuard>} />
                 <Route path="client-experience" element={<CompanyRequiredGuard><ClientExperience /></CompanyRequiredGuard>} />
-                <Route path="invoices" element={<CompanyRequiredGuard><InvoicesPage /></CompanyRequiredGuard>} />
+                <Route path="invoices" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><InvoicesPage /></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="service-categories" element={<CompanyRequiredGuard><ServiceCategories /></CompanyRequiredGuard>} />
                 <Route path="ai-workforce" element={<CompanyRequiredGuard><AIWorkforce /></CompanyRequiredGuard>} />
                 <Route path="live-map" element={<CompanyRequiredGuard><LiveMap /></CompanyRequiredGuard>} />
@@ -412,11 +413,11 @@ function App() {
                 <Route path="passport" element={<CompanyRequiredGuard><WorkerPassport /></CompanyRequiredGuard>} />
                 <Route path="attendance" element={<CompanyRequiredGuard><Attendance /></CompanyRequiredGuard>} />
                 <Route path="quality" element={<CompanyRequiredGuard><QualityDashboard /></CompanyRequiredGuard>} />
-                <Route path="migration" element={<CompanyRequiredGuard><MigrationCommandCenter /></CompanyRequiredGuard>} />
-                <Route path="company-migration" element={<CompanyRequiredGuard><CompanyMigration /></CompanyRequiredGuard>} />
+                <Route path="migration" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><MigrationCommandCenter /></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="company-migration" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><CompanyMigration /></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="reconciliation-report" element={<CompanyRequiredGuard><ReconciliationReport /></CompanyRequiredGuard>} />
                 <Route path="staged-reconciliation" element={<CompanyRequiredGuard><StagedReconciliation /></CompanyRequiredGuard>} />
-                <Route path="advances-loans" element={<CompanyRequiredGuard><AdvancesLoans /></CompanyRequiredGuard>} />
+                <Route path="advances-loans" element={<PermissionGate permission="payroll.manage"><CompanyRequiredGuard><AdvancesLoans /></CompanyRequiredGuard></PermissionGate>} />
                 {/* Legacy redirects — KioskDevices/FrontDeskReports consolidated into KioskHub/FrontDeskHub */}
                 <Route path="kiosk-devices" element={<Navigate to="/app/kiosk" replace />} />
                 <Route path="kiosk" element={<CompanyRequiredGuard><KioskHub /></CompanyRequiredGuard>} />
@@ -427,29 +428,29 @@ function App() {
                 <Route path="front-desk-reports" element={<Navigate to="/app/front-desk" replace />} />
                 <Route path="front-desk" element={<CompanyRequiredGuard><FrontDeskHub /></CompanyRequiredGuard>} />
                 <Route path="validation-center" element={<CompanyRequiredGuard><ValidationCenter /></CompanyRequiredGuard>} />
-                <Route path="compensation-validation" element={<CompanyRequiredGuard><CompensationValidation /></CompanyRequiredGuard>} />
-                <Route path="payroll-pilot-close" element={<CompanyRequiredGuard><PayrollPilotClose /></CompanyRequiredGuard>} />
-                <Route path="payroll-mappings" element={<CompanyRequiredGuard><PayrollMappings /></CompanyRequiredGuard>} />
-                <Route path="payroll-reconciliation" element={<CompanyRequiredGuard><PayrollReconciliation /></CompanyRequiredGuard>} />
-                <Route path="payroll-review-queue" element={<CompanyRequiredGuard><PayrollReviewQueue /></CompanyRequiredGuard>} />
+                <Route path="compensation-validation" element={<PermissionGate permission="payroll.view"><CompanyRequiredGuard><CompensationValidation /></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="payroll-pilot-close" element={<PermissionGate permission="payroll.manage"><CompanyRequiredGuard><PayrollPilotClose /></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="payroll-mappings" element={<PermissionGate permission="payroll.manage"><CompanyRequiredGuard><PayrollMappings /></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="payroll-reconciliation" element={<PermissionGate permission="payroll.manage"><CompanyRequiredGuard><PayrollReconciliation /></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="payroll-review-queue" element={<PermissionGate permission="payroll.manage"><CompanyRequiredGuard><PayrollReviewQueue /></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="dev/change-intelligence" element={<ChangeIntelligenceObservation />} />
                 <Route path="dev/operational-authorization" element={<OperationalAuthorizationObservation />} />
                 <Route path="dev/ocs" element={<OcsCatalog />} />
                 <Route path="dev/operational-signals" element={<CompanyRequiredGuard><OperationalSignalsShadow /></CompanyRequiredGuard>} />
 
-                <Route path="weekly-payroll-reconciliation" element={<CompanyRequiredGuard><WeeklyPayrollReconciliation /></CompanyRequiredGuard>} />
-                <Route path="payroll-native-dry-run" element={<CompanyRequiredGuard><PayrollNativeDryRun /></CompanyRequiredGuard>} />
-                <Route path="compensation-adoption" element={<CompanyRequiredGuard><CompensationAdoption /></CompanyRequiredGuard>} />
+                <Route path="weekly-payroll-reconciliation" element={<PermissionGate permission="payroll.manage"><CompanyRequiredGuard><WeeklyPayrollReconciliation /></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="payroll-native-dry-run" element={<PermissionGate permission="payroll.manage"><CompanyRequiredGuard><PayrollNativeDryRun /></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="compensation-adoption" element={<PermissionGate permission="payroll.view"><CompanyRequiredGuard><CompensationAdoption /></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="applications" element={<CompanyRequiredGuard><Applications /></CompanyRequiredGuard>} />
                 <Route path="referrals" element={<Referrals />} />
-                <Route path="application-settings" element={<CompanyRequiredGuard><ApplicationSettings /></CompanyRequiredGuard>} />
+                <Route path="application-settings" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><ApplicationSettings /></CompanyRequiredGuard></PermissionGate>} />
                 <Route path="upgrade-requests" element={<UpgradeRequests />} />
-                <Route path="invoicing/clients" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingClients /></ModuleGate></CompanyRequiredGuard>} />
-                <Route path="invoicing/clients/import" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingClientsImport /></ModuleGate></CompanyRequiredGuard>} />
-                <Route path="invoicing/service-blocks" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingServiceBlocks /></ModuleGate></CompanyRequiredGuard>} />
-                <Route path="invoicing/invoices" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingInvoices /></ModuleGate></CompanyRequiredGuard>} />
-                <Route path="invoicing/invoices/new" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingInvoiceNew /></ModuleGate></CompanyRequiredGuard>} />
-                <Route path="invoicing/invoices/:id" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingInvoiceDetail /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="invoicing/clients" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingClients /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="invoicing/clients/import" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingClientsImport /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="invoicing/service-blocks" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingServiceBlocks /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="invoicing/invoices" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingInvoices /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="invoicing/invoices/new" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingInvoiceNew /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
+                <Route path="invoicing/invoices/:id" element={<PermissionGate permission="company.settings"><CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingInvoiceDetail /></ModuleGate></CompanyRequiredGuard></PermissionGate>} />
                 {/* Founder Finance — private to founder role; gated inside layout */}
                 <Route path="founder-finance" element={<FounderFinanceLayout />}>
                   <Route index element={<FounderFinanceOverview />} />
