@@ -26,6 +26,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Receipt, Loader2, AlertCircle, CheckCircle2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
