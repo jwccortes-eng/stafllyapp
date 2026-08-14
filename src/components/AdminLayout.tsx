@@ -18,6 +18,8 @@ import { useNavPreferences } from "@/hooks/useNavPreferences";
 import { supabase } from "@/integrations/supabase/client";
 import { NavItem } from "@/components/navigation/nav-items";
 import { ContextSwitcher } from "@/components/context/ContextSwitcher";
+import { usePermissions } from "@/hooks/usePermissions";
+import { isNavItemVisible } from "@/lib/auth/nav-permissions";
 
 import { safeLocalStorage } from "@/lib/safe-storage";
 import { SHELL_GUTTER_X } from "@/lib/ux/shell-spacing";
@@ -91,6 +93,9 @@ export default function AdminLayout() {
   const location = useLocation();
   const [launcherOpen, setLauncherOpen] = useState(false);
   const { pinnedIds, togglePin, maxPins } = useNavPreferences(isMobile ? ADMIN_DEFAULT_PINS_MOBILE : ADMIN_DEFAULT_PINS);
+  const { canAny, status: permissionStatus } = usePermissions();
+  const isPlatformStaffUser = allRoles.has("developer") || allRoles.has("owner");
+
 
   useEffect(() => {
     const id = logMount("AdminLayout");
@@ -245,19 +250,14 @@ export default function AdminLayout() {
     );
   }
 
-  const isLinkVisible = (module: string | null) => {
-    if (!module) return true;
-    if (!isModuleActive(module)) return false;
-    if (effectiveRole === 'developer' || effectiveRole === 'owner' || effectiveRole === 'company_owner' || effectiveRole === 'admin') return true;
-    if (effectiveRole === 'manager' || effectiveRole === 'supervisor') return hasModuleAccess(module, 'view');
-    return false;
-  };
-
+  // P0 Legacy Bypass Retirement — visibilidad por PERMISO efectivo, nunca por
+  // `role === 'admin'`. El plan sigue ocultando módulos no contratados.
   const visibleItems = ADMIN_NAV_ITEMS.filter(item => {
-    if (!isLinkVisible(item.module)) return false;
-    if (item.roles && !item.roles.includes(effectiveRole ?? '')) return false;
-    return true;
+    if (item.module && !isModuleActive(item.module)) return false;
+    if (permissionStatus !== "ready") return false;
+    return isNavItemVisible({ to: item.to, canAny, isPlatformStaff: isPlatformStaffUser });
   });
+
 
   // Mobile-only: drop items explicitly flagged mobile === "hidden".
   // Desktop continues to use the full visibleItems list.

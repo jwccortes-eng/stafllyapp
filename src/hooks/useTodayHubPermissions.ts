@@ -13,6 +13,7 @@
  *  - La UI no reemplaza la seguridad: RPC/RLS siguen validando autorización.
  */
 import { useMemo } from "react";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { isAdminLevelRole, isGatedAdminRole } from "@/lib/roles";
@@ -31,18 +32,14 @@ export interface TodayHubPermissionsResult {
 }
 
 export function useTodayHubPermissions(): TodayHubPermissionsResult {
-  const {
-    loading: authLoading,
-    getRoleForCompany,
-    hasModuleAccess,
-    hasActionPermission,
-  } = useAuth();
+  const { getRoleForCompany } = useAuth();
   const { selectedCompanyId, loading: companyLoading } = useCompany() as {
     selectedCompanyId: string | null;
     loading?: boolean;
   };
+  const { can, status } = usePermissions();
 
-  const loading = authLoading || !!companyLoading;
+  const loading = status === "loading" || !!companyLoading;
   const role = selectedCompanyId ? getRoleForCompany(selectedCompanyId) : null;
 
   return useMemo<TodayHubPermissionsResult>(() => {
@@ -64,62 +61,29 @@ export function useTodayHubPermissions(): TodayHubPermissionsResult {
         role: null,
       };
     }
-    if (!role) {
-      return {
-        permissions: NO_HUB_PERMISSIONS,
-        resolved: false,
-        loading: false,
-        reason: "role_unresolved_for_tenant",
-        role: null,
-      };
-    }
 
-    try {
-      const admin = isAdminLevelRole(role);
-      const gated = isGatedAdminRole(role);
-      const privileged = admin || gated;
+    // P0 Legacy Bypass Retirement — el permiso efectivo es la única autoridad.
+    const permissions: HubPermissions = {
+      canAssign: can("staffing.assign"),
+      canConfirmTeam: can("staffing.assign"),
+      canOperate: can("service.edit") || can("service.view"),
+      canClose: can("service.close"),
+      canReviewCloseout: can("closeout.close_day") || can("service.close"),
+      canApproveHours: can("time_entries.approve") || can("payroll.approve"),
+      canAccessValidations:
+        can("payroll.view") || can("time_entries.review") || can("time_entries.approve"),
+      canManageWorkers: can("workers.edit"),
+      canManageAttendance: can("time_entries.review") || can("time_entries.adjust"),
+    };
 
-      // Módulos existentes; para admin-level `hasModuleAccess` ya devuelve true.
-      const shiftsEdit = privileged && hasModuleAccess("shifts", "edit");
-      const shiftsView = privileged && hasModuleAccess("shifts", "view");
-      const payrollView = privileged && hasModuleAccess("payroll", "view");
-      const payrollEdit = privileged && hasModuleAccess("payroll", "edit");
-      const timeclockEdit = privileged && hasModuleAccess("timeclock", "edit");
-      const employeesEdit = privileged && hasModuleAccess("employees", "edit");
-
-      const approveHours =
-        privileged &&
-        (admin || payrollEdit || hasActionPermission("aprobar_nomina"));
-
-      const permissions: HubPermissions = {
-        canAssign: shiftsEdit,
-        canConfirmTeam: shiftsEdit,
-        canOperate: shiftsEdit || shiftsView,
-        canClose: shiftsEdit,
-        canReviewCloseout: shiftsEdit,
-        canApproveHours: approveHours,
-        canAccessValidations: admin || payrollView || approveHours,
-        canManageWorkers: admin || employeesEdit,
-        canManageAttendance: admin || timeclockEdit || shiftsEdit,
-      };
-
-      return {
-        permissions,
-        resolved: true,
-        loading: false,
-        reason: null,
-        role: role as string,
-      };
-    } catch (err) {
-      console.error("[OX-4.3.1] permission resolver failed", err);
-      return {
-        permissions: NO_HUB_PERMISSIONS,
-        resolved: false,
-        loading: false,
-        reason: "resolver_error",
-        role: role as string,
-      };
-    }
+    return {
+      permissions,
+      resolved: true,
+      loading: false,
+      reason: null,
+      role: (role as string) ?? null,
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, selectedCompanyId, role, hasModuleAccess, hasActionPermission]);
+  }, [loading, selectedCompanyId, role, can]);
 }
+

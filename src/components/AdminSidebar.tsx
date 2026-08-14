@@ -16,7 +16,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useSubscription } from "@/hooks/useSubscription";
 import { cn } from "@/lib/utils";
-import { isAdminLevelRole } from "@/lib/roles";
+import { usePermissions } from "@/hooks/usePermissions";
+import { isNavItemVisible } from "@/lib/auth/nav-permissions";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -173,12 +174,13 @@ const GLOBAL_SECTION_ORDER = ["Plataforma", "Empresa"];
 
 
 export default function AdminSidebar() {
-  const { signOut, role: globalRole, hasModuleAccess, user, fullName, getRoleForCompany, canAccessAdminForCompany } = useAuth();
+  const { signOut, role: globalRole, user, fullName, getRoleForCompany, allRoles } = useAuth();
   const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive, isGlobalMode, canUseGlobalMode } = useCompany();
   // Tenant-scoped role: NEVER use global role to gate per-tenant UI.
   // In Global Mode (developer/owner platform view), fall back to global role.
   const role = isGlobalMode ? globalRole : getRoleForCompany(selectedCompanyId);
-  const isAdminRole = isAdminLevelRole(role);
+  const { canAny, status: permissionStatus } = usePermissions();
+  const isPlatformStaff = allRoles.has("developer") || allRoles.has("owner");
   const { canAccessModule, requiredPlanForModule, isTrial, trialDaysLeft } = useSubscription();
   const location = useLocation();
   const navigate = useNavigate();
@@ -228,19 +230,16 @@ export default function AdminSidebar() {
   const activeLinks = isGlobalMode ? GLOBAL_LINKS : COMPANY_LINKS;
   const activeSectionOrder = isGlobalMode ? GLOBAL_SECTION_ORDER : COMPANY_SECTION_ORDER;
 
+  /**
+   * P0 Legacy Bypass Retirement — la visibilidad se decide por PERMISO
+   * efectivo en la empresa activa, nunca por `role === 'admin'`.
+   */
   const isLinkVisible = (link: LinkDef) => {
     if (isGlobalMode) return true; // Global mode shows all platform links
-    if (link.module) {
-      if (!isModuleActive(link.module)) return false;
-      // Hide plan-locked modules from non-admin roles (managers/supervisors/employees)
-      // Admins still see them (locked) so they can upgrade.
-      if (!isAdminRole && !canAccessModule(link.module)) return false;
-      if (isAdminRole) return true;
-      if (role === 'manager' || role === 'supervisor') return hasModuleAccess(link.module, 'view');
-      return false;
-    }
-    if (link.roles && !link.roles.includes(role ?? '')) return false;
-    return true;
+    if (permissionStatus !== "ready") return false;
+    if (link.module && !isModuleActive(link.module)) return false;
+    if (link.module && !isPlatformStaff && !canAccessModule(link.module)) return false;
+    return isNavItemVisible({ to: link.to, canAny, isPlatformStaff });
   };
 
   const isModuleLocked = (module: string | null): boolean => {
@@ -253,7 +252,7 @@ export default function AdminSidebar() {
     return location.pathname === to || location.pathname.startsWith(to + "/");
   };
 
-  const isOwner = globalRole === 'developer' || globalRole === 'owner' || isAdminRole;
+
 
   const visibleSections = useMemo(() => {
     const sectionMap = new Map<string, LinkDef[]>();
@@ -267,7 +266,7 @@ export default function AdminSidebar() {
       if (sectionMap.has(sec)) result.push({ label: sec, links: sectionMap.get(sec)! });
     }
     return result;
-  }, [role, selectedCompanyId, isGlobalMode]);
+  }, [role, selectedCompanyId, isGlobalMode, permissionStatus, canAny, isPlatformStaff]);
 
   useEffect(() => {
     const activeSection = visibleSections.find(s => s.links.some(l => isActive(l.to, l.end)));

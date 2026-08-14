@@ -29,3 +29,10 @@ Hardcodes de rol retirados en todos los gates de escritura (P1 Hardcode Retireme
 2026-08-13). Nunca reintroducir `role === "admin"` para autorizar escrituras:
 usar `can`/`canAny`. Quedan solo en navegación/visibilidad y ámbito plataforma.
 Referencia: `docs/qa/P1_PERMISSION_HARDCODE_RETIREMENT.md`.
+
+Bypasses legacy retirados (2026-08-14): `has_module_permission`/`has_action_permission`
+exigen `company_id`; la firma de 3 args solo autoriza staff de plataforma. RLS de
+personas, documentos, configuración, staffing, ubicaciones y horas usa `has_permission`.
+Pendiente: 27 tablas financieras aún con `user_is_company_admin`.
+Referencia: `docs/qa/P0_AUTHORIZATION_LEGACY_BYPASS_RETIREMENT.md`.
+

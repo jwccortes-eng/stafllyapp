@@ -10,6 +10,8 @@ import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
+import { isNavItemVisible } from "@/lib/auth/nav-permissions";
 import { useCompany } from "@/hooks/useCompany";
 import CompanyActionGuard from "@/components/CompanyActionGuard";
 
@@ -59,7 +61,9 @@ const OWNER_SEARCHABLE: SearchableLink[] = [
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const { role, hasModuleAccess } = useAuth();
+  const { role, allRoles } = useAuth();
+  const { canAny, status: permissionStatus } = usePermissions();
+  const isPlatformStaff = allRoles.has('developer') || allRoles.has('owner');
   const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
   const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
 
@@ -74,19 +78,20 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  const isVisible = (module: string | null) => {
-    if (!module) return true;
-    if (!isModuleActive(module)) return false;
-    if (role === 'developer' || role === 'owner' || role === 'admin') return true;
-    if (role === 'manager' || role === 'supervisor') return hasModuleAccess(module, 'view');
-    return false;
+  // P0 Legacy Bypass Retirement — visibilidad por permiso efectivo.
+  const isVisible = (link: { to: string; module: string | null }) => {
+    if (link.module && !isModuleActive(link.module)) return false;
+    if (permissionStatus !== "ready") return false;
+    return isNavItemVisible({ to: link.to, canAny, isPlatformStaff });
   };
 
   const links = useMemo(() => {
-    const base = ALL_SEARCHABLE.filter(l => isVisible(l.module));
-    if (role === 'developer' || role === 'owner') return [...base, ...OWNER_SEARCHABLE];
+    const base = ALL_SEARCHABLE.filter(l => isVisible(l));
+    if (isPlatformStaff) return [...base, ...OWNER_SEARCHABLE];
     return base;
-  }, [role]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, canAny, permissionStatus, isPlatformStaff]);
+
 
   const sections = useMemo(() => {
     const map = new Map<string, SearchableLink[]>();
