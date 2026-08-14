@@ -266,7 +266,7 @@ export default function AdminSidebar() {
       if (sectionMap.has(sec)) result.push({ label: sec, links: sectionMap.get(sec)! });
     }
     return result;
-  }, [role, selectedCompanyId, isGlobalMode]);
+  }, [role, selectedCompanyId, isGlobalMode, permissionStatus, canAny, isPlatformStaff]);
 
   useEffect(() => {
     const activeSection = visibleSections.find(s => s.links.some(l => isActive(l.to, l.end)));
