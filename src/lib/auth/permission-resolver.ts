@@ -117,32 +117,31 @@ export function explicitOverride(
   const spec = getPermissionSpec(permission);
   if (!spec || companyId === null) return undefined;
 
-  let saw = false;
-  let anyTrue = false;
-
+  // 1) Regla explícita por ACCIÓN: es autoritativa. Un "no" explícito
+  //    (p. ej. aprobar_nomina = false) manda sobre cualquier permiso de
+  //    módulo más amplio (p. ej. periods.edit para preparar nómina).
   if (spec.legacyAction) {
     const row = input.actionPermissions.find(
       (r) => r.action === spec.legacyAction && r.company_id === companyId,
     );
-    if (row) {
-      saw = true;
-      if (row.granted) anyTrue = true;
-    }
+    if (row) return !!row.granted;
   }
 
+  // 2) Solo si no hay regla de acción se consulta el módulo.
   if (spec.legacyModule && spec.legacyLevel) {
     const row = input.modulePermissions.find(
       (r) => r.module === spec.legacyModule && r.company_id === companyId,
     );
     if (row) {
-      saw = true;
-      const v =
-        spec.legacyLevel === "view" ? row.can_view : spec.legacyLevel === "edit" ? row.can_edit : row.can_delete;
-      if (v) anyTrue = true;
+      return spec.legacyLevel === "view"
+        ? !!row.can_view
+        : spec.legacyLevel === "edit"
+          ? !!row.can_edit
+          : !!row.can_delete;
     }
   }
 
-  return saw ? anyTrue : undefined;
+  return undefined;
 }
 
 /**
