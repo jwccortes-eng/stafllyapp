@@ -189,6 +189,7 @@ export function MobileShiftOperationsSheet({
   }, [open, initialOpenTeamHub, shiftProp?.id]);
   const { allRoles, canAccessAdminForCompany, user } = useAuth();
   const { selectedCompanyId } = useCompany();
+  const { canAny: canAnyPermission } = usePermissions();
 
   // P0 SINGLE SERVICE STATE — la hoja no renderiza el snapshot de la lista:
   // lee la versión canónica (fila completa, scoped al tenant) y solo usa la
