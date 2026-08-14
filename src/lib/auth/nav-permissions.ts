@@ -49,6 +49,10 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
 
   // Personas
   "/app/employees": ["workers.view"],
+  "/app/people": ["workers.view"],
+  "/app/workers": ["workers.view"],
+  "/app/workforce": ["workers.view"],
+  "/app/identity-quality": ["workers.edit"],
   "/app/directory": ["workers.view"],
   "/app/documents": ["documents.view"],
   "/app/document-intake": ["documents.manage"],
@@ -63,16 +67,20 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   // Clientes
   "/app/clients": ["clients.view"],
   "/app/locations": ["locations.view"],
+  "/app/client-experience": ["clients.view"],
+  "/app/invoicing": ["company.settings"],
   "/app/invoicing/clients": ["clients.view"],
   "/app/invoicing/service-blocks": ["clients.view"],
   "/app/invoicing/invoices": ["payroll.view"],
   "/app/invoices": ["payroll.view"],
+  "/app/billing": ["company.settings"],
 
   // Payroll
   "/app/periods": ["payroll.view"],
   "/app/movements": ["payroll.view"],
   "/app/concepts": ["payroll.view"],
   "/app/summary": ["payroll.view", "reports.view"],
+  "/app/reports": ["reports.view", "payroll.view"],
   "/app/advances-loans": ["payroll.view"],
   "/app/payroll-review-queue": ["payroll.view"],
   "/app/validation-center": ["payroll.view", "time_entries.review"],
@@ -82,14 +90,24 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   "/app/compensation-adoption": ["payroll.view"],
   "/app/payroll-pilot-close": ["payroll.approve"],
   "/app/payroll-settings": ["payroll.settings"],
+  "/app/reconciliation-report": ["payroll.view"],
+  "/app/staged-reconciliation": ["payroll.view"],
+  "/app/discrepancies": ["reports.view", "payroll.view"],
+  "/app/unpaid-shifts": ["reports.view", "payroll.view"],
 
   // Comunicación y empresa
   "/app/announcements": ["announcements.publish", "announcements.edit"],
+  "/app/chat": ["workers.view"],
   "/app/quality": ["workers.view"],
   "/app/admin": ["company.settings"],
+  "/app/company-config": ["company.settings"],
+  "/app/onboarding": ["company.settings"],
   "/app/permissions": ["roles.manage"],
   "/app/users": ["users.manage"],
+  "/app/activity": ["company.settings"],
+  "/app/assignment-overrides": ["staffing.assign"],
 };
+
 
 /** Rutas exclusivas de staff de plataforma (developer/owner globales). */
 const PLATFORM_ONLY_ROUTES = new Set<string>([
