@@ -173,12 +173,13 @@ const GLOBAL_SECTION_ORDER = ["Plataforma", "Empresa"];
 
 
 export default function AdminSidebar() {
-  const { signOut, role: globalRole, hasModuleAccess, user, fullName, getRoleForCompany, canAccessAdminForCompany } = useAuth();
+  const { signOut, role: globalRole, user, fullName, getRoleForCompany, allRoles } = useAuth();
   const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive, isGlobalMode, canUseGlobalMode } = useCompany();
   // Tenant-scoped role: NEVER use global role to gate per-tenant UI.
   // In Global Mode (developer/owner platform view), fall back to global role.
   const role = isGlobalMode ? globalRole : getRoleForCompany(selectedCompanyId);
-  const isAdminRole = isAdminLevelRole(role);
+  const { canAny, status: permissionStatus } = usePermissions();
+  const isPlatformStaff = allRoles.has("developer") || allRoles.has("owner");
   const { canAccessModule, requiredPlanForModule, isTrial, trialDaysLeft } = useSubscription();
   const location = useLocation();
   const navigate = useNavigate();
