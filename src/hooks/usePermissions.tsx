@@ -39,17 +39,27 @@ export interface UsePermissionsResult {
 }
 
 export function usePermissions(): UsePermissionsResult {
-  const { allRoles, companyRoles, permissions, actionPermissions, authorizationStatus, authState, loading } = useAuth();
+  const {
+    allRoles,
+    companyRoles,
+    companyOperatingRoles,
+    permissions,
+    actionPermissions,
+    authorizationStatus,
+    authState,
+    loading,
+  } = useAuth();
   const { selectedCompanyId, loading: companyLoading } = useCompany();
 
   const input: AuthorizationInput = useMemo(
     () => ({
       globalRoles: allRoles,
       companyRoles,
+      operatingRoles: companyOperatingRoles,
       modulePermissions: permissions,
       actionPermissions,
     }),
-    [allRoles, companyRoles, permissions, actionPermissions],
+    [allRoles, companyRoles, companyOperatingRoles, permissions, actionPermissions],
   );
 
   const status: AuthorizationStatus = useMemo(() => {

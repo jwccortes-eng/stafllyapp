@@ -157,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole>(null);
   const [allRoles, setAllRoles] = useState<Set<string>>(new Set());
   const [companyRoles, setCompanyRoles] = useState<Record<string, string>>({});
+  const [companyOperatingRoles, setCompanyOperatingRoles] = useState<Record<string, string | null>>({});
   const [activeMode, setActiveModeState] = useState<ActiveMode>(() => {
     return (safeLocalStorage.getItem("stafly-active-mode") as ActiveMode) || 'admin';
   });
