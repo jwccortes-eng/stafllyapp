@@ -33,3 +33,15 @@ export function canManageShifts(args: {
   }
   return args.canAccessAdminForCompany(args.companyId);
 }
+
+/**
+ * P0 — Domain boundary: administrar SERVICIOS no concede autoridad sobre HORAS.
+ * Toda mutación de asistencia/horas reales exige permisos del dominio de horas
+ * (espejo de la RLS de `time_entries` y de `can_request_shift_correction`).
+ */
+export const TIME_DOMAIN_WRITE_PERMISSIONS: readonly string[] = [
+  "time_entries.review",
+  "time_entries.adjust",
+  "time_entries.approve",
+];
+
