@@ -112,7 +112,8 @@ export function GenerateBillingBlockButton({ shiftId, shiftDate, clientId, class
     };
   }, [shiftId]);
 
-  if (!clientId || !selectedCompanyId) return null;
+  // P0 Domain boundary — facturación no se concede por administrar servicios.
+  if (!clientId || !selectedCompanyId || !isFullAccess(selectedCompanyId)) return null;
 
   const run = async () => {
     setRunning(true);
