@@ -26,6 +26,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Receipt, Loader2, AlertCircle, CheckCircle2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,7 @@ type GateState =
 
 export function GenerateBillingBlockButton({ shiftId, shiftDate, clientId, className }: Props) {
   const { selectedCompanyId } = useCompany();
+  const { isFullAccess } = usePermissions();
   const [running, setRunning] = useState(false);
   const [lastResult, setLastResult] = useState<
     | { kind: "ok"; generated: number; updated: number }
@@ -112,7 +114,8 @@ export function GenerateBillingBlockButton({ shiftId, shiftDate, clientId, class
     };
   }, [shiftId]);
 
-  if (!clientId || !selectedCompanyId) return null;
+  // P0 Domain boundary — facturación no se concede por administrar servicios.
+  if (!clientId || !selectedCompanyId || !isFullAccess(selectedCompanyId)) return null;
 
   const run = async () => {
     setRunning(true);

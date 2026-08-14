@@ -39,7 +39,8 @@ import { useServiceState } from "@/hooks/useServiceState";
 import { staffedAssignments } from "@/lib/shifts/assignment-coverage";
 import { CalendarX2 } from "lucide-react";
 import { CancelShiftDialog } from "@/components/shifts/CancelShiftDialog";
-import { canManageShifts } from "@/lib/shifts/shift-permissions";
+import { canManageShifts, TIME_DOMAIN_WRITE_PERMISSIONS } from "@/lib/shifts/shift-permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import { ShiftAttendancePanel } from "@/components/shifts/ShiftAttendancePanel";
 import { MobileShiftTeamHub } from "@/components/shifts/mobile/MobileShiftTeamHub";
 import { ShiftShareMenu } from "@/components/shifts/ShiftShareMenu";
@@ -188,6 +189,7 @@ export function MobileShiftOperationsSheet({
   }, [open, initialOpenTeamHub, shiftProp?.id]);
   const { allRoles, canAccessAdminForCompany, user } = useAuth();
   const { selectedCompanyId } = useCompany();
+  const { canAny: canAnyPermission } = usePermissions();
 
   // P0 SINGLE SERVICE STATE — la hoja no renderiza el snapshot de la lista:
   // lee la versión canónica (fila completa, scoped al tenant) y solo usa la
@@ -264,7 +266,10 @@ export function MobileShiftOperationsSheet({
     return () => { cancelled = true; };
   }, [shift?.id, open, reloadKey]);
 
-  const canValidate = canManageShifts({ allRoles, canAccessAdminForCompany, companyId: selectedCompanyId });
+  // P0 Domain boundary — validar horas exige permisos del dominio de horas.
+  const canValidate =
+    canManageShifts({ allRoles, canAccessAdminForCompany, companyId: selectedCompanyId }) &&
+    canAnyPermission([...TIME_DOMAIN_WRITE_PERMISSIONS], selectedCompanyId);
   const editLocked = ["locked", "archived", "cancelled"].includes(shift?.status ?? "");
   // P0 — Cancelación segura del turno (misma operación canónica que desktop).
   const [cancelOpen, setCancelOpen] = useState(false);

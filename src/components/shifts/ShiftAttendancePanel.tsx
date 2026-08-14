@@ -51,7 +51,8 @@ import {
 } from "@/components/ui/sheet";
 import ClockEventEvidence from "@/components/timeclock/ClockEventEvidence";
 import type { Assignment, Employee } from "./types";
-import { canManageShifts } from "@/lib/shifts/shift-permissions";
+import { canManageShifts, TIME_DOMAIN_WRITE_PERMISSIONS } from "@/lib/shifts/shift-permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   staffedAssignments,
   type AttendanceValidationStatus,
@@ -138,12 +139,17 @@ export function ShiftAttendancePanel({
 }: ShiftAttendancePanelProps) {
   const { user, allRoles, canAccessAdminForCompany } = useAuth();
   const { selectedCompanyId } = useCompany();
+  const { canAny } = usePermissions();
 
-  const canValidate = canManageShifts({
-    allRoles,
-    canAccessAdminForCompany,
-    companyId: selectedCompanyId ?? companyId,
-  });
+  // P0 Domain boundary — validar/corregir HORAS exige permisos del dominio de
+  // horas. Administrar servicios (service.*/staffing.*) ya no basta.
+  const canValidate =
+    canManageShifts({
+      allRoles,
+      canAccessAdminForCompany,
+      companyId: selectedCompanyId ?? companyId,
+    }) && canAny([...TIME_DOMAIN_WRITE_PERMISSIONS], selectedCompanyId ?? companyId);
+
 
   const [extras, setExtras] = useState<AsgnExtra[]>([]);
   const [clockByEmp, setClockByEmp] = useState<Record<string, ClockEvidence>>({});
