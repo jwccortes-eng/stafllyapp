@@ -51,7 +51,8 @@ import {
 } from "@/components/ui/sheet";
 import ClockEventEvidence from "@/components/timeclock/ClockEventEvidence";
 import type { Assignment, Employee } from "./types";
-import { canManageShifts } from "@/lib/shifts/shift-permissions";
+import { canManageShifts, TIME_DOMAIN_WRITE_PERMISSIONS } from "@/lib/shifts/shift-permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   staffedAssignments,
   type AttendanceValidationStatus,
