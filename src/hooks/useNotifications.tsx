@@ -218,6 +218,16 @@ export function useNotifications() {
       return;
     }
 
+    // P0 COMPANY_ADMIN BYPASS REMOVAL: sin permiso para esa categoría, la
+    // notificación operativa no entra a la bandeja (ni suena, ni cuenta).
+    if (!canReceiveNotification(newNotif.type, canAny)) {
+      console.info("[notifications] dropped unauthorized realtime event", {
+        notificationId: newNotif.id,
+        type: newNotif.type,
+      });
+      return;
+    }
+
     // F1 — Operational Signal Engine (SHADOW MODE). Observa y registra la
     // decisión recomendada. No altera el envío ni la experiencia actual.
     try {
