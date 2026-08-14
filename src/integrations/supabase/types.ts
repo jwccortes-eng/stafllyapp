@@ -18792,10 +18792,20 @@ export type Database = {
         Args: { _company_id: string; _role: string; _user_id: string }
         Returns: boolean
       }
-      has_module_permission: {
-        Args: { _module: string; _permission: string; _user_id: string }
-        Returns: boolean
-      }
+      has_module_permission:
+        | {
+            Args: {
+              _company_id: string
+              _module: string
+              _permission: string
+              _user_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: { _module: string; _permission: string; _user_id: string }
+            Returns: boolean
+          }
       has_module_permission_in_company: {
         Args: {
           _company_id: string
