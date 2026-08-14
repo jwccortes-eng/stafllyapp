@@ -69,7 +69,8 @@ export function useTodayHubPermissions(): TodayHubPermissionsResult {
       canOperate: can("service.edit") || can("service.view"),
       canClose: can("service.close"),
       canReviewCloseout: can("closeout.close_day") || can("service.close"),
-      canApproveHours: can("time_entries.approve") || can("payroll.approve"),
+      // Aprobar horas es dominio de Time & Closeout: payroll NUNCA lo hereda.
+      canApproveHours: can("time_entries.approve"),
       canAccessValidations:
         can("payroll.view") || can("time_entries.review") || can("time_entries.approve"),
       canManageWorkers: can("workers.edit"),

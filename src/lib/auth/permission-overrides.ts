@@ -37,21 +37,14 @@ const pick = (row: ModuleTriState | undefined, level: ModuleLevel): boolean | un
  * `undefined` = no hay override (hereda del rol).
  */
 export function overrideValue(spec: PermissionSpec, draft: OverrideDraft): boolean | undefined {
-  let saw = false;
-  let anyTrue = false;
-
+  // La acción explícita manda sobre el módulo (espejo del resolver y de SQL).
   if (spec.legacyAction && spec.legacyAction in draft.actions) {
-    saw = true;
-    if (draft.actions[spec.legacyAction]) anyTrue = true;
+    return draft.actions[spec.legacyAction];
   }
   if (spec.legacyModule && spec.legacyLevel) {
-    const v = pick(draft.modules[spec.legacyModule], spec.legacyLevel);
-    if (v !== undefined) {
-      saw = true;
-      if (v) anyTrue = true;
-    }
+    return pick(draft.modules[spec.legacyModule], spec.legacyLevel);
   }
-  return saw ? anyTrue : undefined;
+  return undefined;
 }
 
 /** Estado que debe mostrar el switch editable (nunca el acceso efectivo). */
