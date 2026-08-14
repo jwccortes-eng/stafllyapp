@@ -16,7 +16,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useSubscription } from "@/hooks/useSubscription";
 import { cn } from "@/lib/utils";
-import { isAdminLevelRole } from "@/lib/roles";
+import { usePermissions } from "@/hooks/usePermissions";
+import { isNavItemVisible } from "@/lib/auth/nav-permissions";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
