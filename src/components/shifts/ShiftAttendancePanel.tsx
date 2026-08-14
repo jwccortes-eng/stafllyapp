@@ -148,7 +148,7 @@ export function ShiftAttendancePanel({
       allRoles,
       canAccessAdminForCompany,
       companyId: selectedCompanyId ?? companyId,
-    }) && canAny(TIME_DOMAIN_WRITE_PERMISSIONS, selectedCompanyId ?? companyId);
+    }) && canAny([...TIME_DOMAIN_WRITE_PERMISSIONS], selectedCompanyId ?? companyId);
 
 
   const [extras, setExtras] = useState<AsgnExtra[]>([]);
