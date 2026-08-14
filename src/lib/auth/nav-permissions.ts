@@ -127,6 +127,32 @@ export function navPermissionsFor(to: string): string[] | null {
 }
 
 /**
+ * Permisos requeridos por una URL REAL (incluye subrutas y parámetros).
+ * Se toma el prefijo mapeado más largo: `/app/employees/:id` hereda de
+ * `/app/employees`. Sin coincidencia ⇒ superficie neutra.
+ */
+export function routePermissionsFor(pathname: string): string[] | null {
+  const clean = pathname.replace(/\/+$/, "") || pathname;
+  let best: { key: string; perms: string[] } | null = null;
+  for (const [key, perms] of Object.entries(ROUTE_PERMISSIONS)) {
+    if (clean === key || clean.startsWith(`${key}/`)) {
+      if (!best || key.length > best.key.length) best = { key, perms };
+    }
+  }
+  return best?.perms ?? null;
+}
+
+/** ¿La URL real pertenece a una superficie exclusiva de plataforma? */
+export function isPlatformOnlyPath(pathname: string): boolean {
+  const clean = pathname.replace(/\/+$/, "") || pathname;
+  for (const key of PLATFORM_ONLY_ROUTES) {
+    if (clean === key || clean.startsWith(`${key}/`)) return true;
+  }
+  return false;
+}
+
+
+/**
  * ¿Se muestra esta entrada de navegación?
  * `canAny` viene de `usePermissions`; `isPlatformStaff` de los roles globales.
  */
