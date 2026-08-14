@@ -228,19 +228,16 @@ export default function AdminSidebar() {
   const activeLinks = isGlobalMode ? GLOBAL_LINKS : COMPANY_LINKS;
   const activeSectionOrder = isGlobalMode ? GLOBAL_SECTION_ORDER : COMPANY_SECTION_ORDER;
 
+  /**
+   * P0 Legacy Bypass Retirement — la visibilidad se decide por PERMISO
+   * efectivo en la empresa activa, nunca por `role === 'admin'`.
+   */
   const isLinkVisible = (link: LinkDef) => {
     if (isGlobalMode) return true; // Global mode shows all platform links
-    if (link.module) {
-      if (!isModuleActive(link.module)) return false;
-      // Hide plan-locked modules from non-admin roles (managers/supervisors/employees)
-      // Admins still see them (locked) so they can upgrade.
-      if (!isAdminRole && !canAccessModule(link.module)) return false;
-      if (isAdminRole) return true;
-      if (role === 'manager' || role === 'supervisor') return hasModuleAccess(link.module, 'view');
-      return false;
-    }
-    if (link.roles && !link.roles.includes(role ?? '')) return false;
-    return true;
+    if (permissionStatus !== "ready") return false;
+    if (link.module && !isModuleActive(link.module)) return false;
+    if (link.module && !isPlatformStaff && !canAccessModule(link.module)) return false;
+    return isNavItemVisible({ to: link.to, canAny, isPlatformStaff });
   };
 
   const isModuleLocked = (module: string | null): boolean => {
@@ -253,7 +250,7 @@ export default function AdminSidebar() {
     return location.pathname === to || location.pathname.startsWith(to + "/");
   };
 
-  const isOwner = globalRole === 'developer' || globalRole === 'owner' || isAdminRole;
+
 
   const visibleSections = useMemo(() => {
     const sectionMap = new Map<string, LinkDef[]>();
