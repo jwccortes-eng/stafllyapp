@@ -48,6 +48,7 @@ type GateState =
 
 export function GenerateBillingBlockButton({ shiftId, shiftDate, clientId, className }: Props) {
   const { selectedCompanyId } = useCompany();
+  const { isFullAccess } = usePermissions();
   const [running, setRunning] = useState(false);
   const [lastResult, setLastResult] = useState<
     | { kind: "ok"; generated: number; updated: number }
