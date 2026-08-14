@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
+import { usePermissions } from "@/hooks/usePermissions";
+import { canReceiveNotification } from "@/lib/notifications/authorization";
 import { useSoundContext } from "@/hooks/useSound";
 import { toast } from "sonner";
 import { observeOperationalEvent } from "@/lib/operational-signals/sink";
@@ -31,6 +33,7 @@ const BURST_TOAST_ID = "stafly-notification-burst";
 
 export function useNotifications() {
   const { user, role } = useAuth();
+  const { canAny, status: permissionStatus } = usePermissions();
   const { selectedCompanyId } = useCompany();
   const { effectiveEmployeeId } = useEffectiveEmployee();
   const { play } = useSoundContext();
@@ -68,7 +71,13 @@ export function useNotifications() {
       return;
     }
 
-    const isAdmin = role === "developer" || role === "owner" || role === "admin" || role === "manager";
+    // P0 COMPANY_ADMIN BYPASS REMOVAL: la bandeja de empresa se abre por
+    // PERMISO efectivo, nunca por la etiqueta de membresía.
+    if (permissionStatus !== "ready") return;
+    const canReadCompanyInbox = canAny([
+      "service.view", "staffing.view", "attendance.view", "time_entries.view",
+    ]);
+    const isAdmin = canReadCompanyInbox;
 
     if (isAdmin) {
       const [userResult, companyResult] = await Promise.all([
@@ -90,7 +99,8 @@ export function useNotifications() {
 
       const all = [...(userResult.data ?? []), ...(companyResult.data ?? [])]
         .filter((n) => n.company_id === selectedCompanyId);
-      const unique = Array.from(new Map(all.map((n) => [n.id, n])).values()) as AppNotification[];
+      const unique = (Array.from(new Map(all.map((n) => [n.id, n])).values()) as AppNotification[])
+        .filter((n) => canReceiveNotification(n.type, canAny));
       const ordered = sortByPriorityThenDate(unique).slice(0, 30);
 
       setNotifications(ordered);
@@ -108,14 +118,16 @@ export function useNotifications() {
 
       if (!error && data) {
         const ordered = sortByPriorityThenDate(
-          (data as AppNotification[]).filter((n) => n.company_id === selectedCompanyId)
+          (data as AppNotification[])
+            .filter((n) => n.company_id === selectedCompanyId)
+            .filter((n) => canReceiveNotification(n.type, canAny))
         );
         setNotifications(ordered);
         setUnreadCount(ordered.filter((n) => !n.read_at).length);
       }
     }
     setLoading(false);
-  }, [user, role, selectedCompanyId, effectiveEmployeeId]);
+  }, [user, role, selectedCompanyId, effectiveEmployeeId, canAny, permissionStatus]);
 
   // Determine sound type based on notification type
   const getSoundType = useCallback((notifType: string): "notification" | "chat" | "alert" => {
