@@ -19288,6 +19288,10 @@ export type Database = {
         Args: { _new_status: string; _token: string }
         Returns: boolean
       }
+      user_belongs_to_company: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_can_access_worker_docs: {
         Args: { _user_id: string; _worker_profile_id: string }
         Returns: boolean

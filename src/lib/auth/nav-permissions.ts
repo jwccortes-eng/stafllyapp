@@ -18,8 +18,17 @@
 const ROUTE_PERMISSIONS: Record<string, string[]> = {
   // Operación / servicios
   "/app/shifts": ["service.view"],
+  "/app/shift-ops": ["service.view"],
+  "/app/shift-requests": ["service.view"],
+  "/app/backfill-shift": ["service.edit"],
+  "/app/bulk-import-shifts": ["service.create"],
   "/app/ops": ["service.view"],
   "/app/ops-center": ["service.view"],
+  "/app/daily-ops": ["service.view"],
+  "/app/daily-close": ["closeout.close_day", "service.close"],
+  "/app/command-center": ["service.view", "attendance.view", "time_entries.view"],
+  "/app/needs-attention": ["service.view", "attendance.view", "time_entries.view"],
+  "/app/today": ["service.view", "attendance.view", "time_entries.view"],
   "/app/staffing-center": ["staffing.view"],
   "/app/staffing-requests": ["staffing.view"],
   "/app/comparison": ["service.view"],
@@ -30,6 +39,7 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   "/app/service-categories": ["company.settings"],
   "/app/ai-workforce": ["staffing.view"],
 
+
   // Horas y cierre
   "/app/timeclock": ["time_entries.view", "attendance.view"],
   "/app/attendance": ["attendance.view"],
@@ -39,6 +49,10 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
 
   // Personas
   "/app/employees": ["workers.view"],
+  "/app/people": ["workers.view"],
+  "/app/workers": ["workers.view"],
+  "/app/workforce": ["workers.view"],
+  "/app/identity-quality": ["workers.edit"],
   "/app/directory": ["workers.view"],
   "/app/documents": ["documents.view"],
   "/app/document-intake": ["documents.manage"],
@@ -53,16 +67,20 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   // Clientes
   "/app/clients": ["clients.view"],
   "/app/locations": ["locations.view"],
+  "/app/client-experience": ["clients.view"],
+  "/app/invoicing": ["company.settings"],
   "/app/invoicing/clients": ["clients.view"],
   "/app/invoicing/service-blocks": ["clients.view"],
   "/app/invoicing/invoices": ["payroll.view"],
   "/app/invoices": ["payroll.view"],
+  "/app/billing": ["company.settings"],
 
   // Payroll
   "/app/periods": ["payroll.view"],
   "/app/movements": ["payroll.view"],
   "/app/concepts": ["payroll.view"],
   "/app/summary": ["payroll.view", "reports.view"],
+  "/app/reports": ["reports.view", "payroll.view"],
   "/app/advances-loans": ["payroll.view"],
   "/app/payroll-review-queue": ["payroll.view"],
   "/app/validation-center": ["payroll.view", "time_entries.review"],
@@ -72,14 +90,24 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   "/app/compensation-adoption": ["payroll.view"],
   "/app/payroll-pilot-close": ["payroll.approve"],
   "/app/payroll-settings": ["payroll.settings"],
+  "/app/reconciliation-report": ["payroll.view"],
+  "/app/staged-reconciliation": ["payroll.view"],
+  "/app/discrepancies": ["reports.view", "payroll.view"],
+  "/app/unpaid-shifts": ["reports.view", "payroll.view"],
 
   // Comunicación y empresa
   "/app/announcements": ["announcements.publish", "announcements.edit"],
+  "/app/chat": ["workers.view"],
   "/app/quality": ["workers.view"],
   "/app/admin": ["company.settings"],
+  "/app/company-config": ["company.settings"],
+  "/app/onboarding": ["company.settings"],
   "/app/permissions": ["roles.manage"],
   "/app/users": ["users.manage"],
+  "/app/activity": ["company.settings"],
+  "/app/assignment-overrides": ["staffing.assign"],
 };
+
 
 /** Rutas exclusivas de staff de plataforma (developer/owner globales). */
 const PLATFORM_ONLY_ROUTES = new Set<string>([
@@ -97,6 +125,32 @@ export function isPlatformOnlyRoute(to: string): boolean {
 export function navPermissionsFor(to: string): string[] | null {
   return ROUTE_PERMISSIONS[to] ?? null;
 }
+
+/**
+ * Permisos requeridos por una URL REAL (incluye subrutas y parámetros).
+ * Se toma el prefijo mapeado más largo: `/app/employees/:id` hereda de
+ * `/app/employees`. Sin coincidencia ⇒ superficie neutra.
+ */
+export function routePermissionsFor(pathname: string): string[] | null {
+  const clean = pathname.replace(/\/+$/, "") || pathname;
+  let best: { key: string; perms: string[] } | null = null;
+  for (const [key, perms] of Object.entries(ROUTE_PERMISSIONS)) {
+    if (clean === key || clean.startsWith(`${key}/`)) {
+      if (!best || key.length > best.key.length) best = { key, perms };
+    }
+  }
+  return best?.perms ?? null;
+}
+
+/** ¿La URL real pertenece a una superficie exclusiva de plataforma? */
+export function isPlatformOnlyPath(pathname: string): boolean {
+  const clean = pathname.replace(/\/+$/, "") || pathname;
+  for (const key of PLATFORM_ONLY_ROUTES) {
+    if (clean === key || clean.startsWith(`${key}/`)) return true;
+  }
+  return false;
+}
+
 
 /**
  * ¿Se muestra esta entrada de navegación?
