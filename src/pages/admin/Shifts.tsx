@@ -1750,11 +1750,26 @@ function DesktopShifts() {
     setPendingPublishShift(shift);
   };
 
+  // Single reader of the publish RPC payload. The RPC can return
+  // { ok:false, missing:[...] } WITHOUT a Postgres error: treating that as
+  // success used to leave phantom states (status=published while the shift
+  // stayed draft) and emitted notifications for unpublished services.
+  const readPublishResult = (data: any): { ok: boolean; reason?: string } => {
+    if (data && typeof data === "object" && data.ok === false) {
+      const missing = Array.isArray(data.missing) ? data.missing.join(", ") : "datos incompletos";
+      return { ok: false, reason: `Falta completar: ${missing}` };
+    }
+    return { ok: true };
+  };
+
   const executePublishShift = async (shift: Shift) => {
     // Use the RPC so draft reservations are lifted atomically and the
     // publication lifecycle stays consistent (publication_status + status).
-    const { error: rpcError } = await supabase.rpc("publish_shift_draft" as any, { _shift_id: shift.id });
+    const { data: rpcData, error: rpcError } = await supabase.rpc("publish_shift_draft" as any, { _shift_id: shift.id });
     if (rpcError) { toast.error(rpcError.message); return; }
+    const result = readPublishResult(rpcData);
+    if (!result.ok) { toast.error(`No se pudo publicar. ${result.reason}`); return; }
+
     // Keep the legacy `status` column in sync for downstream UI/filters.
     const { error } = await supabase.from("scheduled_shifts")
       .update({ status: "published" } as any)
