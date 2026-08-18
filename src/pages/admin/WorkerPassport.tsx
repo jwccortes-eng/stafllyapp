@@ -124,12 +124,15 @@ export default function WorkerPassport() {
       if (emp) setEmployee(emp as unknown as Employee);
 
       // Shift metrics — identidad completa (canónica + fichas fusionadas).
+      // Vocabulario canónico: `accepted` es un compromiso cerrado igual que
+      // `confirmed`. Filtrar sólo por `confirmed` borraba historia real.
+      // Ver src/lib/shifts/assignment-status-truth.ts
       const identityIds = await resolveIdentityEmployeeIds(employeeId);
       const { data: assignments } = await supabase
         .from("shift_assignments")
         .select("shift_id, scheduled_shifts!inner(date, start_time, end_time, company_id, title, deleted_at)")
         .in("employee_id", identityIds)
-        .eq("status", "confirmed");
+        .in("status", COMMITTED_ASSIGNMENT_STATUS_LIST);
 
       const valid = (assignments || []).filter((a: any) => !a.scheduled_shifts?.deleted_at);
       let totalHours = 0;
