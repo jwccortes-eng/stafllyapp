@@ -61,6 +61,8 @@ import { useCompany } from "@/hooks/useCompany";
 import { useServiceState } from "@/hooks/useServiceState";
 import { useDebugMode } from "@/hooks/useDebugMode";
 import { toast } from "sonner";
+import { resolveShiftRequest } from "@/lib/shifts/team-actions";
+import { claimResolutionErrorCopy } from "@/lib/shifts/claim-resolution";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
 import { ClientIdentityPack } from "@/components/clients/ClientIdentityPack";
 import { formatShiftCode, getClientColor, isEmployeeDriver } from "./types";
