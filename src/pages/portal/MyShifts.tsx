@@ -122,6 +122,10 @@ export default function MyShifts() {
   // Pagination for History — render in chunks to keep DOM small.
   const HISTORY_PAGE = 30;
   const [historyVisible, setHistoryVisible] = useState(HISTORY_PAGE);
+  // Historial completo: sólo bajo petición explícita de la persona.
+  const [fullHistory, setFullHistory] = useState(false);
+
+
 
   const load = async () => {
     if (!employeeId) {
