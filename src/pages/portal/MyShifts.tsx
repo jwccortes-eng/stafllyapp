@@ -752,6 +752,19 @@ export default function MyShifts() {
                   </Button>
                 </div>
               )}
+
+              {remaining === 0 && !fullHistory && (
+                <div className="pt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setFullHistory(true); setHistoryVisible(HISTORY_PAGE); }}
+                    className="w-full h-10 text-[12px] font-semibold rounded-xl text-muted-foreground hover:text-foreground"
+                  >
+                    Ver historial anterior a {HISTORY_WINDOW_DAYS} días
+                  </Button>
+                </div>
+              )}
             </div>
           );
         }
