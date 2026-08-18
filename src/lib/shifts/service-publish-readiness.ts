@@ -17,6 +17,11 @@
  */
 
 import { resolveServiceLocationTruth } from "./service-location";
+import {
+  evaluatePublishReadiness,
+  describePublishWarning,
+  type PublishWarningCode,
+} from "./publish-readiness";
 
 export const SERVICE_LOCATION_COPY = {
   jobSite: "Lugar del servicio",
@@ -79,6 +84,7 @@ export interface ReadinessBlocker {
     | "shift_admin"
     | "driver"
     | "team"
+    | "capacity"
     | "duration";
   /** Etiqueta corta para toasts y listas ("Lugar del servicio"). */
   label: string;
@@ -88,7 +94,7 @@ export interface ReadinessBlocker {
 }
 
 export interface ReadinessWarning {
-  key: "job_site_unsaved" | "meeting_missing" | "team_pending";
+  key: PublishWarningCode;
   message: string;
 }
 
@@ -142,95 +148,78 @@ export function getServicePublishReadiness(
   const meetingText = (v.meetingPoint ?? "").trim();
   const hasMeetingPoint = Boolean(meetingText || v.meetingPointLocationId);
 
-  const blockers: ReadinessBlocker[] = [];
-  const warnings: ReadinessWarning[] = [];
+  // PHASE 2 · SSOT — las reglas viven en `evaluatePublishReadiness`, espejo de
+  // `public.service_publish_readiness`. Aquí sólo se traducen a copy/CTA.
+  const spec = evaluatePublishReadiness({
+    terminal: false,
+    date: v.date,
+    startTime: v.startTime,
+    endTime: v.endTime,
+    claimable: v.claimable,
+    requiredCount: v.claimable ? Math.max(1, v.assignedCount || 1) : v.assignedCount,
+    assignedCount: v.assignedCount,
+    hasJobSite,
+    hasSavedJobSite,
+    hasMeetingPoint,
+    hasClient: Boolean(v.clientId),
+    hasShiftAdmin: Boolean(v.shiftAdminId),
+    transportRequired: v.transportRequired,
+    hasDriver: (v.driverIds?.length ?? 0) > 0 || Boolean(v.driverEmployeeId),
+    requirements: req,
+  });
 
-  if (!v.date) {
-    blockers.push({ key: "date", label: "Fecha", message: "Falta la fecha del servicio" });
-  }
-  if (!v.startTime) {
-    blockers.push({
-      key: "start_time",
-      label: "Hora de inicio",
-      message: "Falta la hora de inicio",
-    });
-  }
-  if (!v.endTime) {
-    blockers.push({ key: "end_time", label: "Hora de fin", message: "Falta la hora de fin" });
-  }
-  if (req.requireTitle && !(v.title ?? "").trim()) {
-    blockers.push({ key: "title", label: "Título", message: "Falta el título del servicio" });
-  }
-  if (req.requireClient && !v.clientId) {
-    blockers.push({ key: "client", label: "Cliente", message: "Falta el cliente" });
-  }
-  if (req.requireLocation && !hasJobSite) {
-    blockers.push({
+  const BLOCKER_UI: Record<string, ReadinessBlocker> = {
+    date: { key: "date", label: "Fecha", message: "Falta la fecha del servicio" },
+    start_time: { key: "start_time", label: "Hora de inicio", message: "Falta la hora de inicio" },
+    end_time: { key: "end_time", label: "Hora de fin", message: "Falta la hora de fin" },
+    client: { key: "client", label: "Cliente", message: "Falta el cliente" },
+    job_site: {
       key: "job_site",
       label: SERVICE_LOCATION_COPY.jobSite,
       message: SERVICE_LOCATION_COPY.jobSiteMissing,
       cta: { label: SERVICE_LOCATION_COPY.jobSiteCta, anchorId: SERVICE_JOB_SITE_ANCHOR },
-    });
-  }
-  if (req.requireShiftAdmin && !v.shiftAdminId) {
-    blockers.push({
-      key: "shift_admin",
-      label: "Shift admin",
-      message: "Falta el shift admin",
-    });
-  }
-  if (v.transportRequired && (v.driverIds?.length ?? 0) === 0 && !v.driverEmployeeId) {
-    blockers.push({
+    },
+    shift_admin: { key: "shift_admin", label: "Shift admin", message: "Falta el shift admin" },
+    driver: {
       key: "driver",
       label: "Conductor",
       message: "Transporte activado pero sin conductor asignado",
-    });
-  }
-  if (v.assignedCount === 0 && !v.claimable) {
-    blockers.push({
+    },
+    assignments: {
       key: "team",
       label: "Equipo",
       message: "Asigna al menos un trabajador o marca el servicio como reclamable",
-    });
-  }
-  if (v.startTime && v.endTime) {
-    const [sh, sm] = v.startTime.split(":").map(Number);
-    const [eh, em] = v.endTime.split(":").map(Number);
-    if ([sh, sm, eh, em].every((n) => Number.isFinite(n))) {
-      let durationMin = eh * 60 + em - (sh * 60 + sm);
-      if (durationMin < 0) durationMin += 24 * 60;
-      if (durationMin / 60 > req.maxShiftHours) {
-        blockers.push({
-          key: "duration",
-          label: `Duración ≤ ${req.maxShiftHours}h`,
-          message: `La duración supera el máximo permitido (${req.maxShiftHours}h)`,
-        });
-      }
-    }
+    },
+    capacity: {
+      key: "capacity",
+      label: "Plazas",
+      message: "Define cuántas plazas quedan abiertas a reclamo",
+    },
+    duration: {
+      key: "duration",
+      label: `Duración ≤ ${req.maxShiftHours}h`,
+      message: `La duración no es válida (máximo permitido ${req.maxShiftHours}h)`,
+    },
+  };
+
+  const blockers: ReadinessBlocker[] = spec.blockers
+    .map((code) => BLOCKER_UI[code])
+    .filter(Boolean) as ReadinessBlocker[];
+
+  // Validación de formulario (no de readiness backend): el título todavía no
+  // existe como fila, así que sólo se exige cuando el editor lo pide.
+  if (req.requireTitle && !(v.title ?? "").trim()) {
+    blockers.unshift({ key: "title", label: "Título", message: "Falta el título del servicio" });
   }
 
-  if (jobSiteKind === "manual") {
-    warnings.push({
-      key: "job_site_unsaved",
-      message:
-        "Dirección agregada como texto · sin lugar guardado, mapa y geofence no estarán disponibles",
-    });
-  }
-  if (v.transportRequired && !hasMeetingPoint) {
-    warnings.push({
-      key: "meeting_missing",
-      message: "Transporte activado sin punto de encuentro definido",
-    });
-  }
-  if (v.claimable && v.assignedCount === 0) {
-    warnings.push({
-      key: "team_pending",
-      message: "Sin equipo asignado · el servicio queda abierto a reclamos",
-    });
-  }
+  const warnings: ReadinessWarning[] = spec.warnings.map((key) => ({
+    key,
+    message: describePublishWarning(key),
+  })) as ReadinessWarning[];
 
   const jobSiteEqualsMeetingPoint =
     hasJobSite && hasMeetingPoint && !!manualAddress && norm(manualAddress) === norm(meetingText);
+
 
   return {
     blockers,

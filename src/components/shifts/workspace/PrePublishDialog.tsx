@@ -243,7 +243,7 @@ function PrePublishDialogImpl({ open, onOpenChange, data, saving, onConfirm }: P
           </section>
 
           {/* Claimable + pending stronger notice */}
-          {data.claimable && data.hasPending && (
+          {data.claimable && data.hasPending && !hasBlockers && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300 flex gap-2">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
               <span>
@@ -253,11 +253,12 @@ function PrePublishDialogImpl({ open, onOpenChange, data, saving, onConfirm }: P
             </div>
           )}
 
-          {/* D. Safety copy */}
-          <p className="text-[11px] text-muted-foreground leading-relaxed">
+          {/* D. Safety copy — sólo cuando el servicio realmente puede publicarse.
+              Claimable describe staffing, nunca anula la política de compañía. */}
+          {!hasBlockers && <p className="text-[11px] text-muted-foreground leading-relaxed">
             Este turno será visible para trabajadores con la información disponible actualmente.
             Los campos pendientes aparecerán como "por confirmar".
-          </p>
+          </p>}
 
           {/* Required checkbox when pending */}
           {data.hasPending && (
