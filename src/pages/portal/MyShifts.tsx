@@ -39,6 +39,23 @@ import { WeekHistorySummary } from "@/components/portal/WeekHistorySummary";
 import { useT } from "@/i18n/LanguageContext";
 import { SmartWorkCardHero } from "@/components/portal/SmartWorkCardHero";
 import { getPageCache, setPageCache, hasPageCache } from "@/lib/portal/page-cache";
+import { EXCLUDED_ASSIGNMENT_STATUS_FILTER } from "@/lib/shifts/assignment-status-truth";
+import { classifyQueryError } from "@/lib/data/query-error";
+
+/**
+ * Ventana operativa por defecto del portal: historial reciente + todo el futuro.
+ * Evita recorrer la historia completa del tenant en cada carga (P0 timeout).
+ */
+const HISTORY_WINDOW_DAYS = 90;
+const ASSIGNMENT_HARD_LIMIT = 500;
+
+const windowStartDate = (): string => {
+  const d = new Date();
+  d.setDate(d.getDate() - HISTORY_WINDOW_DAYS);
+  return d.toISOString().split("T")[0];
+};
+
+
 
 interface ShiftAssignment {
   id: string;
