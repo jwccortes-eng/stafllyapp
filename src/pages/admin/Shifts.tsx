@@ -1862,17 +1862,9 @@ function DesktopShifts() {
         continue;
       }
 
+      // The RPC owns the whole transition atomically (publication_status,
+      // legacy status, published_at/by, draft reservations).
 
-      // Keep the legacy `status` column in sync for downstream UI/filters.
-      // The RPC owns publication_status/published_at/published_by/reservations.
-      const { error: statusError } = await supabase
-        .from("scheduled_shifts")
-        .update({ status: "published" } as any)
-        .eq("id", shift.id);
-      if (statusError) {
-        failed.push({ shift, reason: statusError.message });
-        continue;
-      }
 
       await logShiftActivity(
         "publicar_turno",
