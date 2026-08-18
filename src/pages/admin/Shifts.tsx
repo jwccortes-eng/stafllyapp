@@ -1864,11 +1864,21 @@ function DesktopShifts() {
   const handlePublishAll = async () => {
     // Only true drafts — never re-publish already-published shifts (avoids
     // duplicate notifications) and never touch locked ones.
-    const draftShifts = filteredShifts.filter(s => {
-      const pub = (s as any).publication_status ?? "published";
-      return pub === "draft" && s.status !== "locked";
-    });
-    if (draftShifts.length === 0) { toast.info("No hay turnos borrador para publicar"); return; }
+    // Phase 1 — solo READY: se excluyen cancelados (terminal), bloqueados y
+    // borradores BLOCKED. La acción ya no descubre blockers que la UI llamó
+    // "listo": el mismo adapter alimenta el chip y este bucle.
+    const { ready: draftShifts, blocked: skipped } = selectPublishableDrafts(
+      filteredShifts as any,
+      (shiftId: string) => assignments.filter(a => a.shift_id === shiftId) as any,
+    );
+    if (draftShifts.length === 0) {
+      toast.info(
+        skipped.length > 0
+          ? `Ningún borrador está listo para publicar (${skipped.length} con datos pendientes)`
+          : "No hay turnos borrador para publicar",
+      );
+      return;
+    }
 
     // require_shift_admin gate for bulk publish
     if (shiftsConfig.require_shift_admin) {
