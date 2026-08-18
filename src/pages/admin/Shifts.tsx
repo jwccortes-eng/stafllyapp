@@ -1771,19 +1771,44 @@ function DesktopShifts() {
   // stayed draft) and emitted notifications for unpublished services.
   const readPublishResult = (data: any): { ok: boolean; reason?: string } => {
     if (data && typeof data === "object" && data.ok === false) {
-      const missing = Array.isArray(data.missing) ? data.missing.join(", ") : "datos incompletos";
-      return { ok: false, reason: `Falta completar: ${missing}` };
+      const missing = Array.isArray(data.missing) ? data.missing.map(String) : [];
+      return { ok: false, reason: describePublishBlockers(missing) };
     }
     return { ok: true };
   };
 
+  // Identidad real del registro que falló: un segmento muestra el QK del
+  // servicio raíz, así que reportar solo ese QK apuntaba al servicio
+  // equivocado (caso QK-001657 reportado como QK-001651).
+  const publishFailureLabel = (shift: Shift): string => {
+    const id = getShiftDisplayIdentity(shift as any);
+    if (id.isServiceSegment && id.segmentRef) {
+      return `${id.segmentRef} (servicio ${id.serviceRef ?? id.primaryRef})`;
+    }
+    return id.primaryRef;
+  };
+
   const executePublishShift = async (shift: Shift) => {
+    // Phase 1 — espejo del backend: cancelado y borradores BLOCKED no llegan
+    // al RPC. Nunca se publica ni se notifica un servicio que no está listo.
+    const readiness = resolveDraftPublishReadiness(
+      shift as any,
+      assignments.filter(a => a.shift_id === shift.id) as any,
+    );
+    if (!readiness.ready) {
+      toast.error(`No se pudo publicar ${publishFailureLabel(shift)}`, { description: readiness.reason ?? undefined });
+      return;
+    }
+
     // Use the RPC so draft reservations are lifted atomically and the
     // publication lifecycle stays consistent (publication_status + status).
     const { data: rpcData, error: rpcError } = await supabase.rpc("publish_shift_draft" as any, { _shift_id: shift.id });
     if (rpcError) { toast.error(rpcError.message); return; }
     const result = readPublishResult(rpcData);
-    if (!result.ok) { toast.error(`No se pudo publicar. ${result.reason}`); return; }
+    if (!result.ok) {
+      toast.error(`No se pudo publicar ${publishFailureLabel(shift)}`, { description: result.reason });
+      return;
+    }
 
     // The RPC owns the whole transition (publication_status + legacy status +
     // published_at/by) in a single transaction — no second write from the client.
