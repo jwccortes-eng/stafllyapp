@@ -52,6 +52,9 @@ Frontend: `ShiftRequests.tsx` sólo llama `resolveShiftRequest()` de
 | `ShiftRequests.tsx` | `update` en `shift_requests` | ninguno (lo hace la RPC) |
 | `ShiftRequests.tsx` | `insert` en `notifications` | ninguno (`create_shift_worker_notification`) |
 | `resolve_shift_request` (SQL) | `INSERT/UPDATE shift_assignments` inline | `assign_worker_to_shift` + `set_shift_assignment_state` |
+| `ShiftDetailDialog.tsx` (pestaña Solicitudes) | conteo local de cupo + `insert` en `shift_assignments` + `update` de la solicitud + notificación manual | `resolveShiftRequest()` |
+
+Copy de error canónico único: `src/lib/shifts/claim-resolution.ts`.
 
 ## 4. Validaciones reutilizadas (ninguna reimplementada)
 
