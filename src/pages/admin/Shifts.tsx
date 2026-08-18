@@ -1770,11 +1770,9 @@ function DesktopShifts() {
     const result = readPublishResult(rpcData);
     if (!result.ok) { toast.error(`No se pudo publicar. ${result.reason}`); return; }
 
-    // Keep the legacy `status` column in sync for downstream UI/filters.
-    const { error } = await supabase.from("scheduled_shifts")
-      .update({ status: "published" } as any)
-      .eq("id", shift.id);
-    if (error) { toast.error(error.message); return; }
+    // The RPC owns the whole transition (publication_status + legacy status +
+    // published_at/by) in a single transaction — no second write from the client.
+
 
     await logShiftActivity("publicar_turno", shift.id, { status: shift.status }, { status: "published" });
 
