@@ -1972,14 +1972,23 @@ function DesktopShifts() {
       toast.success(`${succeeded.length} turno(s) publicados`);
     }
     if (failed.length > 0) {
-      // Compact, actionable summary. Each entry: "#code — reason".
+      // Identidad REAL del registro: segmento + servicio raíz, nunca solo el QK
+      // del padre (que puede estar ya publicado y no ser el que falló).
       const details = failed
         .slice(0, 5)
-        .map(f => `${getShiftDisplayIdentity(f.shift).primaryRef}: ${f.reason}`)
+        .map(f => `${publishFailureLabel(f.shift)}: ${f.reason}`)
         .join("\n");
       const more = failed.length > 5 ? `\n…y ${failed.length - 5} más` : "";
       toast.error(`${failed.length} turno(s) no se publicaron`, { description: details + more });
       console.warn("[bulk-publish] failures", failed);
+    }
+    if (skipped.length > 0) {
+      // Los BLOCKED nunca se intentaron: se informan aparte, sin ruido de error.
+      const details = skipped
+        .slice(0, 5)
+        .map(s => `${publishFailureLabel(s.shift)}: ${s.readiness.reason}`)
+        .join("\n");
+      toast.info(`${skipped.length} borrador(es) no están listos`, { description: details });
     }
 
     loadData();
