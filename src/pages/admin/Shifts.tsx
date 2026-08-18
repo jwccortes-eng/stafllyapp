@@ -1847,16 +1847,23 @@ function DesktopShifts() {
 
     // Sequential to keep error attribution clean and avoid hammering the RPC.
     for (const shift of draftShifts) {
-      const { error: rpcError } = await supabase.rpc(
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
         "publish_shift_draft" as any,
         { _shift_id: shift.id }
       );
       if (rpcError) {
-        // Surface validation reasons (PUBLISH_VALIDATION_FAILED: field1,field2)
-        // verbatim so the operator knows what to fix.
+        // Surface validation reasons verbatim so the operator knows what to fix.
         failed.push({ shift, reason: rpcError.message });
         continue;
       }
+      const result = readPublishResult(rpcData);
+      if (!result.ok) {
+        // Validation rejection without SQL error: no status sync, no
+        // notifications — the service stays Draft.
+        failed.push({ shift, reason: result.reason! });
+        continue;
+      }
+
 
       // Keep the legacy `status` column in sync for downstream UI/filters.
       // The RPC owns publication_status/published_at/published_by/reservations.
