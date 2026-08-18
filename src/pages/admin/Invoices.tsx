@@ -24,6 +24,7 @@ import {
   AlertTriangle, ArrowRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { COMMITTED_ASSIGNMENT_STATUS_LIST } from "@/lib/shifts/assignment-status-truth";
 
 const STATUS_CFG: Record<string, { label: string; color: string }> = {
   draft: { label: "Borrador", color: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400" },
@@ -143,7 +144,7 @@ export default function Invoices() {
       .from("shift_assignments")
       .select("shift_id, employee_id, employees(first_name, last_name)")
       .in("shift_id", shiftIds)
-      .eq("status", "confirmed");
+      .in("status", COMMITTED_ASSIGNMENT_STATUS_LIST);
 
     const lines = shifts.map((s, idx) => {
       const assignedCount = (assignments ?? []).filter(a => a.shift_id === s.id).length;

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { EmployeeDayDetailDrawer } from "@/components/today/EmployeeDayDetailDrawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { COMMITTED_ASSIGNMENT_STATUS_LIST } from "@/lib/shifts/assignment-status-truth";
 
 interface TimeEntry {
   id: string;
@@ -89,7 +90,7 @@ export default function TodayView() {
         employee_id,
         scheduled_shifts(id, title, start_time, end_time, date,
           locations(name), clients(name))
-      `).eq("company_id", selectedCompanyId).eq("status", "confirmed"),
+      `).eq("company_id", selectedCompanyId).in("status", COMMITTED_ASSIGNMENT_STATUS_LIST),
     ]);
 
     setEmployees((empsRes.data ?? []) as Employee[]);

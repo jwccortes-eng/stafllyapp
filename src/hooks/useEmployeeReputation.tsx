@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { COMMITTED_ASSIGNMENT_STATUS_LIST } from "@/lib/shifts/assignment-status-truth";
 
 /* ─── Badge definitions ─── */
 export const BADGE_DEFS: Record<string, { emoji: string; label: string; desc: string }> = {
@@ -55,7 +56,7 @@ export async function calcTrustScore(employeeId: string, companyId: string): Pro
     .from("shift_assignments")
     .select("*", { count: "exact", head: true })
     .eq("employee_id", employeeId)
-    .eq("status", "confirmed")
+    .in("status", COMMITTED_ASSIGNMENT_STATUS_LIST)
     .gte("created_at", ninetyAgo);
 
   const { count: cancelled } = await supabase

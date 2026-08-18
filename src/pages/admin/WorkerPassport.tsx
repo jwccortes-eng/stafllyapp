@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { LegacyDeprecationBanner } from "@/components/transition/LegacyDeprecationBanner";
 import { resolveIdentityEmployeeIds } from "@/lib/identity/identity-set";
+import { COMMITTED_ASSIGNMENT_STATUS_LIST } from "@/lib/shifts/assignment-status-truth";
 
 /* ─── Types ─── */
 interface Employee {
