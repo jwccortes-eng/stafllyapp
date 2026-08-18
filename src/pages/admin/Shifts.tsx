@@ -111,7 +111,12 @@ import { PrePublishDialog } from "@/components/shifts/workspace/PrePublishDialog
 import { ExportConnecteamBulkDialog } from "@/components/shifts/integrations/ExportConnecteamBulkDialog";
 import type { Shift, Assignment, SelectOption, ClientOption, Employee, ViewMode } from "@/components/shifts/types";
 import { formatShiftCode } from "@/components/shifts/types";
-import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
+import { isDraftShift, isPublishedShift, isCancelledOrArchivedShift } from "@/lib/shifts/shift-guards";
+import {
+  resolveDraftPublishReadiness,
+  selectPublishableDrafts,
+  describePublishBlockers,
+} from "@/lib/shifts/publish-readiness";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
 import { useServiceRootRefs } from "@/hooks/useServiceRootRefs";
 
