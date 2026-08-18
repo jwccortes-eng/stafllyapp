@@ -98,65 +98,27 @@ export default function ShiftRequests() {
 
   useEffect(() => { loadRequests(); }, [loadRequests]);
 
+  /**
+   * Approval goes through the canonical path only:
+   * resolve_shift_request → assign_worker_to_shift (compliance, duplicates,
+   * overlap trigger, capacity, tenant, audit). No direct assignment writes,
+   * no local capacity counting.
+   */
   const handleApprove = async (req: ShiftRequest) => {
     setProcessing(req.id);
-
-    // Check slot availability
-    const { count } = await supabase
-      .from("shift_assignments")
-      .select("id", { count: "exact", head: true })
-      .eq("shift_id", req.shift_id);
-
-    const currentCount = count ?? 0;
-    const maxSlots = req.shift.slots ?? 1;
-
-    if (currentCount >= maxSlots) {
-      toast.error("No hay plazas disponibles en este turno");
+    try {
+      await resolveShiftRequest({
+        requestId: req.id,
+        decision: "approved",
+        source: "admin_shift_requests",
+      });
+      toast.success(`Solicitud aprobada — ${req.employee.first_name} asignado al turno`);
+      loadRequests();
+    } catch (e: any) {
+      toast.error(approvalErrorCopy(e?.message));
+    } finally {
       setProcessing(null);
-      return;
     }
-
-    // Create assignment
-    const { error: assignError } = await supabase.from("shift_assignments").insert({
-      company_id: selectedCompanyId!,
-      shift_id: req.shift_id,
-      employee_id: req.employee_id,
-      status: "confirmed",
-    } as any);
-
-    if (assignError) { toast.error(assignError.message); setProcessing(null); return; }
-
-    // Update request
-    await supabase.from("shift_requests")
-      .update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as any)
-      .eq("id", req.id);
-
-    // Notify employee
-    await supabase.from("notifications").insert({
-      company_id: selectedCompanyId!,
-      recipient_id: req.employee_id,
-      recipient_type: "employee",
-      type: "shift_request_approved",
-      title: "✅ Solicitud aprobada",
-      body: `Tu solicitud para el turno "${req.shift.title}" del ${format(parseISO(req.shift.date), "d MMM", { locale: es })} ha sido aprobada. ¡Estás asignado!`,
-      metadata: { shift_id: req.shift_id },
-      created_by: user?.id,
-    } as any);
-
-    // Log audit
-    await supabase.rpc("log_activity_detailed", {
-      _action: "aprobar_solicitud_turno",
-      _entity_type: "shift_request",
-      _entity_id: req.id,
-      _company_id: selectedCompanyId,
-      _details: { employee_id: req.employee_id, shift_id: req.shift_id },
-      _old_data: { status: "pending" },
-      _new_data: { status: "approved" },
-    });
-
-    toast.success(`Solicitud aprobada — ${req.employee.first_name} asignado al turno`);
-    setProcessing(null);
-    loadRequests();
   };
 
   const handleReject = async () => {
@@ -165,44 +127,24 @@ export default function ShiftRequests() {
     if (!req) return;
 
     setProcessing(rejectId);
-
-    await supabase.from("shift_requests")
-      .update({
-        status: "rejected",
-        rejection_reason: rejectReason.trim() || null,
-        reviewed_by: user?.id,
-        reviewed_at: new Date().toISOString(),
-      } as any)
-      .eq("id", rejectId);
-
-    // Notify employee
-    await supabase.from("notifications").insert({
-      company_id: selectedCompanyId!,
-      recipient_id: req.employee_id,
-      recipient_type: "employee",
-      type: "shift_request_rejected",
-      title: "❌ Solicitud rechazada",
-      body: `Tu solicitud para el turno "${req.shift.title}" del ${format(parseISO(req.shift.date), "d MMM", { locale: es })} fue rechazada.${rejectReason.trim() ? ` Motivo: ${rejectReason.trim()}` : ""}`,
-      metadata: { shift_id: req.shift_id, rejection_reason: rejectReason.trim() || null },
-      created_by: user?.id,
-    } as any);
-
-    await supabase.rpc("log_activity_detailed", {
-      _action: "rechazar_solicitud_turno",
-      _entity_type: "shift_request",
-      _entity_id: rejectId,
-      _company_id: selectedCompanyId,
-      _details: { employee_id: req.employee_id, shift_id: req.shift_id, reason: rejectReason.trim() },
-      _old_data: { status: "pending" },
-      _new_data: { status: "rejected" },
-    });
-
-    toast.success("Solicitud rechazada");
-    setProcessing(null);
-    setRejectId(null);
-    setRejectReason("");
-    loadRequests();
+    try {
+      await resolveShiftRequest({
+        requestId: rejectId,
+        decision: "rejected",
+        reason: rejectReason.trim() || null,
+        source: "admin_shift_requests",
+      });
+      toast.success("Solicitud rechazada");
+      setRejectId(null);
+      setRejectReason("");
+      loadRequests();
+    } catch (e: any) {
+      toast.error(approvalErrorCopy(e?.message));
+    } finally {
+      setProcessing(null);
+    }
   };
+
 
   const filtered = requests.filter(r => r.status === tab);
   const pendingCount = requests.filter(r => r.status === "pending").length;
