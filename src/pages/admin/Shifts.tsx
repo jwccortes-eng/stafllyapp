@@ -1867,8 +1867,8 @@ function DesktopShifts() {
     // Phase 1 — solo READY: se excluyen cancelados (terminal), bloqueados y
     // borradores BLOCKED. La acción ya no descubre blockers que la UI llamó
     // "listo": el mismo adapter alimenta el chip y este bucle.
-    const { ready: draftShifts, blocked: skipped } = selectPublishableDrafts(
-      filteredShifts as any,
+    const { ready: draftShifts, blocked: skipped } = selectPublishableDrafts<Shift & { id: string }>(
+      filteredShifts as (Shift & { id: string })[],
       (shiftId: string) => assignments.filter(a => a.shift_id === shiftId) as any,
     );
     if (draftShifts.length === 0) {
