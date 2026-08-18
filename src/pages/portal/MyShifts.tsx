@@ -120,7 +120,8 @@ export default function MyShifts() {
     setLoadError(null);
     try {
 
-    const { data: emp } = await supabase.from("employees").select("company_id").eq("id", employeeId).maybeSingle();
+    const { data: emp, error: empError } = await supabase.from("employees").select("company_id").eq("id", employeeId).maybeSingle();
+    if (empError) throw empError;
     if (!emp) {
       setLoadError("No encontramos tu perfil de empleado para esta compañía.");
       setLoading(false);
@@ -129,14 +130,20 @@ export default function MyShifts() {
 
     // CRITICAL: filter scheduled_shifts.deleted_at to hide soft-deleted shifts.
     // ALSO exclude removed/rejected assignments (set by trigger on soft-delete or by employee).
-    // See src/lib/shifts/visibility.ts for the canonical rule.
+    // Vocabulario de estados: src/lib/shifts/assignment-status-truth.ts (accepted
+    // es tan operativo como confirmed; sólo se excluyen los estados de salida).
     // Defense in depth: scope to the employee's own company so a stale
     // selection or upstream bug can never leak cross-tenant assignments.
     // IDENTIDAD: la persona incluye su ficha canónica y sus fichas fusionadas
     // del mismo tenant (historia que no se mueve).
     // Ver src/lib/shifts/worker-visible-shifts.ts
+    //
+    // VENTANA OPERATIVA (P0 timeout 57014): el portal carga por defecto desde
+    // hace HISTORY_WINDOW_DAYS hacia adelante sin límite. Sin este filtro la
+    // consulta recorría toda la historia del tenant y el servidor la cancelaba
+    // a los 8 s. El historial completo se pide explícitamente.
     const identityIds = await resolveWorkerAssignmentEmployeeIds(employeeId);
-    const { data: assignData } = await supabase
+    let assignQuery = supabase
       .from("shift_assignments")
       .select(`id, employee_id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, shift_ref, meeting_point, meeting_time, special_instructions, company_id, operational_version, locations (name), clients (name))`)
       .in("employee_id", identityIds)
@@ -145,8 +152,16 @@ export default function MyShifts() {
       .is("scheduled_shifts.deleted_at", null)
       .eq("scheduled_shifts.publication_status", "published")
       .not("scheduled_shifts.status", "in", "(cancelled,canceled)")
-      .not("status", "in", "(removed,rejected)")
-      .order("created_at", { ascending: false });
+      .not("status", "in", EXCLUDED_ASSIGNMENT_STATUS_FILTER);
+
+    if (!fullHistory) {
+      assignQuery = assignQuery.gte("scheduled_shifts.date", windowStartDate());
+    }
+
+    const { data: assignData, error: assignError } = await assignQuery
+      .order("date", { ascending: false, referencedTable: "scheduled_shifts" })
+      .limit(ASSIGNMENT_HARD_LIMIT);
+    if (assignError) throw assignError;
 
     const mapped: ShiftAssignment[] = (assignData ?? []).map((a: any) => ({
       id: a.id,
