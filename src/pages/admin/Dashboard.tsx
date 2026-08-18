@@ -32,6 +32,7 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
 import { useIsMobile } from "@/hooks/use-mobile";
 import MobileAdminHome from "./MobileAdminHome";
+import { COMMITTED_ASSIGNMENT_STATUS_LIST } from "@/lib/shifts/assignment-status-truth";
 
 /* ─── animated counter hook ─── */
 function useAnimatedNumber(target: number, duration = 800) {
@@ -474,7 +475,7 @@ function AdminDashboardDesktop() {
        const todayShiftIds = (todayShiftsRes.data ?? []).map((s: any) => s.id);
        let assignedCount = 0;
        if (todayShiftIds.length > 0) {
-         const { count } = await supabase.from("shift_assignments").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("status", "confirmed").in("shift_id", todayShiftIds);
+         const { count } = await supabase.from("shift_assignments").select("id", { count: "exact", head: true }).eq("company_id", cid).in("status", COMMITTED_ASSIGNMENT_STATUS_LIST).in("shift_id", todayShiftIds);
          assignedCount = count ?? 0;
        }
 

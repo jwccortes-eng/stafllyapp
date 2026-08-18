@@ -19311,6 +19311,10 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
       }
+      user_module_company_ids: {
+        Args: { _module: string; _permission: string; _user_id: string }
+        Returns: string[]
+      }
       verify_switch_pin: { Args: { _pin: string }; Returns: boolean }
       versioned_assignment_transition: {
         Args: {
