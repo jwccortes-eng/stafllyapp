@@ -277,67 +277,52 @@ export function ShiftDetailDialog({
     setLoadingRequests(false);
   }, [shift]);
 
+  /**
+   * Canonical claim resolution: resolve_shift_request → assign_worker_to_shift
+   * (tenant, compliance, duplicados, solape, capacidad, auditoría).
+   * Prohibido escribir shift_assignments / shift_requests desde aquí.
+   */
   const handleApproveRequest = async (req: ShiftRequestItem) => {
-    if (!shift || !selectedCompanyId) return;
+    if (!shift) return;
     setProcessingReqId(req.id);
-    const shiftAssignments = assignments.filter(a => a.shift_id === shift.id);
-    const maxSlots = shift.slots ?? 1;
-    const approvedRequests = requests.filter(r => r.status === "approved" && r.id !== req.id).length;
-    if (shiftAssignments.length + approvedRequests >= maxSlots) {
-      toast.error("No hay plazas disponibles");
+    try {
+      await resolveShiftRequest({
+        requestId: req.id,
+        decision: "approved",
+        source: "admin_shift_detail",
+      });
+      toast.success(`${req.employee.first_name} aprobado y asignado`);
+      await loadRequests();
+      onRequestAction?.();
+    } catch (e: any) {
+      toast.error(claimResolutionErrorCopy(e?.message));
+    } finally {
       setProcessingReqId(null);
-      return;
     }
-    // Auto-pick a typed role slot if the shift has any (FIFO by sort_order)
-    const [pickedSlotId] = pickRoleSlotsForNewAssignments(
-      roleSlots,
-      shiftAssignments as unknown as ActiveAssignment[],
-      [req.employee_id],
-    );
-    const { error: assignErr } = await supabase.from("shift_assignments").insert({
-      company_id: selectedCompanyId,
-      shift_id: shift.id,
-      employee_id: req.employee_id,
-      status: "confirmed",
-      role_slot_id: pickedSlotId ?? null,
-    } as any);
-    if (assignErr) { toast.error(assignErr.message); setProcessingReqId(null); return; }
-    await supabase.from("shift_requests")
-      .update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as any)
-      .eq("id", req.id);
-    await supabase.from("notifications").insert({
-      company_id: selectedCompanyId, recipient_id: req.employee_id, recipient_type: "employee",
-      type: "shift_request_approved", title: "Solicitud aprobada",
-      body: `Tu solicitud para "${shift.title}" fue aprobada. Estás asignado.`,
-      metadata: { shift_id: shift.id }, created_by: user?.id,
-    } as any);
-    toast.success(`${req.employee.first_name} aprobado y asignado`);
-    setProcessingReqId(null);
-    await loadRequests();
-    onRequestAction?.();
   };
 
   const handleRejectRequest = async () => {
-    if (!rejectReqId || !shift || !selectedCompanyId) return;
-    const req = requests.find(r => r.id === rejectReqId);
-    if (!req) return;
+    if (!rejectReqId || !shift) return;
     setProcessingReqId(rejectReqId);
-    await supabase.from("shift_requests")
-      .update({ status: "rejected", rejection_reason: rejectReason.trim() || null, reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as any)
-      .eq("id", rejectReqId);
-    await supabase.from("notifications").insert({
-      company_id: selectedCompanyId, recipient_id: req.employee_id, recipient_type: "employee",
-      type: "shift_request_rejected", title: "Solicitud rechazada",
-      body: `Tu solicitud para "${shift.title}" fue rechazada.${rejectReason.trim() ? ` Motivo: ${rejectReason.trim()}` : ""}`,
-      metadata: { shift_id: shift.id }, created_by: user?.id,
-    } as any);
-    toast.success("Solicitud rechazada");
-    setProcessingReqId(null);
-    setRejectReqId(null);
-    setRejectReason("");
-    await loadRequests();
-    onRequestAction?.();
+    try {
+      await resolveShiftRequest({
+        requestId: rejectReqId,
+        decision: "rejected",
+        reason: rejectReason.trim() || null,
+        source: "admin_shift_detail",
+      });
+      toast.success("Solicitud rechazada");
+      setRejectReqId(null);
+      setRejectReason("");
+      await loadRequests();
+      onRequestAction?.();
+    } catch (e: any) {
+      toast.error(claimResolutionErrorCopy(e?.message));
+    } finally {
+      setProcessingReqId(null);
+    }
   };
+
 
   useEffect(() => {
     if (shift && open) {
