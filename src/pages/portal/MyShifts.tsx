@@ -244,14 +244,16 @@ export default function MyShifts() {
       setClaimable(claimableFiltered);
       setPageCache<ShiftsSnapshot>(PAGE_KEY, employeeId, { assignments: mapped, claimable: claimableFiltered });
     } catch (err: any) {
-      console.error("[MyShifts] load failed", err);
-      setLoadError(err?.message ?? "Could not load your shifts.");
+      // Nunca esqueleto infinito: LOADING → ERROR clasificado + reintento.
+      const classified = classifyQueryError(err);
+      console.error(`[MyShifts] load failed (${classified.kind})`, err);
+      setLoadError(classified.message);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, [employeeId, isResolvingEmployee]);
+  useEffect(() => { load(); }, [employeeId, isResolvingEmployee, fullHistory]);
 
   const claimShift = async (shiftId: string) => {
     if (!employeeId) return;
