@@ -367,6 +367,14 @@ function DesktopShifts() {
   const { selectedCompanyId, selectedCompany } = useCompany();
   const { config: payrollConfig } = usePayrollConfig();
   const { config: shiftsConfig, updateConfig: updateShiftsConfig, loading: shiftsConfigLoading } = useShiftsConfig();
+  // PHASE 2 · SSOT — política real de la empresa dueña del servicio. Es la
+  // misma que lee `public.service_publish_readiness` en el backend.
+  const publishRequirements = useMemo(() => ({
+    requireClient: shiftsConfig.require_client,
+    requireLocation: shiftsConfig.require_location,
+    requireShiftAdmin: shiftsConfig.require_shift_admin,
+    maxShiftHours: shiftsConfig.max_shift_hours,
+  }), [shiftsConfig.require_client, shiftsConfig.require_location, shiftsConfig.require_shift_admin, shiftsConfig.max_shift_hours]);
   const payrollWeekStart = payrollConfig.payroll_week_start_day as 0 | 1 | 2 | 3 | 4 | 5 | 6;
   const canEdit = can("service.edit");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -705,7 +713,7 @@ function DesktopShifts() {
     );
     const draftsCount = draftShiftsInView.length;
     const publishReadyCount = draftShiftsInView.filter(
-      s => resolveDraftPublishReadiness(s as any, assignments.filter(a => a.shift_id === s.id) as any).ready,
+      s => resolveDraftPublishReadiness(s as any, assignments.filter(a => a.shift_id === s.id) as any, publishRequirements).ready,
     ).length;
     const publishedCount = filteredShifts.filter(s => isPublishedShift(s) && s.status !== "locked").length;
     const needsStaffCount = filteredShifts.filter(s => {
@@ -728,7 +736,7 @@ function DesktopShifts() {
       needsStaffCount,
       missingLocationCount,
     };
-  }, [filteredShifts, assignments]);
+  }, [filteredShifts, assignments, publishRequirements]);
 
   const weekDays = useMemo(() =>
     Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
@@ -1794,6 +1802,7 @@ function DesktopShifts() {
     const readiness = resolveDraftPublishReadiness(
       shift as any,
       assignments.filter(a => a.shift_id === shift.id) as any,
+      publishRequirements,
     );
     if (!readiness.ready) {
       toast.error(`No se pudo publicar ${publishFailureLabel(shift)}`, { description: readiness.reason ?? undefined });
@@ -1870,6 +1879,7 @@ function DesktopShifts() {
     const { ready: draftShifts, blocked: skipped } = selectPublishableDrafts<Shift & { id: string }>(
       filteredShifts as (Shift & { id: string })[],
       (shiftId: string) => assignments.filter(a => a.shift_id === shiftId) as any,
+      publishRequirements,
     );
     if (draftShifts.length === 0) {
       toast.info(
@@ -3365,11 +3375,7 @@ function DesktopShifts() {
             driverIds: Array.isArray(s.driver_ids) ? s.driver_ids : [],
             assignedCount,
             claimable: !!s.claimable,
-            requirements: {
-              requireClient: shiftsConfig.require_client,
-              requireLocation: shiftsConfig.require_location,
-              maxShiftHours: shiftsConfig.max_shift_hours,
-            },
+            requirements: publishRequirements,
           }).blockers,
         });
         return (

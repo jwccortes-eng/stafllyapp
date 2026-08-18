@@ -19173,6 +19173,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      service_publish_readiness: { Args: { _shift_id: string }; Returns: Json }
       set_auth_pin: {
         Args: { _pin: string; _reason?: string; _user_id: string }
         Returns: boolean
