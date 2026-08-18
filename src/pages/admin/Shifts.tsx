@@ -111,7 +111,12 @@ import { PrePublishDialog } from "@/components/shifts/workspace/PrePublishDialog
 import { ExportConnecteamBulkDialog } from "@/components/shifts/integrations/ExportConnecteamBulkDialog";
 import type { Shift, Assignment, SelectOption, ClientOption, Employee, ViewMode } from "@/components/shifts/types";
 import { formatShiftCode } from "@/components/shifts/types";
-import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
+import { isDraftShift, isPublishedShift, isCancelledOrArchivedShift } from "@/lib/shifts/shift-guards";
+import {
+  resolveDraftPublishReadiness,
+  selectPublishableDrafts,
+  describePublishBlockers,
+} from "@/lib/shifts/publish-readiness";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
 import { useServiceRootRefs } from "@/hooks/useServiceRootRefs";
 
@@ -692,7 +697,16 @@ function DesktopShifts() {
     const totalHours = `${Math.floor(totalMinutes / 60)}h ${String(totalMinutes % 60).padStart(2, "0")}m`;
 
     // Operator-first additions (UI-only, read from already-loaded data)
-    const draftsCount = filteredShifts.filter(s => isDraftShift(s)).length;
+    // P0 Phase 1 — "Borradores" cuenta borradores no terminales; "listos para
+    // publicar" cuenta SOLO lo que la acción de publicación puede publicar
+    // (mismo adapter que el bulk y espejo de publish_shift_draft).
+    const draftShiftsInView = filteredShifts.filter(
+      s => isDraftShift(s) && !isCancelledOrArchivedShift(s) && s.status !== "locked",
+    );
+    const draftsCount = draftShiftsInView.length;
+    const publishReadyCount = draftShiftsInView.filter(
+      s => resolveDraftPublishReadiness(s as any, assignments.filter(a => a.shift_id === s.id) as any).ready,
+    ).length;
     const publishedCount = filteredShifts.filter(s => isPublishedShift(s) && s.status !== "locked").length;
     const needsStaffCount = filteredShifts.filter(s => {
       const slots = (s as any).slots ?? 0;
@@ -709,6 +723,7 @@ function DesktopShifts() {
       missingWorkers,
       totalHours,
       draftsCount,
+      publishReadyCount,
       publishedCount,
       needsStaffCount,
       missingLocationCount,
@@ -1756,19 +1771,44 @@ function DesktopShifts() {
   // stayed draft) and emitted notifications for unpublished services.
   const readPublishResult = (data: any): { ok: boolean; reason?: string } => {
     if (data && typeof data === "object" && data.ok === false) {
-      const missing = Array.isArray(data.missing) ? data.missing.join(", ") : "datos incompletos";
-      return { ok: false, reason: `Falta completar: ${missing}` };
+      const missing = Array.isArray(data.missing) ? data.missing.map(String) : [];
+      return { ok: false, reason: describePublishBlockers(missing) };
     }
     return { ok: true };
   };
 
+  // Identidad real del registro que falló: un segmento muestra el QK del
+  // servicio raíz, así que reportar solo ese QK apuntaba al servicio
+  // equivocado (caso QK-001657 reportado como QK-001651).
+  const publishFailureLabel = (shift: Shift): string => {
+    const id = getShiftDisplayIdentity(shift as any);
+    if (id.isServiceSegment && id.segmentRef) {
+      return `${id.segmentRef} (servicio ${id.serviceRef ?? id.primaryRef})`;
+    }
+    return id.primaryRef;
+  };
+
   const executePublishShift = async (shift: Shift) => {
+    // Phase 1 — espejo del backend: cancelado y borradores BLOCKED no llegan
+    // al RPC. Nunca se publica ni se notifica un servicio que no está listo.
+    const readiness = resolveDraftPublishReadiness(
+      shift as any,
+      assignments.filter(a => a.shift_id === shift.id) as any,
+    );
+    if (!readiness.ready) {
+      toast.error(`No se pudo publicar ${publishFailureLabel(shift)}`, { description: readiness.reason ?? undefined });
+      return;
+    }
+
     // Use the RPC so draft reservations are lifted atomically and the
     // publication lifecycle stays consistent (publication_status + status).
     const { data: rpcData, error: rpcError } = await supabase.rpc("publish_shift_draft" as any, { _shift_id: shift.id });
     if (rpcError) { toast.error(rpcError.message); return; }
     const result = readPublishResult(rpcData);
-    if (!result.ok) { toast.error(`No se pudo publicar. ${result.reason}`); return; }
+    if (!result.ok) {
+      toast.error(`No se pudo publicar ${publishFailureLabel(shift)}`, { description: result.reason });
+      return;
+    }
 
     // The RPC owns the whole transition (publication_status + legacy status +
     // published_at/by) in a single transaction — no second write from the client.
@@ -1824,11 +1864,21 @@ function DesktopShifts() {
   const handlePublishAll = async () => {
     // Only true drafts — never re-publish already-published shifts (avoids
     // duplicate notifications) and never touch locked ones.
-    const draftShifts = filteredShifts.filter(s => {
-      const pub = (s as any).publication_status ?? "published";
-      return pub === "draft" && s.status !== "locked";
-    });
-    if (draftShifts.length === 0) { toast.info("No hay turnos borrador para publicar"); return; }
+    // Phase 1 — solo READY: se excluyen cancelados (terminal), bloqueados y
+    // borradores BLOCKED. La acción ya no descubre blockers que la UI llamó
+    // "listo": el mismo adapter alimenta el chip y este bucle.
+    const { ready: draftShifts, blocked: skipped } = selectPublishableDrafts<Shift & { id: string }>(
+      filteredShifts as (Shift & { id: string })[],
+      (shiftId: string) => assignments.filter(a => a.shift_id === shiftId) as any,
+    );
+    if (draftShifts.length === 0) {
+      toast.info(
+        skipped.length > 0
+          ? `Ningún borrador está listo para publicar (${skipped.length} con datos pendientes)`
+          : "No hay turnos borrador para publicar",
+      );
+      return;
+    }
 
     // require_shift_admin gate for bulk publish
     if (shiftsConfig.require_shift_admin) {
@@ -1922,14 +1972,23 @@ function DesktopShifts() {
       toast.success(`${succeeded.length} turno(s) publicados`);
     }
     if (failed.length > 0) {
-      // Compact, actionable summary. Each entry: "#code — reason".
+      // Identidad REAL del registro: segmento + servicio raíz, nunca solo el QK
+      // del padre (que puede estar ya publicado y no ser el que falló).
       const details = failed
         .slice(0, 5)
-        .map(f => `${getShiftDisplayIdentity(f.shift).primaryRef}: ${f.reason}`)
+        .map(f => `${publishFailureLabel(f.shift)}: ${f.reason}`)
         .join("\n");
       const more = failed.length > 5 ? `\n…y ${failed.length - 5} más` : "";
       toast.error(`${failed.length} turno(s) no se publicaron`, { description: details + more });
       console.warn("[bulk-publish] failures", failed);
+    }
+    if (skipped.length > 0) {
+      // Los BLOCKED nunca se intentaron: se informan aparte, sin ruido de error.
+      const details = skipped
+        .slice(0, 5)
+        .map(s => `${publishFailureLabel(s.shift)}: ${s.readiness.reason}`)
+        .join("\n");
+      toast.info(`${skipped.length} borrador(es) no están listos`, { description: details });
     }
 
     loadData();
@@ -2370,7 +2429,7 @@ function DesktopShifts() {
     {
       key: "drafts",
       label: "Borradores listos para publicar",
-      count: kpiMetrics.draftsCount,
+      count: kpiMetrics.publishReadyCount,
       tone: "warning" as const,
       icon: FileText,
       active: filters.publishStatus === "draft",
