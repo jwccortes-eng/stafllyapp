@@ -1750,16 +1750,29 @@ function DesktopShifts() {
     setPendingPublishShift(shift);
   };
 
+  // Single reader of the publish RPC payload. The RPC can return
+  // { ok:false, missing:[...] } WITHOUT a Postgres error: treating that as
+  // success used to leave phantom states (status=published while the shift
+  // stayed draft) and emitted notifications for unpublished services.
+  const readPublishResult = (data: any): { ok: boolean; reason?: string } => {
+    if (data && typeof data === "object" && data.ok === false) {
+      const missing = Array.isArray(data.missing) ? data.missing.join(", ") : "datos incompletos";
+      return { ok: false, reason: `Falta completar: ${missing}` };
+    }
+    return { ok: true };
+  };
+
   const executePublishShift = async (shift: Shift) => {
     // Use the RPC so draft reservations are lifted atomically and the
     // publication lifecycle stays consistent (publication_status + status).
-    const { error: rpcError } = await supabase.rpc("publish_shift_draft" as any, { _shift_id: shift.id });
+    const { data: rpcData, error: rpcError } = await supabase.rpc("publish_shift_draft" as any, { _shift_id: shift.id });
     if (rpcError) { toast.error(rpcError.message); return; }
-    // Keep the legacy `status` column in sync for downstream UI/filters.
-    const { error } = await supabase.from("scheduled_shifts")
-      .update({ status: "published" } as any)
-      .eq("id", shift.id);
-    if (error) { toast.error(error.message); return; }
+    const result = readPublishResult(rpcData);
+    if (!result.ok) { toast.error(`No se pudo publicar. ${result.reason}`); return; }
+
+    // The RPC owns the whole transition (publication_status + legacy status +
+    // published_at/by) in a single transaction — no second write from the client.
+
 
     await logShiftActivity("publicar_turno", shift.id, { status: shift.status }, { status: "published" });
 
@@ -1832,27 +1845,26 @@ function DesktopShifts() {
 
     // Sequential to keep error attribution clean and avoid hammering the RPC.
     for (const shift of draftShifts) {
-      const { error: rpcError } = await supabase.rpc(
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
         "publish_shift_draft" as any,
         { _shift_id: shift.id }
       );
       if (rpcError) {
-        // Surface validation reasons (PUBLISH_VALIDATION_FAILED: field1,field2)
-        // verbatim so the operator knows what to fix.
+        // Surface validation reasons verbatim so the operator knows what to fix.
         failed.push({ shift, reason: rpcError.message });
         continue;
       }
-
-      // Keep the legacy `status` column in sync for downstream UI/filters.
-      // The RPC owns publication_status/published_at/published_by/reservations.
-      const { error: statusError } = await supabase
-        .from("scheduled_shifts")
-        .update({ status: "published" } as any)
-        .eq("id", shift.id);
-      if (statusError) {
-        failed.push({ shift, reason: statusError.message });
+      const result = readPublishResult(rpcData);
+      if (!result.ok) {
+        // Validation rejection without SQL error: no status sync, no
+        // notifications — the service stays Draft.
+        failed.push({ shift, reason: result.reason! });
         continue;
       }
+
+      // The RPC owns the whole transition atomically (publication_status,
+      // legacy status, published_at/by, draft reservations).
+
 
       await logShiftActivity(
         "publicar_turno",
