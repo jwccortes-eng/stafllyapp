@@ -697,7 +697,16 @@ function DesktopShifts() {
     const totalHours = `${Math.floor(totalMinutes / 60)}h ${String(totalMinutes % 60).padStart(2, "0")}m`;
 
     // Operator-first additions (UI-only, read from already-loaded data)
-    const draftsCount = filteredShifts.filter(s => isDraftShift(s)).length;
+    // P0 Phase 1 — "Borradores" cuenta borradores no terminales; "listos para
+    // publicar" cuenta SOLO lo que la acción de publicación puede publicar
+    // (mismo adapter que el bulk y espejo de publish_shift_draft).
+    const draftShiftsInView = filteredShifts.filter(
+      s => isDraftShift(s) && !isCancelledOrArchivedShift(s) && s.status !== "locked",
+    );
+    const draftsCount = draftShiftsInView.length;
+    const publishReadyCount = draftShiftsInView.filter(
+      s => resolveDraftPublishReadiness(s as any, assignments.filter(a => a.shift_id === s.id) as any).ready,
+    ).length;
     const publishedCount = filteredShifts.filter(s => isPublishedShift(s) && s.status !== "locked").length;
     const needsStaffCount = filteredShifts.filter(s => {
       const slots = (s as any).slots ?? 0;
