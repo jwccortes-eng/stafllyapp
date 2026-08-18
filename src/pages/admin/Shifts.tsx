@@ -2385,7 +2385,7 @@ function DesktopShifts() {
     {
       key: "drafts",
       label: "Borradores listos para publicar",
-      count: kpiMetrics.draftsCount,
+      count: kpiMetrics.publishReadyCount,
       tone: "warning" as const,
       icon: FileText,
       active: filters.publishStatus === "draft",
