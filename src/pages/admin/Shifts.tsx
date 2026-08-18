@@ -723,6 +723,7 @@ function DesktopShifts() {
       missingWorkers,
       totalHours,
       draftsCount,
+      publishReadyCount,
       publishedCount,
       needsStaffCount,
       missingLocationCount,
