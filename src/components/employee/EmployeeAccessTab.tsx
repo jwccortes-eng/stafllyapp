@@ -139,6 +139,34 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
     }
   };
 
+  const handleSendRecovery = async () => {
+    setSendingRecovery(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("employee-auth", {
+        body: { action: "recovery-admin-start", employee_id: employee.id },
+      });
+      if (error) {
+        let msg = error.message ?? "No se pudo enviar la recuperación";
+        try {
+          const b = await (error as any)?.context?.json?.();
+          if (b?.error) msg = b.error;
+        } catch { /* ignore */ }
+        toast({ title: "Error", description: msg, variant: "destructive" });
+        return;
+      }
+      toast({
+        title: "Recuperación enviada",
+        description: data?.destination_masked
+          ? `Código enviado a ${data.destination_masked}. La persona crea su PIN nuevo.`
+          : "Código enviado a la persona.",
+      });
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message ?? "Error de conexión", variant: "destructive" });
+    } finally {
+      setSendingRecovery(false);
+    }
+  };
+
   const generateRandomPin = async () => {
     setSavingPin(true);
     try {
