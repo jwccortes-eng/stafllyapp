@@ -24,6 +24,7 @@ import { PortalUpdateBanner } from "@/components/portal/PortalUpdateBanner";
 import { getPageCache, setPageCache, hasPageCache } from "@/lib/portal/page-cache";
 import { ErrorBlock } from "@/components/ui/error-block";
 import { resolveWorkerAssignmentEmployeeIds } from "@/lib/shifts/worker-visible-shifts";
+import { fetchWorkerPayStatements } from "@/lib/payroll/pay-statement";
 
 interface NextShift {
   id: string;
