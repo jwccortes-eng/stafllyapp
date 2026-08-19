@@ -494,8 +494,155 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={() => { setLockedMessage(""); setPin(""); setStep("locked"); }}
+            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ¿Olvidaste tu PIN?
+          </button>
         </div>
       )}
+
+      {/* Step: Bloqueo por intentos fallidos — esperar o recuperar acceso */}
+      {step === "locked" && (
+        <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center">
+              <Lock className="h-7 w-7 text-destructive" />
+            </div>
+            <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
+              {lockedMessage ? "Acceso bloqueado" : "Recuperar acceso"}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {lockedMessage
+                || "Verificamos tu identidad por correo y creas un PIN nuevo. Tu PIN anterior deja de servir."}
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-muted/40 border border-border/50 px-4 py-3 space-y-1">
+            <p className="text-xs font-semibold text-foreground/80">Recuperación verificada</p>
+            <p className="text-xs text-muted-foreground">
+              Enviamos un código de 6 dígitos al correo registrado en tu ficha. Nadie más puede ver tu PIN.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Button
+              onClick={handleRecoveryStart}
+              disabled={loading}
+              className="w-full h-12 text-sm font-semibold rounded-xl shadow-sm"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Recuperar acceso"}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => { setPin(""); setStep("login_pin"); }}
+              className="w-full h-11 text-sm rounded-xl"
+            >
+              Esperar e intentar más tarde
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step: Código de recuperación */}
+      {step === "recovery_code" && (
+        <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
+          <button
+            onClick={() => { resetRecoveryState(); setStep("locked"); }}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-3 w-3" /> Volver
+          </button>
+
+          <div className="text-center space-y-2">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Mail className="h-7 w-7 text-primary" />
+            </div>
+            <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
+              Escribe el código
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {recoveryDestination
+                ? `Enviado a ${recoveryDestination}. Vence en 10 minutos.`
+                : "Revisa tu correo. El código vence en 10 minutos."}
+            </p>
+          </div>
+
+          <NumericKeypad
+            value={recoveryCode}
+            maxLength={6}
+            onChange={setRecoveryCode}
+            onComplete={handleRecoveryVerify}
+            label="Código de 6 dígitos"
+          />
+
+          {loading && (
+            <div className="flex justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleRecoveryStart}
+            disabled={loading}
+            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+          >
+            Reenviar código
+          </button>
+        </div>
+      )}
+
+      {/* Step: Nuevo PIN tras recuperación verificada */}
+      {step === "recovery_new_pin" && (
+        <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <ShieldCheck className="h-7 w-7 text-primary" />
+            </div>
+            <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
+              Crea tu PIN nuevo
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {recoveryPinPhase === "create" ? "Elige un PIN de 4 dígitos" : "Confirma tu PIN"}
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-2">
+            <div className={cn("h-1.5 rounded-full transition-all", recoveryPinPhase === "create" ? "w-8 bg-primary" : "w-4 bg-primary/30")} />
+            <div className={cn("h-1.5 rounded-full transition-all", recoveryPinPhase === "confirm" ? "w-8 bg-primary" : "w-4 bg-border")} />
+          </div>
+
+          {recoveryPinPhase === "create" ? (
+            <NumericKeypad
+              value={recoveryPin}
+              maxLength={4}
+              onChange={setRecoveryPin}
+              onComplete={handleRecoveryPinCreate}
+              label="Nuevo PIN"
+            />
+          ) : (
+            <NumericKeypad
+              value={recoveryConfirmPin}
+              maxLength={4}
+              onChange={setRecoveryConfirmPin}
+              onComplete={handleRecoveryPinConfirm}
+              label="Confirma tu PIN"
+            />
+          )}
+
+          {loading && (
+            <div className="flex justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          )}
+        </div>
+      )}
+
+
 
       {/* Step: Activation - Create PIN */}
       {step === "activate_pin" && employeeInfo && (
