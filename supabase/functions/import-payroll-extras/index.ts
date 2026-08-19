@@ -70,7 +70,10 @@ function normalizeName(s: string): string {
 }
 
 function normalizeId(s: unknown): string {
-  return String(s ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  const raw = String(s ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  // Excel entrega los IDs numéricos como "1291.0"; se normaliza a "1291".
+  const numeric = raw.match(/^(\d+)\.0+$/);
+  return numeric ? numeric[1] : raw;
 }
 
 Deno.serve(async (req) => {
