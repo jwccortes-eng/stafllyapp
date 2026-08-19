@@ -471,6 +471,11 @@ export default function ImportPayrollExtras() {
         </Link>
       </div>
 
+      {/* Bridge de cierre externo aprobado (hoja PAYROLL): preview sin escrituras + import controlado */}
+      <ExternalPayrollCloseImport companyId={selectedCompanyId ?? null} periods={periods} />
+
+
+
       {/* Step 1: Select period + Upload file */}
       {step === 1 && (
         <div className="grid gap-6 md:grid-cols-2">
