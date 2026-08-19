@@ -1,217 +1,168 @@
-import { useEffect, useState } from "react";
+/**
+ * PayStub — recibo de pago publicado de un periodo (worker).
+ *
+ * Lee exclusivamente el recibo congelado (`pay_statements`) y sus líneas
+ * aprobadas vía RPC. No recalcula totales, no lee movimientos pendientes y
+ * nunca muestra notas internas.
+ */
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
-import { ArrowLeft, FileText, Calendar, DollarSign, TrendingUp, TrendingDown, CheckCircle2, Receipt } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Receipt, Wallet } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import { PageHeader } from "@/components/ui/page-header";
-import { cn } from "@/lib/utils";
+import { StaflyLoadingState, StaflyStatusBadge } from "@/components/stafly-ui";
+import { notifyError } from "@/lib/feedback/notify";
+import {
+  buildStatementBreakdown,
+  fetchWorkerPayStatementDetail,
+  fetchWorkerPayStatements,
+  fmtStatementMoney,
+  type WorkerPayStatementDetail,
+} from "@/lib/payroll/pay-statement";
 
-interface MovementDetail {
-  id: string;
-  concept_name: string;
-  category: string;
-  quantity: number | null;
-  rate: number | null;
-  total_value: number;
-  note: string | null;
-}
-
-interface PeriodInfo {
-  start_date: string;
-  end_date: string;
-  status: string;
-  paid_at: string | null;
+function fmtDay(iso: string): string {
+  try {
+    return format(parseISO(iso), "d MMM yyyy", { locale: es });
+  } catch {
+    return iso;
+  }
 }
 
 export default function PayStub() {
   const { periodId } = useParams<{ periodId: string }>();
-  const { employeeId, resolveEmployeeForCompany } = useAuth();
-  const { effectiveEmployeeId } = useEffectiveEmployee();
-  const [period, setPeriod] = useState<PeriodInfo | null>(null);
-  const [basePay, setBasePay] = useState(0);
-  const [movements, setMovements] = useState<MovementDetail[]>([]);
+  const [detail, setDetail] = useState<WorkerPayStatementDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!effectiveEmployeeId || !periodId) return;
-    async function load() {
-      // Scope period query by employee's company
-      const { data: empData } = await supabase
-        .from("employees").select("company_id").eq("id", effectiveEmployeeId!).maybeSingle();
+    if (!periodId) return;
+    let cancelled = false;
 
-      const [periodRes, baseRes, movRes] = await Promise.all([
-        supabase.from("pay_periods").select("start_date, end_date, status, paid_at")
-          .eq("id", periodId)
-          .eq("company_id", empData?.company_id ?? "")
-          .maybeSingle(),
-        supabase.from("period_base_pay").select("base_total_pay").eq("employee_id", effectiveEmployeeId!).eq("period_id", periodId).maybeSingle(),
-        supabase.from("movements").select("id, total_value, quantity, rate, note, concepts(name, category)").eq("employee_id", effectiveEmployeeId!).eq("period_id", periodId),
-      ]);
+    (async () => {
+      setLoading(true);
+      try {
+        const list = await fetchWorkerPayStatements();
+        const match = list.find((s) => s.period_id === periodId);
+        if (!match) {
+          if (!cancelled) setDetail(null);
+          return;
+        }
+        const d = await fetchWorkerPayStatementDetail(match.statement_id);
+        if (!cancelled) setDetail(d);
+      } catch (e) {
+        notifyError({
+          title: "No pudimos abrir tu recibo",
+          fact: "El recibo de este periodo no se cargó.",
+          consequence: "No puedes ver el detalle ahora mismo.",
+          cause: e,
+        });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
 
-      if (periodRes.data) setPeriod(periodRes.data as PeriodInfo);
-      setBasePay(Number(baseRes.data?.base_total_pay) || 0);
-      setMovements(
-        (movRes.data ?? []).map((m: any) => ({
-          id: m.id,
-          concept_name: m.concepts?.name ?? "",
-          category: m.concepts?.category ?? "",
-          quantity: m.quantity,
-          rate: m.rate,
-          total_value: Number(m.total_value),
-          note: m.note,
-        }))
-      );
-      setLoading(false);
-    }
-    load();
-  }, [effectiveEmployeeId, periodId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [periodId]);
+
+  const breakdown = useMemo(
+    () => (detail ? buildStatementBreakdown(detail) : null),
+    [detail],
+  );
 
   if (loading) {
+    return <StaflyLoadingState variant="cards" count={3} label="Cargando recibo" />;
+  }
+
+  if (!detail || !breakdown) {
     return (
-      <div className="space-y-4">
-        {[1, 2, 3].map(i => <div key={i} className="h-16 animate-pulse bg-muted rounded-2xl" />)}
+      <div className="py-16 text-center text-muted-foreground">
+        <p className="text-sm">Este periodo todavía no tiene un recibo publicado.</p>
+        <Link to="/portal/pay-reports" className="mt-2 inline-block text-sm text-primary">
+          ← Volver a Mis pagos
+        </Link>
       </div>
     );
   }
-
-  if (!period) {
-    return (
-      <div className="text-center py-16 text-muted-foreground">
-        <p className="text-sm">Periodo no encontrado</p>
-        <Link to="/portal/pay-reports" className="text-primary text-sm mt-2 inline-block">← Volver a Nómina</Link>
-      </div>
-    );
-  }
-
-  const extras = movements.filter(m => m.category === "extra");
-  const deductions = movements.filter(m => m.category === "deduction");
-  const extrasTotal = extras.reduce((s, m) => s + m.total_value, 0);
-  const deductionsTotal = deductions.reduce((s, m) => s + m.total_value, 0);
-  const totalFinal = basePay + extrasTotal - deductionsTotal;
-  const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-  const statusLabel = period.paid_at ? "Pagado" : period.status === "published" ? "Publicado" : period.status === "closed" ? "Cerrado" : "Abierto";
-  const statusColor = period.paid_at
-    ? "bg-earning/10 text-earning"
-    : period.status === "published"
-    ? "bg-primary/10 text-primary"
-    : "bg-warning/10 text-warning";
 
   return (
     <div className="space-y-6">
       <PageHeader
         variant="2"
         icon={Receipt}
-        title="Recibo de Pago"
-        subtitle={`${period.start_date} → ${period.end_date}`}
-        badge={statusLabel}
+        title="Recibo de pago"
+        subtitle={`${fmtDay(detail.start_date)} → ${fmtDay(detail.end_date)}`}
+        badge={detail.paid_at ? "Pagado" : "Publicado"}
         rightSlot={
-          <Link to="/portal/pay-reports" className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center hover:bg-accent transition-colors">
+          <Link
+            to="/portal/pay-reports"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted transition-colors hover:bg-accent"
+            aria-label="Volver a Mis pagos"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Link>
         }
       />
 
-      {/* Total hero */}
-      <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-6 text-center">
-        <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Total a Pagar</p>
-        <p className="text-4xl font-bold font-heading mt-2 tracking-tight tabular-nums">${fmt(totalFinal)}</p>
-        {period.paid_at && (
-          <p className="text-xs text-earning mt-2 font-medium flex items-center gap-1">
-            <CheckCircle2 className="h-3.5 w-3.5" /> Pagado el {new Date(period.paid_at).toLocaleDateString("es")}
-          </p>
-        )}
-      </div>
-
-      {/* Breakdown cards */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-2xl bg-card border p-3 text-center">
-          <DollarSign className="h-4 w-4 text-muted-foreground mx-auto" />
-          <p className="text-[10px] text-muted-foreground mt-1">Base</p>
-          <p className="text-sm font-bold mt-0.5 tabular-nums">${fmt(basePay)}</p>
-        </div>
-        <div className="rounded-2xl bg-earning/5 border border-earning/20 p-3 text-center">
-          <TrendingUp className="h-4 w-4 text-earning mx-auto" />
-          <p className="text-[10px] text-earning mt-1">Extras</p>
-          <p className="text-sm font-bold text-earning mt-0.5 tabular-nums">+${fmt(extrasTotal)}</p>
-        </div>
-        <div className="rounded-2xl bg-destructive/5 border border-destructive/20 p-3 text-center">
-          <TrendingDown className="h-4 w-4 text-deduction mx-auto" />
-          <p className="text-[10px] text-deduction mt-1">Deduc.</p>
-          <p className="text-sm font-bold text-deduction mt-0.5 tabular-nums">−${fmt(deductionsTotal)}</p>
+      <div className="rounded-2xl border bg-card p-6 text-center">
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Total
+        </p>
+        <p className="mt-2 text-4xl font-bold font-heading tabular-nums tracking-tight">
+          {fmtStatementMoney(breakdown.total)}
+        </p>
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <StaflyStatusBadge tone={detail.paid_at ? "success" : "info"} icon={CheckCircle2}>
+            {detail.paid_at ? "Pagado" : "Publicado"}
+          </StaflyStatusBadge>
+          {detail.published_at && (
+            <span className="text-[11px] text-muted-foreground">
+              {fmtDay(detail.published_at.slice(0, 10))}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Extras detail */}
-      {extras.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-earning px-1">Extras</h3>
-          {extras.map(m => (
-            <div key={m.id} className="rounded-2xl border bg-earning/5 p-3 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">{m.concept_name}</p>
-                {m.note && <p className="text-[10px] text-muted-foreground mt-0.5">{m.note}</p>}
-                {m.quantity != null && m.rate != null && (
-                  <p className="text-[10px] text-muted-foreground">{m.quantity} × ${fmt(m.rate)}</p>
-                )}
-              </div>
-              <span className="text-sm font-bold text-earning tabular-nums">+${fmt(m.total_value)}</span>
-            </div>
-          ))}
-        </div>
+      {breakdown.earnings.length > 0 && (
+        <section>
+          <h2 className="mb-2 text-sm font-semibold">Ganancias</h2>
+          <ul className="divide-y rounded-2xl border bg-card">
+            {breakdown.earnings.map((b) => (
+              <li key={b.key} className="flex items-center justify-between gap-3 px-4 py-3">
+                <span className="text-sm">{b.label}</span>
+                <span className="text-sm font-semibold tabular-nums">
+                  {fmtStatementMoney(b.amount)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
-      {/* Deductions detail */}
-      {deductions.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-deduction px-1">Deducciones</h3>
-          {deductions.map(m => (
-            <div key={m.id} className="rounded-2xl border bg-destructive/5 p-3 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">{m.concept_name}</p>
-                {m.note && <p className="text-[10px] text-muted-foreground mt-0.5">{m.note}</p>}
-                {m.quantity != null && m.rate != null && (
-                  <p className="text-[10px] text-muted-foreground">{m.quantity} × ${fmt(m.rate)}</p>
-                )}
-              </div>
-              <span className="text-sm font-bold text-deduction tabular-nums">−${fmt(m.total_value)}</span>
-            </div>
-          ))}
-        </div>
+      {breakdown.adjustments.length > 0 && (
+        <section>
+          <h2 className="mb-2 text-sm font-semibold">Ajustes</h2>
+          <ul className="divide-y rounded-2xl border bg-card">
+            {breakdown.adjustments.map((b) => (
+              <li key={b.key} className="flex items-center justify-between gap-3 px-4 py-3">
+                <span className="text-sm">{b.label}</span>
+                <span className="text-sm font-semibold tabular-nums text-destructive">
+                  −{fmtStatementMoney(b.amount)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
-      {/* Summary line */}
-      <div className="rounded-2xl border-2 border-primary/30 bg-primary/5 p-4">
-        <div className="space-y-1.5 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Pago base</span>
-            <span className="tabular-nums">${fmt(basePay)}</span>
-          </div>
-          {extrasTotal > 0 && (
-            <div className="flex justify-between">
-              <span className="text-earning">+ Extras</span>
-              <span className="text-earning tabular-nums">${fmt(extrasTotal)}</span>
-            </div>
-          )}
-          {deductionsTotal > 0 && (
-            <div className="flex justify-between">
-              <span className="text-deduction">− Deducciones</span>
-              <span className="text-deduction tabular-nums">${fmt(deductionsTotal)}</span>
-            </div>
-          )}
-          <div className="border-t pt-1.5 flex justify-between font-bold text-base">
-            <span>Total Final</span>
-            <span className="tabular-nums">${fmt(totalFinal)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="text-center">
-        <Link to={`/portal/week/${periodId}`} className="text-xs font-medium text-primary hover:underline">
-          Ver detalle de turnos y horas →
-        </Link>
+      <div className="flex items-center justify-between rounded-2xl border bg-card px-4 py-4">
+        <span className="inline-flex items-center gap-2 text-sm font-semibold">
+          <Wallet className="h-4 w-4 text-muted-foreground" /> TOTAL
+        </span>
+        <span className="text-xl font-bold font-heading tabular-nums">
+          {fmtStatementMoney(breakdown.total)}
+        </span>
       </div>
     </div>
   );

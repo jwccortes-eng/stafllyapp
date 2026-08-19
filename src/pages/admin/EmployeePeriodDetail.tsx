@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Pencil, Save, X, Lock, Archive, Info } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
+import PayStatementPublishCard from "@/components/payroll/PayStatementPublishCard";
 
 interface ShiftRow {
   id: string;
@@ -299,6 +300,8 @@ export default function EmployeePeriodDetail() {
           </CardContent>
         </Card>
       </div>
+
+      <PayStatementPublishCard periodId={periodId} employeeId={employeeId} />
 
       {/* Trace level / source banner — read-only */}
       {trace && isClosed && (
