@@ -5,6 +5,7 @@ import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { Link } from "react-router-dom";
 import { ArrowLeft, CalendarDays, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { fetchWorkerPayStatements } from "@/lib/payroll/pay-statement";
 
 interface PeriodAccum {
   period_id: string;
