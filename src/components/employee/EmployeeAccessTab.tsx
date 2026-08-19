@@ -50,6 +50,7 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
   // and surface the freshly-generated PIN once after a reset (one-time reveal).
   const [newPin, setNewPin] = useState("");
   const [savingPin, setSavingPin] = useState(false);
+  const [sendingRecovery, setSendingRecovery] = useState(false);
   const [lastGeneratedPin, setLastGeneratedPin] = useState<string | null>(null);
   const [hasPinResolved, setHasPinResolved] = useState<boolean | null>(null);
 
