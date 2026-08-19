@@ -1022,7 +1022,8 @@ Deno.serve(async (req) => {
         });
       }
 
-      const { current_pin, new_pin } = await req.json().catch(() => ({}));
+      // El body ya fue leído una sola vez arriba (el stream no se puede releer).
+      const { current_pin, new_pin } = body;
 
       if (!new_pin || !/^\d{4}$/.test(new_pin)) {
         return new Response(JSON.stringify({ error: "El nuevo PIN debe ser exactamente 4 dígitos" }), {
