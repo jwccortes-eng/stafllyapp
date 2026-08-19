@@ -10,6 +10,8 @@
 
 > Convención del reporte: **[H]** = hecho observado · **[I]** = inferencia · **[R]** = recomendación.
 
+> ⚠️ **CORRECCIÓN DE MODELO (19 Ago 2026).** Las métricas de las §1–§12 miden **paridad de registros** (row/entity parity) y son **incorrectas como medida de paridad operacional**. La clasificación válida está en la **§14 — Addendum: paridad operacional**, que reclasifica PAY RIDE y los marcadores auxiliares y recalcula la cobertura sobre unidades comparables. Usar §14 como medida oficial.
+
 ---
 
 ## 1. Executive summary
