@@ -223,21 +223,18 @@ export default function EmployeeDashboard() {
       }).length;
       setClaimableCount(cCount);
 
+      // Dinero visible = recibo publicado y congelado (SSOT). Nunca se
+      // recalcula en el cliente ni se leen movimientos pendientes.
       let nextEstimatedPay: number | null = estimatedPay;
-      if (periodRes.data) {
-        const p = periodRes.data;
-        const [bpRes, movRes] = await Promise.all([
-          supabase.from("period_base_pay").select("base_total_pay").eq("employee_id", employeeId!).eq("period_id", p.id).maybeSingle(),
-          supabase.from("movements").select("total_value, concepts(category)").eq("employee_id", employeeId!).eq("period_id", p.id),
-        ]);
-        const base = Number(bpRes.data?.base_total_pay) || 0;
-        let extras = 0, deductions = 0;
-        (movRes.data ?? []).forEach((m: any) => {
-          if (m.concepts?.category === "extra") extras += Number(m.total_value) || 0;
-          else deductions += Number(m.total_value) || 0;
-        });
-        nextEstimatedPay = base + extras - deductions;
+      try {
+        const statements = await fetchWorkerPayStatements();
+        const latest = periodRes.data
+          ? (statements.find((s) => s.period_id === periodRes.data!.id) ?? statements[0])
+          : statements[0];
+        nextEstimatedPay = latest ? latest.frozen_total : null;
         setEstimatedPay(nextEstimatedPay);
+      } catch {
+        /* el dashboard sigue funcionando sin cifra de pago */
       }
 
       const nextUnreadAlerts = (notifRes?.data ?? []).filter((n: any) => !n.read_at).length;
