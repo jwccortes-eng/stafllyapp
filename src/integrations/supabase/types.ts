@@ -9003,11 +9003,14 @@ export type Database = {
           employee_id: string
           id: string
           note: string | null
+          pay_statement_id: string | null
           period_id: string
           quantity: number | null
           rate: number | null
           total_value: number
           updated_at: string
+          visible_to_worker: boolean
+          worker_visible_note: string | null
         }
         Insert: {
           approval_note?: string | null
@@ -9020,11 +9023,14 @@ export type Database = {
           employee_id: string
           id?: string
           note?: string | null
+          pay_statement_id?: string | null
           period_id: string
           quantity?: number | null
           rate?: number | null
           total_value?: number
           updated_at?: string
+          visible_to_worker?: boolean
+          worker_visible_note?: string | null
         }
         Update: {
           approval_note?: string | null
@@ -9037,11 +9043,14 @@ export type Database = {
           employee_id?: string
           id?: string
           note?: string | null
+          pay_statement_id?: string | null
           period_id?: string
           quantity?: number | null
           rate?: number | null
           total_value?: number
           updated_at?: string
+          visible_to_worker?: boolean
+          worker_visible_note?: string | null
         }
         Relationships: [
           {
@@ -9077,6 +9086,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movements_pay_statement_id_fkey"
+            columns: ["pay_statement_id"]
+            isOneToOne: false
+            referencedRelation: "pay_statements"
             referencedColumns: ["id"]
           },
           {
@@ -10553,6 +10569,108 @@ export type Database = {
             columns: ["last_reconciliation_id"]
             isOneToOne: false
             referencedRelation: "reconciliation_period_status"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_statements: {
+        Row: {
+          approved_at: string | null
+          company_id: string
+          created_at: string
+          employee_id: string
+          frozen_base_total: number
+          frozen_deductions_total: number
+          frozen_extras_total: number
+          frozen_total: number
+          id: string
+          line_count: number
+          pay_period_id: string
+          published_at: string | null
+          published_by: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          company_id: string
+          created_at?: string
+          employee_id: string
+          frozen_base_total?: number
+          frozen_deductions_total?: number
+          frozen_extras_total?: number
+          frozen_total: number
+          id?: string
+          line_count?: number
+          pay_period_id: string
+          published_at?: string | null
+          published_by?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          frozen_base_total?: number
+          frozen_deductions_total?: number
+          frozen_extras_total?: number
+          frozen_total?: number
+          id?: string
+          line_count?: number
+          pay_period_id?: string
+          published_at?: string | null
+          published_by?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_statements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_statements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_statements_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_statements_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_statements_pay_period_id_fkey"
+            columns: ["pay_period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
             referencedColumns: ["id"]
           },
         ]
@@ -19103,6 +19221,10 @@ export type Database = {
           role_key: string
         }[]
       }
+      pay_statement_preview: {
+        Args: { _employee_id: string; _period_id: string }
+        Returns: Json
+      }
       permission_catalog: {
         Args: never
         Returns: {
@@ -19120,6 +19242,10 @@ export type Database = {
           priority: number
           sampling_reason: string
         }[]
+      }
+      publish_pay_statement: {
+        Args: { _employee_id: string; _period_id: string; _source?: string }
+        Returns: Json
       }
       publish_shift_draft: { Args: { _shift_id: string }; Returns: Json }
       read_email_batch: {
@@ -19362,6 +19488,10 @@ export type Database = {
       }
       try_path_uuid: { Args: { idx: number; path: string }; Returns: string }
       unaccent_safe: { Args: { _input: string }; Returns: string }
+      unpublish_pay_statement: {
+        Args: { _reason: string; _statement_id: string }
+        Returns: Json
+      }
       update_invitation_status_by_token: {
         Args: { _new_status: string; _token: string }
         Returns: boolean
@@ -19505,6 +19635,30 @@ export type Database = {
       worker_owns_employee_document_scope: {
         Args: { _company_id: string; _employee_id: string }
         Returns: boolean
+      }
+      worker_pay_statement_detail: {
+        Args: { _statement_id: string }
+        Returns: Json
+      }
+      worker_pay_statements: {
+        Args: never
+        Returns: {
+          company_id: string
+          company_name: string
+          end_date: string
+          frozen_base_total: number
+          frozen_deductions_total: number
+          frozen_extras_total: number
+          frozen_total: number
+          line_count: number
+          paid_at: string
+          period_id: string
+          published_at: string
+          sequence_number: number
+          source: string
+          start_date: string
+          statement_id: string
+        }[]
       }
       worker_respond_to_shift_assignment: {
         Args: {
