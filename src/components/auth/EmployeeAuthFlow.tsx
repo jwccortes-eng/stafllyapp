@@ -14,7 +14,15 @@ import {
 import { cn } from "@/lib/utils";
 import { clearFileInput, createPreviewUrl, openFilePicker, selectedFileFromInput } from "@/lib/mobile-file-picker";
 
-type EmployeeStep = "phone" | "activate_pin" | "activate_profile" | "login_pin" | "force_change_pin";
+type EmployeeStep =
+  | "phone"
+  | "activate_pin"
+  | "activate_profile"
+  | "login_pin"
+  | "force_change_pin"
+  | "locked"
+  | "recovery_code"
+  | "recovery_new_pin";
 
 interface EmployeeInfo {
   found: boolean;
@@ -23,16 +31,21 @@ interface EmployeeInfo {
   is_active: boolean;
 }
 
-/** Extract real error message from supabase.functions.invoke error */
-async function extractErrorMsg(error: any): Promise<string> {
+/** Extract structured body ({ error, code }) from a functions.invoke error */
+async function extractErrorBody(error: any): Promise<{ error: string; code?: string }> {
   try {
     const ctx = error?.context;
     if (ctx && typeof ctx.json === "function") {
       const body = await ctx.json();
-      if (body?.error) return body.error;
+      if (body?.error) return { error: body.error, code: body.code };
     }
   } catch { /* ignore */ }
-  return error?.message || "Connection error. Check your internet and try again.";
+  return { error: error?.message || "Connection error. Check your internet and try again." };
+}
+
+/** Extract real error message from supabase.functions.invoke error */
+async function extractErrorMsg(error: any): Promise<string> {
+  return (await extractErrorBody(error)).error;
 }
 
 export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => void }) {
@@ -51,6 +64,128 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
   const [newPin, setNewPin] = useState("");
   const [confirmNewPin, setConfirmNewPin] = useState("");
   const [changePinPhase, setChangePinPhase] = useState<"create" | "confirm">("create");
+
+  // P0 — Recuperación verificada de acceso tras bloqueo por PIN
+  const [lockedMessage, setLockedMessage] = useState("");
+  const [recoveryRequestId, setRecoveryRequestId] = useState<string | null>(null);
+  const [recoveryDestination, setRecoveryDestination] = useState<string | null>(null);
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [recoveryToken, setRecoveryToken] = useState<string | null>(null);
+  const [recoveryPin, setRecoveryPin] = useState("");
+  const [recoveryConfirmPin, setRecoveryConfirmPin] = useState("");
+  const [recoveryPinPhase, setRecoveryPinPhase] = useState<"create" | "confirm">("create");
+
+  const resetRecoveryState = () => {
+    setRecoveryRequestId(null);
+    setRecoveryDestination(null);
+    setRecoveryCode("");
+    setRecoveryToken(null);
+    setRecoveryPin("");
+    setRecoveryConfirmPin("");
+    setRecoveryPinPhase("create");
+  };
+
+  const handleRecoveryStart = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("employee-auth", {
+        body: { action: "recovery-start", phone: phone.trim() },
+      });
+      if (error) {
+        const body = await extractErrorBody(error);
+        toast({ title: "No se pudo enviar el código", description: body.error, variant: "destructive" });
+        return;
+      }
+      setRecoveryRequestId(data?.request_id ?? null);
+      setRecoveryDestination(data?.destination_masked ?? null);
+      setRecoveryCode("");
+      setStep("recovery_code");
+      toast({
+        title: "Código enviado",
+        description: data?.destination_masked
+          ? `Enviamos un código de 6 dígitos a ${data.destination_masked}.`
+          : "Si tu número está registrado, enviamos un código a tu correo.",
+      });
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Error de conexión.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecoveryVerify = async (code: string) => {
+    if (!recoveryRequestId) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("employee-auth", {
+        body: { action: "recovery-verify", request_id: recoveryRequestId, code },
+      });
+      if (error) {
+        const body = await extractErrorBody(error);
+        setRecoveryCode("");
+        toast({ title: "Código no válido", description: body.error, variant: "destructive" });
+        return;
+      }
+      setRecoveryToken(data?.recovery_token ?? null);
+      setRecoveryPin("");
+      setRecoveryConfirmPin("");
+      setRecoveryPinPhase("create");
+      setStep("recovery_new_pin");
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Error de conexión.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecoveryPinCreate = (entered: string) => {
+    if (recoveryPinPhase === "create") {
+      setRecoveryPin(entered);
+      setRecoveryPinPhase("confirm");
+      setRecoveryConfirmPin("");
+    }
+  };
+
+  const handleRecoveryPinConfirm = async (entered: string) => {
+    if (entered !== recoveryPin) {
+      toast({ title: "No coincide", description: "Los PIN no coinciden. Intenta de nuevo.", variant: "destructive" });
+      setRecoveryPinPhase("create");
+      setRecoveryPin("");
+      setRecoveryConfirmPin("");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("employee-auth", {
+        body: {
+          action: "recovery-complete",
+          request_id: recoveryRequestId,
+          recovery_token: recoveryToken,
+          new_pin: recoveryPin,
+        },
+      });
+      if (error) {
+        const body = await extractErrorBody(error);
+        toast({ title: "No se pudo crear el PIN", description: body.error, variant: "destructive" });
+        setRecoveryPinPhase("create");
+        setRecoveryPin("");
+        setRecoveryConfirmPin("");
+        return;
+      }
+      toast({
+        title: "PIN actualizado",
+        description: data?.message || "Ya puedes ingresar con tu PIN nuevo.",
+      });
+      resetRecoveryState();
+      setLockedMessage("");
+      setPin("");
+      setStep("login_pin");
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Error de conexión.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePhoneCheck = async () => {
     if (!phone.trim() || phone.replace(/\D/g, "").length < 7) {
@@ -103,9 +238,14 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
       });
 
       if (error) {
-        const msg = await extractErrorMsg(error);
-        toast({ title: "Error", description: msg, variant: "destructive" });
+        const body = await extractErrorBody(error);
         setPin("");
+        if (body.code === "locked") {
+          setLockedMessage(body.error);
+          setStep("locked");
+          return;
+        }
+        toast({ title: "Error", description: body.error, variant: "destructive" });
         return;
       }
 
@@ -354,8 +494,155 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={() => { setLockedMessage(""); setPin(""); setStep("locked"); }}
+            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ¿Olvidaste tu PIN?
+          </button>
         </div>
       )}
+
+      {/* Step: Bloqueo por intentos fallidos — esperar o recuperar acceso */}
+      {step === "locked" && (
+        <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center">
+              <Lock className="h-7 w-7 text-destructive" />
+            </div>
+            <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
+              {lockedMessage ? "Acceso bloqueado" : "Recuperar acceso"}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {lockedMessage
+                || "Verificamos tu identidad por correo y creas un PIN nuevo. Tu PIN anterior deja de servir."}
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-muted/40 border border-border/50 px-4 py-3 space-y-1">
+            <p className="text-xs font-semibold text-foreground/80">Recuperación verificada</p>
+            <p className="text-xs text-muted-foreground">
+              Enviamos un código de 6 dígitos al correo registrado en tu ficha. Nadie más puede ver tu PIN.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Button
+              onClick={handleRecoveryStart}
+              disabled={loading}
+              className="w-full h-12 text-sm font-semibold rounded-xl shadow-sm"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Recuperar acceso"}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => { setPin(""); setStep("login_pin"); }}
+              className="w-full h-11 text-sm rounded-xl"
+            >
+              Esperar e intentar más tarde
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step: Código de recuperación */}
+      {step === "recovery_code" && (
+        <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
+          <button
+            onClick={() => { resetRecoveryState(); setStep("locked"); }}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-3 w-3" /> Volver
+          </button>
+
+          <div className="text-center space-y-2">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Mail className="h-7 w-7 text-primary" />
+            </div>
+            <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
+              Escribe el código
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {recoveryDestination
+                ? `Enviado a ${recoveryDestination}. Vence en 10 minutos.`
+                : "Revisa tu correo. El código vence en 10 minutos."}
+            </p>
+          </div>
+
+          <NumericKeypad
+            value={recoveryCode}
+            maxLength={6}
+            onChange={setRecoveryCode}
+            onComplete={handleRecoveryVerify}
+            label="Código de 6 dígitos"
+          />
+
+          {loading && (
+            <div className="flex justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleRecoveryStart}
+            disabled={loading}
+            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+          >
+            Reenviar código
+          </button>
+        </div>
+      )}
+
+      {/* Step: Nuevo PIN tras recuperación verificada */}
+      {step === "recovery_new_pin" && (
+        <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <ShieldCheck className="h-7 w-7 text-primary" />
+            </div>
+            <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
+              Crea tu PIN nuevo
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {recoveryPinPhase === "create" ? "Elige un PIN de 4 dígitos" : "Confirma tu PIN"}
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-2">
+            <div className={cn("h-1.5 rounded-full transition-all", recoveryPinPhase === "create" ? "w-8 bg-primary" : "w-4 bg-primary/30")} />
+            <div className={cn("h-1.5 rounded-full transition-all", recoveryPinPhase === "confirm" ? "w-8 bg-primary" : "w-4 bg-border")} />
+          </div>
+
+          {recoveryPinPhase === "create" ? (
+            <NumericKeypad
+              value={recoveryPin}
+              maxLength={4}
+              onChange={setRecoveryPin}
+              onComplete={handleRecoveryPinCreate}
+              label="Nuevo PIN"
+            />
+          ) : (
+            <NumericKeypad
+              value={recoveryConfirmPin}
+              maxLength={4}
+              onChange={setRecoveryConfirmPin}
+              onComplete={handleRecoveryPinConfirm}
+              label="Confirma tu PIN"
+            />
+          )}
+
+          {loading && (
+            <div className="flex justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          )}
+        </div>
+      )}
+
+
 
       {/* Step: Activation - Create PIN */}
       {step === "activate_pin" && employeeInfo && (

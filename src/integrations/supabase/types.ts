@@ -520,6 +520,60 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_recovery_requests: {
+        Row: {
+          channel: string
+          code_attempts: number
+          code_hash: string
+          company_id: string | null
+          consumed_at: string | null
+          created_at: string
+          destination_masked: string
+          expires_at: string
+          id: string
+          initiated_by: string | null
+          initiated_source: string
+          token_expires_at: string | null
+          token_hash: string | null
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          channel?: string
+          code_attempts?: number
+          code_hash: string
+          company_id?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          destination_masked: string
+          expires_at: string
+          id?: string
+          initiated_by?: string | null
+          initiated_source?: string
+          token_expires_at?: string | null
+          token_hash?: string | null
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          channel?: string
+          code_attempts?: number
+          code_hash?: string
+          company_id?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          destination_masked?: string
+          expires_at?: string
+          id?: string
+          initiated_by?: string | null
+          initiated_source?: string
+          token_expires_at?: string | null
+          token_hash?: string | null
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       automation_log: {
         Row: {
           company_id: string
@@ -18342,6 +18396,10 @@ export type Database = {
       _eic_sign_match_token: { Args: { p_payload: Json }; Returns: string }
       _eic_verify_match_token: { Args: { p_token: string }; Returns: Json }
       _get_cron_secret: { Args: never; Returns: string }
+      admin_can_recover_employee: {
+        Args: { _employee_id: string }
+        Returns: Json
+      }
       admin_get_employees_with_fiscal: {
         Args: { p_company_id: string }
         Returns: {
@@ -18872,6 +18930,10 @@ export type Database = {
         Returns: Json
       }
       intake_file_company_id: { Args: { object_name: string }; Returns: string }
+      internal_complete_pin_recovery: {
+        Args: { _pin: string; _request_id: string; _token: string }
+        Returns: Json
+      }
       internal_dual_write_pin_hash: {
         Args: { _employee_id: string; _pin: string }
         Returns: undefined
@@ -18893,6 +18955,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      internal_start_pin_recovery: {
+        Args: {
+          _actor?: string
+          _channel?: string
+          _company_id?: string
+          _destination_masked: string
+          _source?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       internal_verify_auth_pin: {
         Args: { _pin: string; _user_id: string }
         Returns: Json
@@ -18900,6 +18973,10 @@ export type Database = {
       internal_verify_pin_hash: {
         Args: { _employee_id: string; _pin: string }
         Returns: boolean
+      }
+      internal_verify_pin_recovery: {
+        Args: { _code: string; _request_id: string }
+        Returns: Json
       }
       is_company_owner: {
         Args: { _company_id: string; _user_id: string }

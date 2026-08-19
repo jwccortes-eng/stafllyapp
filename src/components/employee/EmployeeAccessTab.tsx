@@ -50,6 +50,7 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
   // and surface the freshly-generated PIN once after a reset (one-time reveal).
   const [newPin, setNewPin] = useState("");
   const [savingPin, setSavingPin] = useState(false);
+  const [sendingRecovery, setSendingRecovery] = useState(false);
   const [lastGeneratedPin, setLastGeneratedPin] = useState<string | null>(null);
   const [hasPinResolved, setHasPinResolved] = useState<boolean | null>(null);
 
@@ -139,6 +140,34 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
     }
   };
 
+  const handleSendRecovery = async () => {
+    setSendingRecovery(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("employee-auth", {
+        body: { action: "recovery-admin-start", employee_id: employee.id },
+      });
+      if (error) {
+        let msg = error.message ?? "No se pudo enviar la recuperación";
+        try {
+          const b = await (error as any)?.context?.json?.();
+          if (b?.error) msg = b.error;
+        } catch { /* ignore */ }
+        toast({ title: "Error", description: msg, variant: "destructive" });
+        return;
+      }
+      toast({
+        title: "Recuperación enviada",
+        description: data?.destination_masked
+          ? `Código enviado a ${data.destination_masked}. La persona crea su PIN nuevo.`
+          : "Código enviado a la persona.",
+      });
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message ?? "Error de conexión", variant: "destructive" });
+    } finally {
+      setSendingRecovery(false);
+    }
+  };
+
   const generateRandomPin = async () => {
     setSavingPin(true);
     try {
@@ -210,6 +239,25 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
 
             {isPrivileged && (
               <>
+                <Separator />
+                {/* Recuperación verificada: el trabajador crea su PIN, nadie más lo ve */}
+                <div className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2.5 space-y-2">
+                  <div>
+                    <p className="text-xs font-semibold">Enviar recuperación de acceso</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Recomendado. Enviamos un código al correo de la persona; ella crea su PIN nuevo y se levanta el bloqueo. Nadie más ve el PIN.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={sendingRecovery}
+                    onClick={handleSendRecovery}
+                  >
+                    {sendingRecovery ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Enviar código de recuperación"}
+                  </Button>
+                </div>
                 <Separator />
                 <div className="flex items-end gap-2">
                   <div className="flex-1 space-y-1">
