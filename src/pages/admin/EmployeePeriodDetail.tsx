@@ -300,6 +300,8 @@ export default function EmployeePeriodDetail() {
         </Card>
       </div>
 
+      <PayStatementPublishCard periodId={periodId} employeeId={employeeId} />
+
       {/* Trace level / source banner — read-only */}
       {trace && isClosed && (
         <Card className="mb-4 border-border/60">
