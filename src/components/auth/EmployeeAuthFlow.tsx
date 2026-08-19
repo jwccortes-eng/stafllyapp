@@ -65,6 +65,128 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
   const [confirmNewPin, setConfirmNewPin] = useState("");
   const [changePinPhase, setChangePinPhase] = useState<"create" | "confirm">("create");
 
+  // P0 — Recuperación verificada de acceso tras bloqueo por PIN
+  const [lockedMessage, setLockedMessage] = useState("");
+  const [recoveryRequestId, setRecoveryRequestId] = useState<string | null>(null);
+  const [recoveryDestination, setRecoveryDestination] = useState<string | null>(null);
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [recoveryToken, setRecoveryToken] = useState<string | null>(null);
+  const [recoveryPin, setRecoveryPin] = useState("");
+  const [recoveryConfirmPin, setRecoveryConfirmPin] = useState("");
+  const [recoveryPinPhase, setRecoveryPinPhase] = useState<"create" | "confirm">("create");
+
+  const resetRecoveryState = () => {
+    setRecoveryRequestId(null);
+    setRecoveryDestination(null);
+    setRecoveryCode("");
+    setRecoveryToken(null);
+    setRecoveryPin("");
+    setRecoveryConfirmPin("");
+    setRecoveryPinPhase("create");
+  };
+
+  const handleRecoveryStart = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("employee-auth", {
+        body: { action: "recovery-start", phone: phone.trim() },
+      });
+      if (error) {
+        const body = await extractErrorBody(error);
+        toast({ title: "No se pudo enviar el código", description: body.error, variant: "destructive" });
+        return;
+      }
+      setRecoveryRequestId(data?.request_id ?? null);
+      setRecoveryDestination(data?.destination_masked ?? null);
+      setRecoveryCode("");
+      setStep("recovery_code");
+      toast({
+        title: "Código enviado",
+        description: data?.destination_masked
+          ? `Enviamos un código de 6 dígitos a ${data.destination_masked}.`
+          : "Si tu número está registrado, enviamos un código a tu correo.",
+      });
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Error de conexión.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecoveryVerify = async (code: string) => {
+    if (!recoveryRequestId) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("employee-auth", {
+        body: { action: "recovery-verify", request_id: recoveryRequestId, code },
+      });
+      if (error) {
+        const body = await extractErrorBody(error);
+        setRecoveryCode("");
+        toast({ title: "Código no válido", description: body.error, variant: "destructive" });
+        return;
+      }
+      setRecoveryToken(data?.recovery_token ?? null);
+      setRecoveryPin("");
+      setRecoveryConfirmPin("");
+      setRecoveryPinPhase("create");
+      setStep("recovery_new_pin");
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Error de conexión.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecoveryPinCreate = (entered: string) => {
+    if (recoveryPinPhase === "create") {
+      setRecoveryPin(entered);
+      setRecoveryPinPhase("confirm");
+      setRecoveryConfirmPin("");
+    }
+  };
+
+  const handleRecoveryPinConfirm = async (entered: string) => {
+    if (entered !== recoveryPin) {
+      toast({ title: "No coincide", description: "Los PIN no coinciden. Intenta de nuevo.", variant: "destructive" });
+      setRecoveryPinPhase("create");
+      setRecoveryPin("");
+      setRecoveryConfirmPin("");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("employee-auth", {
+        body: {
+          action: "recovery-complete",
+          request_id: recoveryRequestId,
+          recovery_token: recoveryToken,
+          new_pin: recoveryPin,
+        },
+      });
+      if (error) {
+        const body = await extractErrorBody(error);
+        toast({ title: "No se pudo crear el PIN", description: body.error, variant: "destructive" });
+        setRecoveryPinPhase("create");
+        setRecoveryPin("");
+        setRecoveryConfirmPin("");
+        return;
+      }
+      toast({
+        title: "PIN actualizado",
+        description: data?.message || "Ya puedes ingresar con tu PIN nuevo.",
+      });
+      resetRecoveryState();
+      setLockedMessage("");
+      setPin("");
+      setStep("login_pin");
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Error de conexión.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePhoneCheck = async () => {
     if (!phone.trim() || phone.replace(/\D/g, "").length < 7) {
       toast({ title: "Error", description: "Enter a valid phone number", variant: "destructive" });
