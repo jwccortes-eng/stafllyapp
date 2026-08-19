@@ -211,6 +211,25 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
             {isPrivileged && (
               <>
                 <Separator />
+                {/* Recuperación verificada: el trabajador crea su PIN, nadie más lo ve */}
+                <div className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2.5 space-y-2">
+                  <div>
+                    <p className="text-xs font-semibold">Enviar recuperación de acceso</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Recomendado. Enviamos un código al correo de la persona; ella crea su PIN nuevo y se levanta el bloqueo. Nadie más ve el PIN.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={sendingRecovery}
+                    onClick={handleSendRecovery}
+                  >
+                    {sendingRecovery ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Enviar código de recuperación"}
+                  </Button>
+                </div>
+                <Separator />
                 <div className="flex items-end gap-2">
                   <div className="flex-1 space-y-1">
                     <Label className="text-xs">Resetear PIN (4 dígitos)</Label>
