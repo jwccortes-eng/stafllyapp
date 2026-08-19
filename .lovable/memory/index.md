@@ -7,3 +7,4 @@
 - [Acceso multi-empresa](mem://features/multi-company-auth-access-truth) — AUTH vs MEMBERSHIP vs EMPLOYEE en login por teléfono; resolveMultiCompanyAccess, outcome access_disabled
 - [Stafly Operating Model](mem://features/stafly-operating-model) — Cadena operativa de 8 etapas, responsabilidades canónicas, ResponsibilityCard y pestaña Modelo operativo
 - [Rol operativo explícito](mem://features/explicit-operating-role) — `company_users.operating_role_key` como SSOT del rol; Jaccard solo diagnóstico; overrides nunca cambian el rol
+- [Recuperación verificada de PIN](mem://features/pin-lockout-verified-recovery) — Salida única ante bloqueo: código por correo, token de un solo uso, admin solo inicia
