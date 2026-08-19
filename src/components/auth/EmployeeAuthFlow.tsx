@@ -14,7 +14,15 @@ import {
 import { cn } from "@/lib/utils";
 import { clearFileInput, createPreviewUrl, openFilePicker, selectedFileFromInput } from "@/lib/mobile-file-picker";
 
-type EmployeeStep = "phone" | "activate_pin" | "activate_profile" | "login_pin" | "force_change_pin";
+type EmployeeStep =
+  | "phone"
+  | "activate_pin"
+  | "activate_profile"
+  | "login_pin"
+  | "force_change_pin"
+  | "locked"
+  | "recovery_code"
+  | "recovery_new_pin";
 
 interface EmployeeInfo {
   found: boolean;
@@ -23,16 +31,21 @@ interface EmployeeInfo {
   is_active: boolean;
 }
 
-/** Extract real error message from supabase.functions.invoke error */
-async function extractErrorMsg(error: any): Promise<string> {
+/** Extract structured body ({ error, code }) from a functions.invoke error */
+async function extractErrorBody(error: any): Promise<{ error: string; code?: string }> {
   try {
     const ctx = error?.context;
     if (ctx && typeof ctx.json === "function") {
       const body = await ctx.json();
-      if (body?.error) return body.error;
+      if (body?.error) return { error: body.error, code: body.code };
     }
   } catch { /* ignore */ }
-  return error?.message || "Connection error. Check your internet and try again.";
+  return { error: error?.message || "Connection error. Check your internet and try again." };
+}
+
+/** Extract real error message from supabase.functions.invoke error */
+async function extractErrorMsg(error: any): Promise<string> {
+  return (await extractErrorBody(error)).error;
 }
 
 export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => void }) {
