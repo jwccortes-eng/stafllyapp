@@ -1067,6 +1067,229 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ============================================================
+    // P0 — PIN LOCKOUT VERIFIED RECOVERY
+    // El lockout canónico NO se relaja. Solo se limpia después de
+    // verificar identidad por el canal ya registrado en la ficha.
+    // ============================================================
+
+    // ACTION: recovery-start — el trabajador pide un código (por teléfono)
+    if (action === "recovery-start") {
+      const genericOk = {
+        success: true,
+        sent: true,
+        destination_masked: null as string | null,
+        request_id: null as string | null,
+      };
+
+      if (!phone) {
+        return new Response(JSON.stringify({ error: "Teléfono requerido" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const cleanPhone = normalizePhone(phone);
+      const identity = await resolveCanonicalIdentity(adminClient, phone);
+      if (!identity.userId) {
+        // No filtramos existencia de cuentas.
+        return new Response(JSON.stringify(genericOk), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: recs } = await adminClient
+        .from("employees")
+        .select("id, company_id, email, first_name, is_active, portal_access_enabled")
+        .eq("user_id", identity.userId)
+        .order("created_at", { ascending: true });
+
+      const target = (recs ?? []).find((e: any) => e.email && e.is_active !== false)
+        ?? (recs ?? []).find((e: any) => e.email);
+
+      if (!target?.email) {
+        return new Response(
+          JSON.stringify({ error: recoveryErrorMessage("no_channel"), code: "no_channel" }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const masked = maskEmail(target.email);
+      const { data: started, error: startErr } = await adminClient.rpc("internal_start_pin_recovery", {
+        _user_id: identity.userId,
+        _destination_masked: masked,
+        _company_id: target.company_id ?? null,
+        _source: "worker",
+        _actor: identity.userId,
+        _channel: "email",
+      });
+
+      if (startErr || !started || (started as any).ok !== true) {
+        const reason = (started as any)?.reason ?? "error";
+        const retry = (started as any)?.retry_after_seconds ?? null;
+        console.info("[pin-recovery]", { ctx: "start", phone: cleanPhone, result: reason });
+        return new Response(
+          JSON.stringify({ error: recoveryErrorMessage(reason, retry), code: reason, retry_after_seconds: retry }),
+          { status: reason === "rate_limited" || reason === "cooldown" ? 429 : 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      await sendRecoveryCodeEmail(adminClient, target.email, (started as any).code, target.first_name);
+      console.info("[pin-recovery]", { ctx: "start", phone: cleanPhone, result: "sent", channel: "email" });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          sent: true,
+          request_id: (started as any).request_id,
+          destination_masked: masked,
+          expires_at: (started as any).expires_at,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ACTION: recovery-verify — valida el código y devuelve token de un solo uso
+    if (action === "recovery-verify") {
+      const { request_id, code } = body;
+      if (!request_id || !code || !/^\d{6}$/.test(String(code))) {
+        return new Response(JSON.stringify({ error: "Código inválido", code: "invalid_input" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data, error } = await adminClient.rpc("internal_verify_pin_recovery", {
+        _request_id: request_id,
+        _code: String(code),
+      });
+
+      if (error || !data || (data as any).ok !== true) {
+        const reason = (data as any)?.reason ?? "error";
+        console.info("[pin-recovery]", { ctx: "verify", result: reason });
+        return new Response(
+          JSON.stringify({
+            error: recoveryErrorMessage(reason),
+            code: reason,
+            attempts_left: (data as any)?.attempts_left ?? null,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(JSON.stringify({ success: true, recovery_token: (data as any).token }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ACTION: recovery-complete — crea el PIN nuevo y limpia el bloqueo
+    if (action === "recovery-complete") {
+      const { request_id, recovery_token, new_pin: recoveryPin } = body;
+      if (!recoveryPin || !/^\d{4}$/.test(String(recoveryPin))) {
+        return new Response(JSON.stringify({ error: "El PIN debe ser de 4 dígitos", code: "invalid_pin" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data, error } = await adminClient.rpc("internal_complete_pin_recovery", {
+        _request_id: request_id,
+        _token: recovery_token,
+        _pin: String(recoveryPin),
+      });
+
+      if (error || !data || (data as any).ok !== true) {
+        const reason = (data as any)?.reason ?? "error";
+        console.info("[pin-recovery]", { ctx: "complete", result: reason });
+        return new Response(
+          JSON.stringify({ error: recoveryErrorMessage(reason), code: reason }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Puente de sesión: la contraseña interna sigue derivada del PIN canónico.
+      const recoveredUserId = (data as any).user_id as string;
+      await adminClient.auth.admin.updateUserById(recoveredUserId, {
+        password: authPassword(String(recoveryPin)),
+      });
+      await adminClient.from("employees").update({ must_change_pin: false }).eq("user_id", recoveredUserId);
+
+      console.info("[pin-recovery]", { ctx: "complete", result: "ok" });
+      return new Response(
+        JSON.stringify({ success: true, message: "PIN actualizado. Ya puedes ingresar." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ACTION: recovery-admin-start — un admin inicia la recuperación.
+    // El admin NUNCA ve ni crea el PIN: el código va al canal del trabajador.
+    if (action === "recovery-admin-start") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const callerClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user: caller } } = await callerClient.auth.getUser();
+      if (!caller) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: guard, error: guardErr } = await callerClient.rpc("admin_can_recover_employee", {
+        _employee_id: employee_id,
+      });
+      if (guardErr || !guard || (guard as any).allowed !== true) {
+        const reason = (guard as any)?.reason ?? "forbidden";
+        const msg = reason === "no_auth_user"
+          ? "Esta persona todavía no tiene cuenta activada."
+          : reason === "employee_not_found"
+            ? "No se encontró la ficha."
+            : "No tienes permiso para iniciar esta recuperación.";
+        return new Response(JSON.stringify({ error: msg, code: reason }), {
+          status: reason === "forbidden" ? 403 : 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const targetEmail = (guard as any).email as string | null;
+      if (!targetEmail) {
+        return new Response(
+          JSON.stringify({ error: recoveryErrorMessage("no_channel"), code: "no_channel" }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const maskedAdmin = maskEmail(targetEmail);
+      const { data: started, error: startErr } = await adminClient.rpc("internal_start_pin_recovery", {
+        _user_id: (guard as any).user_id,
+        _destination_masked: maskedAdmin,
+        _company_id: (guard as any).company_id ?? null,
+        _source: "admin",
+        _actor: caller.id,
+        _channel: "email",
+      });
+
+      if (startErr || !started || (started as any).ok !== true) {
+        const reason = (started as any)?.reason ?? "error";
+        const retry = (started as any)?.retry_after_seconds ?? null;
+        return new Response(
+          JSON.stringify({ error: recoveryErrorMessage(reason, retry), code: reason }),
+          { status: reason === "rate_limited" || reason === "cooldown" ? 429 : 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      await sendRecoveryCodeEmail(adminClient, targetEmail, (started as any).code, null);
+
+      return new Response(
+        JSON.stringify({ success: true, destination_masked: maskedAdmin }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(JSON.stringify({ error: "Acción no válida" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
