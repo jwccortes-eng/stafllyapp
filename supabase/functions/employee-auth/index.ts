@@ -238,7 +238,8 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const anonClient = createClient(supabaseUrl, anonKey);
 
-    const { action, phone, pin, employee_id, invite_token, email, avatar_url, activation_audit } = await req.json();
+    const body = await req.json();
+    const { action, phone, pin, employee_id, invite_token, email, avatar_url, activation_audit } = body;
 
     // ACTION: check
     if (action === "check") {
