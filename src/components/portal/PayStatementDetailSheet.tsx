@@ -56,10 +56,9 @@ export default function PayStatementDetailSheet({ statement, onOpenChange }: Pro
       .catch((e) =>
         notifyError({
           title: "No pudimos abrir tu recibo",
-          done: "El desglose no se cargó.",
+          fact: "El desglose no se cargó.",
           consequence: "No puedes ver el detalle de este periodo ahora mismo.",
-          action: "Vuelve a intentarlo en unos segundos.",
-          error: e,
+          cause: e,
         }),
       )
       .finally(() => {
