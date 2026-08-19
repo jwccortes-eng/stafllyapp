@@ -7,6 +7,11 @@ import {
   setCanonicalPin,
   lockoutMessage,
 } from "../_shared/canonical-pin.ts";
+import {
+  maskEmail,
+  sendRecoveryCodeEmail,
+  recoveryErrorMessage,
+} from "../_shared/pin-recovery.ts";
 
 // Internal prefix to meet Supabase min-password-length (6 chars) while keeping 4-digit PINs
 const AUTH_PWD_PREFIX = "SF_";
