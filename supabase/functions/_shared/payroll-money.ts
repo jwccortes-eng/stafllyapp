@@ -51,7 +51,12 @@ export function parseMoney(raw: unknown): MoneyParseResult {
   }
 
   // Quitar símbolos de moneda y separadores de miles
-  work = work.replace(/[$\u00a0]/g, "").replace(/,/g, " ").trim();
+  work = work
+    .replace(/[$\u00a0]/g, "")
+    // separador de miles: solo se elimina cuando va entre dígitos (1,037.50)
+    .replace(/(\d),(?=\d{3}(\D|$))/g, "$1")
+    .replace(/,/g, " ")
+    .trim();
 
   // Extraer el número y verificar que el resto sea únicamente palabra de moneda
   const numMatch = work.match(/-?\d+(?:\.\d+)?/);
