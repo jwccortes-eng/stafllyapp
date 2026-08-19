@@ -11314,6 +11314,9 @@ export type Database = {
       period_base_pay: {
         Row: {
           anomaly_flags: Json | null
+          approved_total_note: string | null
+          approved_total_override: number | null
+          approved_total_source: string | null
           base_total_pay: number
           company_id: string
           created_at: string
@@ -11330,6 +11333,9 @@ export type Database = {
         }
         Insert: {
           anomaly_flags?: Json | null
+          approved_total_note?: string | null
+          approved_total_override?: number | null
+          approved_total_source?: string | null
           base_total_pay?: number
           company_id?: string
           created_at?: string
@@ -11346,6 +11352,9 @@ export type Database = {
         }
         Update: {
           anomaly_flags?: Json | null
+          approved_total_note?: string | null
+          approved_total_override?: number | null
+          approved_total_source?: string | null
           base_total_pay?: number
           company_id?: string
           created_at?: string

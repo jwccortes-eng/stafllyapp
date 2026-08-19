@@ -23,6 +23,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { resolveExistingEmployeeIdentity, identityBlockMessage } from "@/lib/identity/employee-identity-resolver";
 import { buildEmployeeCreationTrace, logEmployeeCreation } from "@/lib/identity/creation-trace";
+import ExternalPayrollCloseImport from "@/components/payroll/ExternalPayrollCloseImport";
+
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -470,6 +472,11 @@ export default function ImportPayrollExtras() {
           </Button>
         </Link>
       </div>
+
+      {/* Bridge de cierre externo aprobado (hoja PAYROLL): preview sin escrituras + import controlado */}
+      <ExternalPayrollCloseImport companyId={selectedCompanyId ?? null} periods={periods} />
+
+
 
       {/* Step 1: Select period + Upload file */}
       {step === 1 && (
