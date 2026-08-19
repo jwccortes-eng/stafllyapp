@@ -44,44 +44,25 @@ export default function Accumulated() {
         .order("start_date", { ascending: false }).limit(1).maybeSingle();
       setCurrentPeriod(latestPeriod ?? null);
 
-      // CRITICAL: scope pay_periods by company_id
-      const { data: publishedPeriods } = await supabase
-        .from("pay_periods").select("id, start_date, end_date")
-        .eq("company_id", empData.company_id)
-        .not("published_at", "is", null).order("start_date", { ascending: false });
+      // SSOT: recibos publicados y congelados en el servidor.
+      let statements: Awaited<ReturnType<typeof fetchWorkerPayStatements>> = [];
+      try {
+        statements = await fetchWorkerPayStatements();
+      } catch {
+        statements = [];
+      }
 
-      const pIds = (publishedPeriods ?? []).map((p: any) => p.id);
-      const pMap = new Map<string, { start_date: string; end_date: string }>();
-      (publishedPeriods ?? []).forEach((p: any) => pMap.set(p.id, { start_date: p.start_date, end_date: p.end_date }));
-
-      if (pIds.length === 0) { setPeriods([]); setLoading(false); return; }
-
-      const [bpRes, movRes] = await Promise.all([
-        supabase.from("period_base_pay").select("period_id, base_total_pay").eq("employee_id", effectiveEmployeeId).in("period_id", pIds),
-        supabase.from("movements").select("period_id, total_value, concepts(category)").eq("employee_id", effectiveEmployeeId).in("period_id", pIds),
-      ]);
-
-      const map = new Map<string, PeriodAccum>();
-      (bpRes.data ?? []).forEach((bp: any) => {
-        const info = pMap.get(bp.period_id);
-        if (!info) return;
-        map.set(bp.period_id, { period_id: bp.period_id, start_date: info.start_date, end_date: info.end_date, base: Number(bp.base_total_pay) || 0, extras: 0, deductions: 0, total: 0 });
-      });
-
-      // Also seed from movements (employee may have movements without base_pay)
-      (movRes.data ?? []).forEach((m: any) => {
-        if (!map.has(m.period_id)) {
-          const info = pMap.get(m.period_id);
-          if (!info) return;
-          map.set(m.period_id, { period_id: m.period_id, start_date: info.start_date, end_date: info.end_date, base: 0, extras: 0, deductions: 0, total: 0 });
-        }
-        const row = map.get(m.period_id)!;
-        if (m.concepts?.category === "extra") row.extras += Number(m.total_value) || 0;
-        else row.deductions += Number(m.total_value) || 0;
-      });
-
-      map.forEach(r => { r.total = r.base + r.extras - r.deductions; });
-      setPeriods(Array.from(map.values()).sort((a, b) => b.start_date.localeCompare(a.start_date)));
+      setPeriods(
+        statements.map((s) => ({
+          period_id: s.period_id,
+          start_date: s.start_date,
+          end_date: s.end_date,
+          base: s.frozen_base_total,
+          extras: s.frozen_extras_total,
+          deductions: s.frozen_deductions_total,
+          total: s.frozen_total,
+        })),
+      );
       setLoading(false);
     }
     load();
