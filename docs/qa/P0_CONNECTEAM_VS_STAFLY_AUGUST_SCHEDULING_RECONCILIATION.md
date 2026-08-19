@@ -10,6 +10,8 @@
 
 > Convención del reporte: **[H]** = hecho observado · **[I]** = inferencia · **[R]** = recomendación.
 
+> ⚠️ **CORRECCIÓN DE MODELO (19 Ago 2026).** Las métricas de las §1–§12 miden **paridad de registros** (row/entity parity) y son **incorrectas como medida de paridad operacional**. La clasificación válida está en la **§14 — Addendum: paridad operacional**, que reclasifica PAY RIDE y los marcadores auxiliares y recalcula la cobertura sobre unidades comparables. Usar §14 como medida oficial.
+
 ---
 
 ## 1. Executive summary
@@ -278,3 +280,112 @@
 **[H]** Esta auditoría ejecutó exclusivamente sentencias `SELECT` sobre `scheduled_shifts`, `shift_assignments`, `employees`, `clients` e `information_schema`. Cero INSERT / UPDATE / DELETE / UPSERT. Cero migraciones. Cero RPC de escritura. Cero edge functions. Ningún registro fue corregido, creado ni eliminado. Ningún archivo de aplicación fue modificado.
 
 **VEREDICTO FINAL: 🔴 NOT PARITY** — 20,4 % de cobertura de servicios y 25,4 % de asignaciones. A la espera de autorización para el siguiente paso.
+
+---
+
+# 14. ADDENDUM — Corrección del modelo de reconciliación (paridad operacional)
+
+**Modo:** AUDIT ONLY · CERO ESCRITURAS · CERO DESARROLLO · sin crear PAY RIDE ni registros SYS.
+**Principio corregido:** se mide **OPERATIONAL PARITY** ("¿puede Stafly representar y ejecutar la misma necesidad operacional sin perder información, trazabilidad ni pago?"), no **ROW / ENTITY PARITY** ("¿existe el mismo registro?").
+
+## 14.1 Reclasificación de las 429 filas de turno de agosto
+
+**[H]** Descomposición real del export (agosto 2026, 2.913 filas totales):
+
+| Categoría | Filas | Unidades | Naturaleza | ¿Debe existir como `scheduled_shift` en Stafly? |
+|---|---|---|---|---|
+| 1. Servicios laborales reales | **389** | **91** | evento con dotación facturable | **Sí** — unidad comparable |
+| 2. Componentes auxiliares (segmentos Setup/Servicio/Kitchen del mismo evento) | incluidos arriba | — | `Sub item` = Setup, Kitchen Staff, House Staff, Production team… | No como shift propio: Stafly los modela con `parent_shift_id` + `segment_label` |
+| 3. PAY RIDE / transporte (`99 - PAY RIDE`) | **40** | **17** | pago de transporte del mismo evento | **No** — es componente económico, no servicio |
+| 4. Marcadores SYS / técnicos (`SYSTEM 1…40` como *Users*) | **66** | 0 | cupo anónimo sin persona | No — Stafly usa `slots` abiertos / `claimable` |
+| 4b. `OPEN SHIFT` como *Users* | **9** | 0 | cupo sin asignar | No — equivale a `open_slots` |
+| 5. Disponibilidad (`All Day`, sin job) | **2.484** | 0 | preferencia del trabajador | No — `employee_availability` |
+| 6. Otros no equivalentes (`Draft = Yes`, títulos "PENDING INFO") | 10 filas draft | — | información incompleta en origen | Sí, pero no exigible aún |
+
+**[H]** No existen títulos `SYS1 / SYS2 / SYSxx` como servicios: el patrón `SYSTEM n` aparece **únicamente en la columna `Users`** (66 filas), es decir, es un **cupo anónimo**, no un registro de servicio. **[I]** Exigir su equivalencia literal en Stafly sería un error de modelo: su equivalente funcional es un slot vacío/`claimable`.
+
+## 14.2 PAY RIDE — reclasificación
+
+**[H]** Las 17 unidades PAY RIDE de agosto **coinciden todas** con al menos un servicio laboral del mismo día (verificado 17/17). No son eventos comerciales: son el traslado pagado del personal de esos eventos.
+
+**[H]** Equivalente funcional ya existente en Stafly:
+
+| Necesidad | Estructura Stafly | Estado |
+|---|---|---|
+| Marcar que el servicio requiere transporte | `scheduled_shifts.transportation_required`, `transportation_notes`, `car_capacity` | Existe · **2** servicios de agosto lo usan |
+| Conductor responsable | `scheduled_shifts.driver_employee_id`, `shift_rides.driver_id`, `ride_type` | Existe · **1** servicio de agosto con conductor · `shift_rides` con **15 filas** (Mar–May 2026) |
+| Tarifa de transporte por persona | `compensation_profiles.default_ride_rate_regular / _special`, `bonus_transport_hourly_rate` | Existe · **24** perfiles de Quality Staff con tarifa de ride |
+| Liquidación / pago del transporte | `normalized_payroll_rows.ride_amount`, `payroll_interpreted_entries.detected_ride_amount/_type`, `payroll_rate_snapshots.ride_rate`, `reconciliation_final_records.ride_amount/ride_pay_total`, `reconciliation_closing_receipts.total_ride_pay` | Existe · último uso real **Mar 2026** (19 filas de reconciliación, 5 de payroll) |
+| Anticipos de transporte | `company_financial_policies.allow_transport_advances`, `employee_financial_records.is_transport_related` | Existe |
+
+**[H] Clasificación corregida de PAY RIDE: NOT YET CERTIFIED / PENDING OPERATIONAL VALIDATION.** La cadena programación → conductor → tarifa → liquidación **existe end-to-end** en Stafly, pero **no ha sido ejercitada en la ventana de agosto 2026** (2 servicios con transporte, 1 con conductor, 0 liquidaciones de ride en agosto). **No es MISSING_IN_STAFLY** y **no debe contarse como servicio faltante**.
+
+**[I]** El gap real de PAY RIDE no es de programación sino de **certificación de la liquidación**: falta una prueba operativa que recorra un evento con transporte desde el turno hasta el recibo de pago del conductor/pasajeros en agosto.
+
+## 14.3 Denominador corregido y nueva cobertura
+
+**[H]** Unidades comparables = **91 servicios laborales** (108 − 17 PAY RIDE).
+
+| Clasificación (sobre 91) | # | % |
+|---|---|---|
+| MATCHED | **11** | 12,1 % |
+| TIME_MISMATCH | **6** | 6,6 % |
+| STAFFING_MISMATCH | **5** | 5,5 % |
+| NEEDS_HUMAN_REVIEW (labor, excluidos 6 ítems que eran PAY RIDE) | **6** | 6,6 % |
+| MISSING_IN_STAFLY (servicios laborales reales sin contraparte) | **63** | 69,2 % |
+
+**Cobertura de programación (unidades comparables):** 22/91 = **24,2 %** representados · 11/91 = **12,1 %** sin discrepancia.
+
+**[H]** Cobertura de dotación corregida: las 429 filas incluyen 40 de PAY RIDE, 66 marcadores `SYSTEM n` y 9 `OPEN SHIFT`. Relaciones **persona ↔ servicio laboral** reales = 389 − 66 − 9 = **314**. Con 109 asignaciones activas en Stafly → **34,7 %** (antes se reportó 25,4 % con denominador inflado).
+
+| Métrica | Reporte original | Corregida |
+|---|---|---|
+| Denominador de servicios | 108 | **91** |
+| Cobertura de servicios | 20,4 % | **24,2 %** |
+| Servicios faltantes | 74 | **63** |
+| Denominador de asignaciones | 429 | **314** |
+| Cobertura de asignaciones | 25,4 % | **34,7 %** |
+| PAY RIDE | 17 MISSING | **0 missing · 17 NOT YET CERTIFIED** |
+| SYSTEM / OPEN SHIFT | ruido contado como identidades | **cupos abiertos, no personas** |
+
+## 14.4 Equivalencias funcionales declaradas
+
+| Concepto Connecteam | Equivalente Stafly | Veredicto |
+|---|---|---|
+| Fila por worker en un mismo evento | `shift_assignments` sobre un `scheduled_shift` | ✅ equivalente |
+| Segmentos del mismo evento (Setup / Servicio / Kitchen) | `parent_shift_id` + `segment_label`, QK del raíz | ✅ equivalente (superior: un solo QK) |
+| `99 - PAY RIDE` | `transportation_required` + `driver_employee_id` + `shift_rides` + `ride_amount` en payroll/reconciliación | 🟡 modelado, **no certificado en agosto** |
+| `SYSTEM n` / `OPEN SHIFT` como usuario | `slots` sin asignar / `claimable` | ✅ equivalente (superior: no crea identidades falsas) |
+| Filas `All Day` de disponibilidad | disponibilidad del trabajador | ✅ equivalente, fuera del alcance de programación |
+| `Draft = Yes` | `publication_status = draft` | ✅ equivalente |
+| `Note` (punto de encuentro, uniforme, parking) | `transportation_notes` / notas del servicio / job site | 🟡 equivalente parcial: hoy no está migrado |
+
+## 14.5 Gaps reales (ya sin ruido de modelo)
+
+**[H]** P0 — ventana viva (19–31 Ago), sólo servicios laborales:
+1. `08-19 ELUM FRANKLHALL 16:00–21:00 (6p)` — hoy, inexistente en Stafly.
+2. `08-20` — 5 servicios laborales (ELUM FRANKL, NEW CONSTUMER, YF PRODUCTIONS ×2, …).
+3. Horarios placeholder en QK-001644/45/46/47 (`09:00–09:01`, `09:00–00:00`) y QK-001668/669.
+4. QK-001662 / QK-001663: `start = end`, `slots` nulo → no publicables.
+
+**[H]** P1 — cierre de agosto: 63 servicios laborales faltantes (mayoría 01–18 Ago), 205 relaciones persona-servicio faltantes (314 − 109), cliente MANACHEM EVENTS inexistente.
+
+**[H]** P2 — no bloquea programación: 25 identidades ambiguas por fichas duplicadas; duplicados de cliente; QK-001649 (dirección Minnesota).
+
+**[H]** Elementos **NOT YET CERTIFIED** (no son gaps de datos, son gaps de validación operativa):
+- Liquidación de transporte (PAY RIDE) end-to-end en la ventana actual.
+- Migración de notas operativas de campo (`Note`) al servicio Stafly.
+- Uso de cupos `claimable` como sustituto real de `SYSTEM n` / `OPEN SHIFT`.
+
+## 14.6 Veredicto corregido
+
+**🟡 PARTIAL PARITY (capacidad) · 🔴 NOT PARITY (datos).**
+
+**[H]** Stafly **sí puede representar** todas las necesidades operacionales observadas en Connecteam: servicios, segmentos, cupos abiertos, disponibilidad, borradores y transporte remunerado. No se detectó ninguna necesidad operacional sin estructura equivalente.
+**[H]** Lo que falta es **carga de programación real** (24,2 % de cobertura) y **una certificación de la liquidación de transporte**, no capacidades del producto.
+
+**[R]** Métrica de salida (corregida): cobertura de **servicios laborales** ≥ 95 % y de **asignaciones persona-servicio** ≥ 95 % sobre 91/314, cero horarios placeholder en la ventana viva, y **un** evento con PAY RIDE certificado de punta a punta (turno → conductor → tarifa → recibo).
+
+## 14.7 Confirmación de seguridad del addendum
+
+**[H]** Sólo `SELECT` sobre `information_schema`, `scheduled_shifts`, `shift_rides`, `compensation_profiles`, `normalized_payroll_rows`, `reconciliation_final_records`. Lectura local del export de Connecteam. Cero INSERT/UPDATE/DELETE, cero migraciones, cero PAY RIDE creados, cero registros SYS creados, cero cambios de código de aplicación.
