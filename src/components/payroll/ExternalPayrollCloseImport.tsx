@@ -58,7 +58,7 @@ export default function ExternalPayrollCloseImport({ companyId, periods }: Props
     const f = e.target.files?.[0];
     if (!f) return;
     if (f.size > MAX_FILE_SIZE) {
-      notifyError({ title: "Archivo demasiado grande", description: "El límite es 10MB." });
+      notifyError({ title: "Archivo demasiado grande", fact: "El límite es 10MB." });
       return;
     }
     reset();
@@ -72,7 +72,7 @@ export default function ExternalPayrollCloseImport({ companyId, periods }: Props
       if (!payrollName) {
         notifyError({
           title: "Falta la hoja PAYROLL",
-          description: `Este archivo no tiene la hoja de cierre aprobada. Hojas encontradas: ${names.join(", ") || "ninguna"}.`,
+          fact: `Este archivo no tiene la hoja de cierre aprobada. Hojas encontradas: ${names.join(", ") || "ninguna"}.`,
         });
         setLoading(false);
         return;
@@ -97,7 +97,7 @@ export default function ExternalPayrollCloseImport({ companyId, periods }: Props
         setSecretariaTotal(Math.round(sum * 100) / 100);
       }
     } catch (err) {
-      notifyError({ title: "No se pudo leer el archivo", description: (err as Error).message });
+      notifyError({ title: "No se pudo leer el archivo", fact: (err as Error).message });
     }
     setLoading(false);
   }, []);
@@ -112,7 +112,7 @@ export default function ExternalPayrollCloseImport({ companyId, periods }: Props
       });
       setPreview(result);
     } catch (err) {
-      notifyError({ title: "Preview fallido", description: (err as Error).message });
+      notifyError({ title: "Preview fallido", fact: (err as Error).message });
     }
     setLoading(false);
   };
@@ -129,10 +129,10 @@ export default function ExternalPayrollCloseImport({ companyId, periods }: Props
       setImported({ basePayRows: result.basePayRows, movementsInserted: result.movementsInserted });
       notifySuccess({
         title: "Cierre cargado",
-        description: `${result.basePayRows} pagos base y ${result.movementsInserted} movimientos. Total aprobado ${formatMoney(result.summary.grandApprovedTotal)}. Aún no se publican recibos.`,
+        fact: `${result.basePayRows} pagos base y ${result.movementsInserted} movimientos. Total aprobado ${formatMoney(result.summary.grandApprovedTotal)}. Aún no se publican recibos.`,
       });
     } catch (err) {
-      notifyError({ title: "Importación bloqueada", description: (err as Error).message });
+      notifyError({ title: "Importación bloqueada", fact: (err as Error).message });
     }
     setImporting(false);
   };
