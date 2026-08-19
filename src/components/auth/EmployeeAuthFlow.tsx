@@ -116,9 +116,14 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
       });
 
       if (error) {
-        const msg = await extractErrorMsg(error);
-        toast({ title: "Error", description: msg, variant: "destructive" });
+        const body = await extractErrorBody(error);
         setPin("");
+        if (body.code === "locked") {
+          setLockedMessage(body.error);
+          setStep("locked");
+          return;
+        }
+        toast({ title: "Error", description: body.error, variant: "destructive" });
         return;
       }
 
