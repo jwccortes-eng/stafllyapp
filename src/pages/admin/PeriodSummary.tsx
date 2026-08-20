@@ -128,9 +128,10 @@ function DesktopPeriodSummary() {
   const [advanceRecords, setAdvanceRecords] = useState<AdvanceRecord[]>([]);
 
   // Helper to create a default SummaryRow
-  const mkRow = (eid: string, fn: string, ln: string, base = 0): SummaryRow => ({
+  const mkRow = (eid: string, fn: string, ln: string, base = 0, approvedOverride: number | null = null): SummaryRow => ({
     employee_id: eid, first_name: fn, last_name: ln,
     base_total_pay: base, extras_total: 0, deductions_total: 0, advance_deduction: 0, total_final_pay: 0,
+    approved_total_override: approvedOverride,
   });
 
   // Filter periods by date range for the dropdown
