@@ -18661,6 +18661,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      bulk_pay_statement_preview: {
+        Args: { _employee_ids?: string[]; _period_id: string }
+        Returns: Json
+      }
+      bulk_publish_pay_statements: {
+        Args: { _employee_ids: string[]; _period_id: string; _source?: string }
+        Returns: Json
+      }
       can_manage_service_intake_files: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean

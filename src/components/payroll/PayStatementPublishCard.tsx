@@ -24,6 +24,14 @@ interface Preview {
   extras_total: number;
   deductions_total: number;
   projected_total: number;
+  /** Suma del desglose (base + extras − descuentos). */
+  computed_total: number;
+  /** Total aprobado externo. `null` = no hay override. 0 es un valor válido. */
+  approved_total_override: number | null;
+  approved_total_source: string | null;
+  /** Total EXACTO que congelará el servidor. Único válido para mostrar. */
+  frozen_total_preview: number;
+  has_override: boolean;
   line_count: number;
   pending_count: number;
 }
@@ -173,8 +181,25 @@ export default function PayStatementPublishCard({ periodId, employeeId }: Props)
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Total a publicar</p>
-                  <p className="font-mono font-semibold">{money(preview.projected_total)}</p>
+                  <p className="font-mono font-semibold">{money(preview.frozen_total_preview)}</p>
                 </div>
+              </div>
+            )}
+
+            {preview?.has_override && (
+              <div className="rounded-md border p-3 text-sm">
+                <Badge variant="secondary" className="mb-2">Total aprobado externo</Badge>
+                <p className="text-xs text-muted-foreground">
+                  Desglose: <span className="font-mono">{money(preview.computed_total)}</span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Total aprobado:{" "}
+                  <span className="font-mono">{money(preview.frozen_total_preview)}</span>
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  El servidor congelará el total aprobado. No se recalcula ni se crean
+                  movimientos compensatorios.
+                </p>
               </div>
             )}
 
