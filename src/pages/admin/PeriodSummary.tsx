@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { describeConsolidation, type ConsolidationOutcome } from "@/lib/payroll/rate-resolver";
+import BulkPublishPanel from "@/components/payroll/BulkPublishPanel";
 
 
 /**
@@ -609,10 +610,21 @@ function DesktopPeriodSummary() {
         <TabsTrigger value="summary" className="gap-1.5">
           <FileSpreadsheet className="h-4 w-4" /> Resumen del periodo
         </TabsTrigger>
+        <TabsTrigger value="statements" className="gap-1.5">
+          <Banknote className="h-4 w-4" /> Recibos
+        </TabsTrigger>
         <TabsTrigger value="reports" className="gap-1.5">
           <BarChart3 className="h-4 w-4" /> Más reportes
         </TabsTrigger>
       </TabsList>
+
+      <TabsContent value="statements" className="space-y-5 mt-0">
+        {selectedPeriod ? (
+          <BulkPublishPanel periodId={selectedPeriod} />
+        ) : (
+          <p className="text-sm text-muted-foreground">Selecciona un periodo para ver los recibos.</p>
+        )}
+      </TabsContent>
 
       <TabsContent value="summary" className="space-y-5 mt-0">
         {/* KPI Cards */}
