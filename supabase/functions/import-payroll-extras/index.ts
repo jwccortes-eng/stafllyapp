@@ -178,12 +178,32 @@ async function handleBridge(
   }
 
   // 2. Identidad: matching por Employer identification (nunca crea empleados).
-  const { data: employees } = await supabase
-    .from("employees")
-    .select("id, first_name, last_name, employer_identification, merged_into_employee_id, status")
-    .eq("company_id", companyId);
+  //    Roster completo paginado (PostgREST corta en 1000 filas por defecto).
+  const roster: any[] = [];
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data: page, error: rosterError } = await supabase
+      .from("employees")
+      .select("id, first_name, last_name, employer_identification, merged_into_employee_id")
+      .eq("company_id", companyId)
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
 
-  const canonical = (employees ?? []).filter((e: any) => !e.merged_into_employee_id);
+    if (rosterError) {
+      // Nunca convertir un fallo de lectura en NOT_FOUND masivos: bloquear el preview.
+      return json({
+        error: `No se pudo leer el roster de empleados (${rosterError.code ?? "?"}): ${rosterError.message}`,
+        stage: "identity_roster_read",
+      }, 500);
+    }
+    const batch = page ?? [];
+    roster.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+
+  const rosterCount = roster.length;
+  const canonical = roster.filter((e: any) => !e.merged_into_employee_id);
+
   const byEmployerId = new Map<string, any[]>();
   const byName = new Map<string, any[]>();
   for (const emp of canonical) {
@@ -384,6 +404,7 @@ async function handleBridge(
     sheet: sheetName || "PAYROLL",
     fileName: body.fileName ?? null,
     period: { id: period.id, startDate: period.start_date, endDate: period.end_date, status: period.status },
+    rosterCount,
     workers: previewRows.length,
     matched,
     ambiguous,
