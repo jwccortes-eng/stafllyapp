@@ -50,9 +50,33 @@ interface SummaryRow {
   last_name: string;
   base_total_pay: number;
   extras_total: number;
+  /** Magnitud POSITIVA. Los movimientos se almacenan en negativo; aquí se normalizan. */
   deductions_total: number;
   advance_deduction: number;
   total_final_pay: number;
+  /** period_base_pay.approved_total_override — total aprobado externo. Nunca sustituye al computado. */
+  approved_total_override: number | null;
+}
+
+/**
+ * Convención financiera canónica (sólo presentación/agregación):
+ *   extras     = magnitud positiva
+ *   deductions = magnitud positiva (Math.abs sobre el valor almacenado)
+ *   total      = base + extras - deducciones - anticipos
+ * No se modifica ningún dato almacenado.
+ */
+function applyMovementsToRows(map: Map<string, SummaryRow>, movements: any[] | null | undefined) {
+  (movements ?? []).forEach((m: any) => {
+    const row = map.get(m.employee_id);
+    if (!row) return;
+    const value = Number(m.total_value) || 0;
+    if (m.concepts?.category === "extra") row.extras_total += Math.abs(value);
+    else row.deductions_total += Math.abs(value);
+  });
+}
+
+function computeRowTotal(row: SummaryRow): number {
+  return row.base_total_pay + row.extras_total - row.deductions_total - row.advance_deduction;
 }
 
 interface AdvanceRecord {
@@ -104,9 +128,10 @@ function DesktopPeriodSummary() {
   const [advanceRecords, setAdvanceRecords] = useState<AdvanceRecord[]>([]);
 
   // Helper to create a default SummaryRow
-  const mkRow = (eid: string, fn: string, ln: string, base = 0): SummaryRow => ({
+  const mkRow = (eid: string, fn: string, ln: string, base = 0, approvedOverride: number | null = null): SummaryRow => ({
     employee_id: eid, first_name: fn, last_name: ln,
     base_total_pay: base, extras_total: 0, deductions_total: 0, advance_deduction: 0, total_final_pay: 0,
+    approved_total_override: approvedOverride,
   });
 
   // Filter periods by date range for the dropdown
@@ -162,7 +187,7 @@ function DesktopPeriodSummary() {
     async function load() {
       const { data: basePays } = await supabase
         .from("period_base_pay")
-        .select("employee_id, base_total_pay, employees(first_name, last_name)")
+        .select("employee_id, base_total_pay, approved_total_override, employees(first_name, last_name)")
         .eq("period_id", selectedPeriod);
       const { data: movements } = await supabase
         .from("movements")
@@ -171,7 +196,13 @@ function DesktopPeriodSummary() {
         .eq("approval_status", "approved");
       const empMap = new Map<string, SummaryRow>();
       (basePays ?? []).forEach((bp: any) => {
-        empMap.set(bp.employee_id, mkRow(bp.employee_id, bp.employees?.first_name ?? "", bp.employees?.last_name ?? "", Number(bp.base_total_pay) || 0));
+        empMap.set(bp.employee_id, mkRow(
+          bp.employee_id,
+          bp.employees?.first_name ?? "",
+          bp.employees?.last_name ?? "",
+          Number(bp.base_total_pay) || 0,
+          bp.approved_total_override === null || bp.approved_total_override === undefined ? null : Number(bp.approved_total_override),
+        ));
       });
       const { data: movEmployees } = await supabase
         .from("movements")
@@ -182,12 +213,7 @@ function DesktopPeriodSummary() {
           empMap.set(me.employee_id, mkRow(me.employee_id, me.employees.first_name ?? "", me.employees.last_name ?? ""));
         }
       });
-      (movements ?? []).forEach((m: any) => {
-        const row = empMap.get(m.employee_id);
-        if (!row) return;
-        if (m.concepts?.category === "extra") row.extras_total += Number(m.total_value) || 0;
-        else row.deductions_total += Number(m.total_value) || 0;
-      });
+      applyMovementsToRows(empMap, movements as any[]);
 
       // Fetch active advance/loan records for this company
       if (selectedCompanyId) {
