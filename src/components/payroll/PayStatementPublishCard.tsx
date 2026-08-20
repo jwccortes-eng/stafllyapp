@@ -24,6 +24,14 @@ interface Preview {
   extras_total: number;
   deductions_total: number;
   projected_total: number;
+  /** Suma del desglose (base + extras − descuentos). */
+  computed_total: number;
+  /** Total aprobado externo. `null` = no hay override. 0 es un valor válido. */
+  approved_total_override: number | null;
+  approved_total_source: string | null;
+  /** Total EXACTO que congelará el servidor. Único válido para mostrar. */
+  frozen_total_preview: number;
+  has_override: boolean;
   line_count: number;
   pending_count: number;
 }
