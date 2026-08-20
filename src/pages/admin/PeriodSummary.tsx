@@ -50,9 +50,33 @@ interface SummaryRow {
   last_name: string;
   base_total_pay: number;
   extras_total: number;
+  /** Magnitud POSITIVA. Los movimientos se almacenan en negativo; aquí se normalizan. */
   deductions_total: number;
   advance_deduction: number;
   total_final_pay: number;
+  /** period_base_pay.approved_total_override — total aprobado externo. Nunca sustituye al computado. */
+  approved_total_override: number | null;
+}
+
+/**
+ * Convención financiera canónica (sólo presentación/agregación):
+ *   extras     = magnitud positiva
+ *   deductions = magnitud positiva (Math.abs sobre el valor almacenado)
+ *   total      = base + extras - deducciones - anticipos
+ * No se modifica ningún dato almacenado.
+ */
+function applyMovementsToRows(map: Map<string, SummaryRow>, movements: any[] | null | undefined) {
+  (movements ?? []).forEach((m: any) => {
+    const row = map.get(m.employee_id);
+    if (!row) return;
+    const value = Number(m.total_value) || 0;
+    if (m.concepts?.category === "extra") row.extras_total += Math.abs(value);
+    else row.deductions_total += Math.abs(value);
+  });
+}
+
+function computeRowTotal(row: SummaryRow): number {
+  return row.base_total_pay + row.extras_total - row.deductions_total - row.advance_deduction;
 }
 
 interface AdvanceRecord {
