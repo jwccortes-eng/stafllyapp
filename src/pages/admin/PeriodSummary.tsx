@@ -187,7 +187,7 @@ function DesktopPeriodSummary() {
     async function load() {
       const { data: basePays } = await supabase
         .from("period_base_pay")
-        .select("employee_id, base_total_pay, employees(first_name, last_name)")
+        .select("employee_id, base_total_pay, approved_total_override, employees(first_name, last_name)")
         .eq("period_id", selectedPeriod);
       const { data: movements } = await supabase
         .from("movements")
@@ -196,7 +196,13 @@ function DesktopPeriodSummary() {
         .eq("approval_status", "approved");
       const empMap = new Map<string, SummaryRow>();
       (basePays ?? []).forEach((bp: any) => {
-        empMap.set(bp.employee_id, mkRow(bp.employee_id, bp.employees?.first_name ?? "", bp.employees?.last_name ?? "", Number(bp.base_total_pay) || 0));
+        empMap.set(bp.employee_id, mkRow(
+          bp.employee_id,
+          bp.employees?.first_name ?? "",
+          bp.employees?.last_name ?? "",
+          Number(bp.base_total_pay) || 0,
+          bp.approved_total_override === null || bp.approved_total_override === undefined ? null : Number(bp.approved_total_override),
+        ));
       });
       const { data: movEmployees } = await supabase
         .from("movements")
@@ -207,12 +213,7 @@ function DesktopPeriodSummary() {
           empMap.set(me.employee_id, mkRow(me.employee_id, me.employees.first_name ?? "", me.employees.last_name ?? ""));
         }
       });
-      (movements ?? []).forEach((m: any) => {
-        const row = empMap.get(m.employee_id);
-        if (!row) return;
-        if (m.concepts?.category === "extra") row.extras_total += Number(m.total_value) || 0;
-        else row.deductions_total += Number(m.total_value) || 0;
-      });
+      applyMovementsToRows(empMap, movements as any[]);
 
       // Fetch active advance/loan records for this company
       if (selectedCompanyId) {
