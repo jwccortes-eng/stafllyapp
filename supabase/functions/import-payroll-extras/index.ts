@@ -404,6 +404,7 @@ async function handleBridge(
     sheet: sheetName || "PAYROLL",
     fileName: body.fileName ?? null,
     period: { id: period.id, startDate: period.start_date, endDate: period.end_date, status: period.status },
+    rosterCount,
     workers: previewRows.length,
     matched,
     ambiguous,
