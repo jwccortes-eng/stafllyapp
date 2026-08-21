@@ -275,7 +275,7 @@ function DesktopPeriodSummary() {
       }
 
       empMap.forEach((row) => {
-        row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total - row.advance_deduction;
+        row.total_final_pay = computeRowTotal(row);
       });
       const allRows = Array.from(empMap.values());
       setRows(allRows);
