@@ -150,13 +150,13 @@ export default function MobilePeriodSummaryView() {
         }
       }
 
+      // Convención canónica: extras y deducciones se agregan como magnitud positiva.
       for (const m of (mvRes.data ?? []) as any[]) {
         const r = map.get(m.employee_id);
         if (!r) continue;
-        const cat = m.concepts?.category;
-        const v = Number(m.total_value ?? 0);
-        if (cat === "deduction") r.deductions_total += v;
-        else r.extras_total += v;
+        const v = Math.abs(Number(m.total_value ?? 0));
+        if (m.concepts?.category === "extra") r.extras_total += v;
+        else r.deductions_total += v;
       }
 
       for (const r of map.values()) {
