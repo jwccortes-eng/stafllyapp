@@ -217,6 +217,16 @@ export function resolveShiftPublicationTruth(
   else if (aStatus === "removed") blocking = "La asignación fue retirada.";
   else if (aStatus === "none") blocking = "No hay asignación para esta persona.";
 
+  // Incoherencia estructural: publicado pero la asignación quedó tentativa.
+  const anomaly: ShiftTruthAnomaly | null =
+    published && !cancelled && aStatus === "draft_reservation"
+      ? "PUBLISHED_WITH_DRAFT_RESERVATIONS"
+      : null;
+  if (anomaly) {
+    blocking =
+      "Incoherencia: el servicio está publicado pero la asignación sigue tentativa. Vuelve a publicar para repararla.";
+  }
+
   return {
     state,
     shift_status: String(shift.status ?? ""),
@@ -230,8 +240,11 @@ export function resolveShiftPublicationTruth(
     capacity_status: capacity,
     worker_action_available: workerActionAvailable,
     open_call_available: openCallAvailable,
-    admin_label: adminLabelFor(state, notified),
+    admin_label: anomaly
+      ? "Publicado · asignaciones aún tentativas"
+      : adminLabelFor(state, notified),
     admin_blocking_reason: blocking,
+    anomaly,
   };
 }
 
