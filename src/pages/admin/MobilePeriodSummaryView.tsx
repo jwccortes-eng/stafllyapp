@@ -43,8 +43,10 @@ interface Row {
   last_name: string;
   base_total_pay: number;
   extras_total: number;
+  /** Magnitud positiva. */
   deductions_total: number;
   total_final_pay: number;
+  approved_total_override: number | null;
 }
 
 type TabKey = "summary" | "issues";
@@ -105,7 +107,7 @@ export default function MobilePeriodSummaryView() {
       const [bpRes, mvRes, mvEmpRes] = await Promise.all([
         supabase
           .from("period_base_pay")
-          .select("employee_id, base_total_pay, employees(first_name, last_name)")
+          .select("employee_id, base_total_pay, approved_total_override, employees(first_name, last_name)")
           .eq("period_id", periodId),
         supabase
           .from("movements")
@@ -132,6 +134,10 @@ export default function MobilePeriodSummaryView() {
           extras_total: 0,
           deductions_total: 0,
           total_final_pay: 0,
+          approved_total_override:
+            bp.approved_total_override === null || bp.approved_total_override === undefined
+              ? null
+              : Number(bp.approved_total_override),
         });
       }
 
@@ -146,17 +152,18 @@ export default function MobilePeriodSummaryView() {
             extras_total: 0,
             deductions_total: 0,
             total_final_pay: 0,
+            approved_total_override: null,
           });
         }
       }
 
+      // Convención canónica: extras y deducciones se agregan como magnitud positiva.
       for (const m of (mvRes.data ?? []) as any[]) {
         const r = map.get(m.employee_id);
         if (!r) continue;
-        const cat = m.concepts?.category;
-        const v = Number(m.total_value ?? 0);
-        if (cat === "deduction") r.deductions_total += v;
-        else r.extras_total += v;
+        const v = Math.abs(Number(m.total_value ?? 0));
+        if (m.concepts?.category === "extra") r.extras_total += v;
+        else r.deductions_total += v;
       }
 
       for (const r of map.values()) {
@@ -173,15 +180,16 @@ export default function MobilePeriodSummaryView() {
   const period = useMemo(() => periods.find(p => p.id === periodId), [periods, periodId]);
 
   const totals = useMemo(() => {
-    let workers = 0, base = 0, extras = 0, deductions = 0, finalPay = 0;
+    let workers = 0, base = 0, extras = 0, deductions = 0, finalPay = 0, approvedExternal = 0, withApproved = 0;
     for (const r of rows) {
       workers++;
       base += r.base_total_pay;
       extras += r.extras_total;
       deductions += r.deductions_total;
       finalPay += r.total_final_pay;
+      if (r.approved_total_override !== null) { approvedExternal += r.approved_total_override; withApproved++; }
     }
-    return { workers, base, extras, deductions, finalPay };
+    return { workers, base, extras, deductions, finalPay, approvedExternal, withApproved };
   }, [rows]);
 
   const issues = useMemo(
@@ -226,7 +234,11 @@ export default function MobilePeriodSummaryView() {
     { label: "Workers", value: totals.workers, tone: "default" },
     { label: "Base", value: fmt$(totals.base), tone: "default" },
     { label: "Extras", value: fmt$(totals.extras), tone: "success" },
-    { label: "Final pay", value: fmt$(totals.finalPay), tone: "primary" },
+    { label: "Deductions", value: `-${fmt$(totals.deductions)}`, tone: "danger" },
+    { label: "Computed", value: fmt$(totals.finalPay), tone: "primary" },
+    ...(totals.withApproved > 0
+      ? [{ label: "Approved (external)", value: fmt$(totals.approvedExternal), tone: "warning" } as MobileMetric]
+      : []),
   ];
 
   const tabs = [

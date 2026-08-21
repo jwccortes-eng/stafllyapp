@@ -275,7 +275,7 @@ function DesktopPeriodSummary() {
       }
 
       empMap.forEach((row) => {
-        row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total - row.advance_deduction;
+        row.total_final_pay = computeRowTotal(row);
       });
       const allRows = Array.from(empMap.values());
       setRows(allRows);
@@ -363,6 +363,9 @@ function DesktopPeriodSummary() {
   const grandExtras = filtered.reduce((s, r) => s + r.extras_total, 0);
   const grandDeductions = filtered.reduce((s, r) => s + r.deductions_total, 0);
   const grandAdvances = filtered.reduce((s, r) => s + r.advance_deduction, 0);
+  // Total aprobado externo: sólo suma quienes tienen override; nunca sustituye al computado.
+  const grandApprovedExternal = filtered.reduce((s, r) => s + (r.approved_total_override ?? 0), 0);
+  const withApprovedExternal = filtered.filter(r => r.approved_total_override !== null).length;
   const withExtras = rows.filter(r => r.extras_total > 0).length;
   const withDeductions = rows.filter(r => r.deductions_total > 0).length;
   const withBase = rows.filter(r => r.base_total_pay > 0).length;
@@ -371,14 +374,16 @@ function DesktopPeriodSummary() {
   const selectedPeriodObj = periods.find(p => p.id === selectedPeriod);
 
   const getCSVRows = (): string[][] => {
-    const header = ["Empleado", "Base", "Extras", "Deducciones", "Anticipos/Préstamos", "Total Final"];
+    const header = ["Empleado", "Base", "Extras", "Deducciones", "Anticipos/Préstamos", "Total computado", "Total aprobado (externo)"];
     const dataRows = sorted.map(r => [
       formatPersonName(`${r.first_name} ${r.last_name}`),
       String(r.base_total_pay),
       String(r.extras_total),
-      String(r.deductions_total),
-      String(r.advance_deduction),
+      // Semántica financiera: la deducción se exporta con signo negativo.
+      String(r.deductions_total === 0 ? 0 : -r.deductions_total),
+      String(r.advance_deduction === 0 ? 0 : -r.advance_deduction),
       String(r.total_final_pay),
+      r.approved_total_override === null ? "" : String(r.approved_total_override),
     ]);
     return [header, ...dataRows];
   };
@@ -443,16 +448,22 @@ function DesktopPeriodSummary() {
                       // Reload without resetting period
 
                       setLoading(true);
-                      const { data: basePays2 } = await supabase.from("period_base_pay").select("employee_id, base_total_pay, employees(first_name, last_name)").eq("period_id", selectedPeriod);
+                      const { data: basePays2 } = await supabase.from("period_base_pay").select("employee_id, base_total_pay, approved_total_override, employees(first_name, last_name)").eq("period_id", selectedPeriod);
                       const { data: movements2 } = await supabase.from("movements").select("employee_id, total_value, concepts(category)").eq("period_id", selectedPeriod).eq("approval_status", "approved");
                       const empMap2 = new Map<string, SummaryRow>();
                       (basePays2 ?? []).forEach((bp: any) => {
-                        empMap2.set(bp.employee_id, mkRow(bp.employee_id, bp.employees?.first_name ?? "", bp.employees?.last_name ?? "", Number(bp.base_total_pay) || 0));
+                        empMap2.set(bp.employee_id, mkRow(
+                          bp.employee_id,
+                          bp.employees?.first_name ?? "",
+                          bp.employees?.last_name ?? "",
+                          Number(bp.base_total_pay) || 0,
+                          bp.approved_total_override === null || bp.approved_total_override === undefined ? null : Number(bp.approved_total_override),
+                        ));
                       });
                       const { data: movEmps2 } = await supabase.from("movements").select("employee_id, employees(first_name, last_name)").eq("period_id", selectedPeriod);
                       (movEmps2 ?? []).forEach((me: any) => { if (!empMap2.has(me.employee_id) && me.employees) empMap2.set(me.employee_id, mkRow(me.employee_id, me.employees.first_name ?? "", me.employees.last_name ?? "")); });
-                      (movements2 ?? []).forEach((m: any) => { const row = empMap2.get(m.employee_id); if (!row) return; if (m.concepts?.category === "extra") row.extras_total += Number(m.total_value) || 0; else row.deductions_total += Number(m.total_value) || 0; });
-                      empMap2.forEach(row => { row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total; });
+                      applyMovementsToRows(empMap2, movements2 as any[]);
+                      empMap2.forEach(row => { row.total_final_pay = computeRowTotal(row); });
                       setRows(Array.from(empMap2.values()));
                       setLoading(false);
                     } catch (err: any) {
@@ -659,9 +670,13 @@ function DesktopPeriodSummary() {
             <KpiCard value={rows.length.toString()} label="Empleados en periodo" icon={<Users className="h-5 w-5 text-primary" />} accent="primary" subtitle={`${withBase} con pago base`} />
             <KpiCard value={`$${fmt(grandBase)}`} label="Total pago base" icon={<DollarSign className="h-5 w-5 text-primary" />} accent="primary" />
             <KpiCard value={`$${fmt(grandExtras)}`} label="Total extras" icon={<TrendingUp className="h-5 w-5 text-earning" />} accent="earning" subtitle={`${withExtras} empleados con extras`} />
-            <KpiCard value={`$${fmt(grandDeductions)}`} label="Total deducciones" icon={<TrendingDown className="h-5 w-5 text-deduction" />} accent="deduction" subtitle={`${withDeductions} con deducciones`} />
+            <KpiCard value={`−$${fmt(grandDeductions)}`} label="Total deducciones" icon={<TrendingDown className="h-5 w-5 text-deduction" />} accent="deduction" subtitle={`${withDeductions} con deducciones`} />
             {grandAdvances > 0 && (
               <KpiCard value={`$${fmt(grandAdvances)}`} label="Anticipos / Préstamos" icon={<Banknote className="h-5 w-5 text-warning" />} accent="warning" subtitle={`${withAdvances} empleado${withAdvances !== 1 ? "s" : ""}`} />
+            )}
+            <KpiCard value={`$${fmt(grandTotal)}`} label="Total computado" icon={<DollarSign className="h-5 w-5 text-primary" />} accent="primary" subtitle="Base + extras − deducciones − anticipos" />
+            {withApprovedExternal > 0 && (
+              <KpiCard value={`$${fmt(grandApprovedExternal)}`} label="Total aprobado (externo)" icon={<DollarSign className="h-5 w-5 text-warning" />} accent="warning" subtitle={`${withApprovedExternal} con total aprobado importado`} />
             )}
           </div>
         )}
@@ -786,7 +801,10 @@ function DesktopPeriodSummary() {
                             {r.advance_deduction > 0 && (
                               <><span className="text-muted-foreground">Anticipos:</span><span className="text-right font-mono text-warning">−${fmt(r.advance_deduction)}</span></>
                             )}
-                            <span className="font-semibold border-t pt-0.5">Total:</span><span className="text-right font-mono font-bold border-t pt-0.5">${fmt(r.total_final_pay)}</span>
+                            <span className="font-semibold border-t pt-0.5">Computado:</span><span className="text-right font-mono font-bold border-t pt-0.5">${fmt(r.total_final_pay)}</span>
+                            {r.approved_total_override !== null && (
+                              <><span className="text-muted-foreground">Aprobado (externo):</span><span className="text-right font-mono font-bold text-warning">${fmt(r.approved_total_override)}</span></>
+                            )}
                           </div>
                         </TooltipContent>
                       </Tooltip>
