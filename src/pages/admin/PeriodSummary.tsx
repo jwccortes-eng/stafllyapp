@@ -443,11 +443,17 @@ function DesktopPeriodSummary() {
                       // Reload without resetting period
 
                       setLoading(true);
-                      const { data: basePays2 } = await supabase.from("period_base_pay").select("employee_id, base_total_pay, employees(first_name, last_name)").eq("period_id", selectedPeriod);
+                      const { data: basePays2 } = await supabase.from("period_base_pay").select("employee_id, base_total_pay, approved_total_override, employees(first_name, last_name)").eq("period_id", selectedPeriod);
                       const { data: movements2 } = await supabase.from("movements").select("employee_id, total_value, concepts(category)").eq("period_id", selectedPeriod).eq("approval_status", "approved");
                       const empMap2 = new Map<string, SummaryRow>();
                       (basePays2 ?? []).forEach((bp: any) => {
-                        empMap2.set(bp.employee_id, mkRow(bp.employee_id, bp.employees?.first_name ?? "", bp.employees?.last_name ?? "", Number(bp.base_total_pay) || 0));
+                        empMap2.set(bp.employee_id, mkRow(
+                          bp.employee_id,
+                          bp.employees?.first_name ?? "",
+                          bp.employees?.last_name ?? "",
+                          Number(bp.base_total_pay) || 0,
+                          bp.approved_total_override === null || bp.approved_total_override === undefined ? null : Number(bp.approved_total_override),
+                        ));
                       });
                       const { data: movEmps2 } = await supabase.from("movements").select("employee_id, employees(first_name, last_name)").eq("period_id", selectedPeriod);
                       (movEmps2 ?? []).forEach((me: any) => { if (!empMap2.has(me.employee_id) && me.employees) empMap2.set(me.employee_id, mkRow(me.employee_id, me.employees.first_name ?? "", me.employees.last_name ?? "")); });
