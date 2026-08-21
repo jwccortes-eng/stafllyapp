@@ -801,7 +801,10 @@ function DesktopPeriodSummary() {
                             {r.advance_deduction > 0 && (
                               <><span className="text-muted-foreground">Anticipos:</span><span className="text-right font-mono text-warning">−${fmt(r.advance_deduction)}</span></>
                             )}
-                            <span className="font-semibold border-t pt-0.5">Total:</span><span className="text-right font-mono font-bold border-t pt-0.5">${fmt(r.total_final_pay)}</span>
+                            <span className="font-semibold border-t pt-0.5">Computado:</span><span className="text-right font-mono font-bold border-t pt-0.5">${fmt(r.total_final_pay)}</span>
+                            {r.approved_total_override !== null && (
+                              <><span className="text-muted-foreground">Aprobado (externo):</span><span className="text-right font-mono font-bold text-warning">${fmt(r.approved_total_override)}</span></>
+                            )}
                           </div>
                         </TooltipContent>
                       </Tooltip>
