@@ -451,8 +451,8 @@ function DesktopPeriodSummary() {
                       });
                       const { data: movEmps2 } = await supabase.from("movements").select("employee_id, employees(first_name, last_name)").eq("period_id", selectedPeriod);
                       (movEmps2 ?? []).forEach((me: any) => { if (!empMap2.has(me.employee_id) && me.employees) empMap2.set(me.employee_id, mkRow(me.employee_id, me.employees.first_name ?? "", me.employees.last_name ?? "")); });
-                      (movements2 ?? []).forEach((m: any) => { const row = empMap2.get(m.employee_id); if (!row) return; if (m.concepts?.category === "extra") row.extras_total += Number(m.total_value) || 0; else row.deductions_total += Number(m.total_value) || 0; });
-                      empMap2.forEach(row => { row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total; });
+                      applyMovementsToRows(empMap2, movements2 as any[]);
+                      empMap2.forEach(row => { row.total_final_pay = computeRowTotal(row); });
                       setRows(Array.from(empMap2.values()));
                       setLoading(false);
                     } catch (err: any) {
