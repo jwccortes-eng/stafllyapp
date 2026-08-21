@@ -363,6 +363,9 @@ function DesktopPeriodSummary() {
   const grandExtras = filtered.reduce((s, r) => s + r.extras_total, 0);
   const grandDeductions = filtered.reduce((s, r) => s + r.deductions_total, 0);
   const grandAdvances = filtered.reduce((s, r) => s + r.advance_deduction, 0);
+  // Total aprobado externo: sólo suma quienes tienen override; nunca sustituye al computado.
+  const grandApprovedExternal = filtered.reduce((s, r) => s + (r.approved_total_override ?? 0), 0);
+  const withApprovedExternal = filtered.filter(r => r.approved_total_override !== null).length;
   const withExtras = rows.filter(r => r.extras_total > 0).length;
   const withDeductions = rows.filter(r => r.deductions_total > 0).length;
   const withBase = rows.filter(r => r.base_total_pay > 0).length;
@@ -371,14 +374,16 @@ function DesktopPeriodSummary() {
   const selectedPeriodObj = periods.find(p => p.id === selectedPeriod);
 
   const getCSVRows = (): string[][] => {
-    const header = ["Empleado", "Base", "Extras", "Deducciones", "Anticipos/Préstamos", "Total Final"];
+    const header = ["Empleado", "Base", "Extras", "Deducciones", "Anticipos/Préstamos", "Total computado", "Total aprobado (externo)"];
     const dataRows = sorted.map(r => [
       formatPersonName(`${r.first_name} ${r.last_name}`),
       String(r.base_total_pay),
       String(r.extras_total),
-      String(r.deductions_total),
-      String(r.advance_deduction),
+      // Semántica financiera: la deducción se exporta con signo negativo.
+      String(r.deductions_total === 0 ? 0 : -r.deductions_total),
+      String(r.advance_deduction === 0 ? 0 : -r.advance_deduction),
       String(r.total_final_pay),
+      r.approved_total_override === null ? "" : String(r.approved_total_override),
     ]);
     return [header, ...dataRows];
   };
