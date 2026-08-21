@@ -94,7 +94,16 @@ export interface ShiftPublicationTruth {
   admin_label: string;
   /** Explicación de por qué el trabajador no lo ve (null si sí lo ve). */
   admin_blocking_reason: string | null;
+  /**
+   * Incoherencia estructural detectada. No se oculta nunca.
+   * `PUBLISHED_WITH_DRAFT_RESERVATIONS`: el turno está publicado pero la
+   * asignación sigue marcada como reserva tentativa → el trabajador no lo ve.
+   */
+  anomaly: ShiftTruthAnomaly | null;
 }
+
+export type ShiftTruthAnomaly = "PUBLISHED_WITH_DRAFT_RESERVATIONS";
+
 
 function assignmentStatusOf(
   a: ShiftTruthAssignmentInput | null | undefined,
