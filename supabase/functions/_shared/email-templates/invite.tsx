@@ -9,10 +9,8 @@ import {
   Head,
   Heading,
   Html,
-  Img,
   Link,
   Preview,
-  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -22,36 +20,33 @@ interface InviteEmailProps {
   confirmationUrl: string
 }
 
-const LOGO_URL = 'https://jplhtputzixwqarqlrth.supabase.co/storage/v1/object/public/email-assets/stafly-logo.png'
-
 export const InviteEmail = ({
   siteName,
   siteUrl,
   confirmationUrl,
 }: InviteEmailProps) => (
-  <Html lang="es" dir="ltr">
-    <Head />
-    <Preview>Te han invitado a StaflyApps</Preview>
+  <Html lang="en" dir="ltr">
+    <Head>
+      <style>{darkModeCss}</style>
+    </Head>
+    <Preview>You've been invited to join {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Section style={logoSection}>
-          <Img src={LOGO_URL} alt="StaflyApps" width="120" height="auto" style={logo} />
-        </Section>
-        <Heading style={h1}>Te han invitado</Heading>
+        <Heading style={h1}>You've been invited</Heading>
         <Text style={text}>
-          Has sido invitado a unirte a{' '}
+          You've been invited to join{' '}
           <Link href={siteUrl} style={link}>
-            <strong>StaflyApps</strong>
+            <strong>{siteName}</strong>
           </Link>
-          . Haz clic en el botón para aceptar la invitación y crear tu cuenta.
+          . Click the button below to accept the invitation and create your
+          account.
         </Text>
-        <Section style={buttonSection}>
-          <Button style={button} href={confirmationUrl}>
-            Aceptar invitación
-          </Button>
-        </Section>
+        <Button className="dm-btn" style={button} href={confirmationUrl}>
+          Accept Invitation
+        </Button>
         <Text style={footer}>
-          Si no esperabas esta invitación, puedes ignorar este correo.
+          If you weren't expecting this invitation, you can safely ignore this
+          email.
         </Text>
       </Container>
     </Body>
@@ -60,34 +55,36 @@ export const InviteEmail = ({
 
 export default InviteEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: "'Sora', 'Inter', Arial, sans-serif" }
-const container = { padding: '40px 28px', maxWidth: '480px', margin: '0 auto' }
-const logoSection = { marginBottom: '28px' }
-const logo = { display: 'block' as const }
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
+const container = { padding: '20px 25px' }
 const h1 = {
   fontSize: '22px',
-  fontWeight: '700' as const,
-  color: 'hsl(220, 60%, 7%)',
-  margin: '0 0 16px',
-  fontFamily: "'Sora', Arial, sans-serif",
+  fontWeight: 'bold' as const,
+  color: '#000000',
+  margin: '0 0 20px',
 }
 const text = {
   fontSize: '14px',
-  color: 'hsl(220, 15%, 46%)',
-  lineHeight: '1.6',
-  margin: '0 0 20px',
-  fontFamily: "'Inter', Arial, sans-serif",
+  color: '#55575d',
+  lineHeight: '1.5',
+  margin: '0 0 25px',
 }
-const link = { color: 'hsl(222, 100%, 59%)', textDecoration: 'underline' }
-const buttonSection = { margin: '8px 0 28px' }
+const link = { color: 'inherit', textDecoration: 'underline' }
 const button = {
-  backgroundColor: 'hsl(222, 100%, 59%)',
+  backgroundColor: '#000000',
   color: '#ffffff',
   fontSize: '14px',
-  fontWeight: '600' as const,
-  borderRadius: '16px',
-  padding: '12px 28px',
+  border: '1px solid #000000',
+  borderRadius: '8px',
+  padding: '12px 20px',
   textDecoration: 'none',
-  fontFamily: "'Sora', Arial, sans-serif",
 }
-const footer = { fontSize: '12px', color: 'hsl(220, 15%, 46%)', margin: '30px 0 0', fontFamily: "'Inter', Arial, sans-serif" }
+const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+// Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
+const darkModeCss = `
+  @media (prefers-color-scheme: dark) {
+    .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+  }
+  [data-ogsc] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+  [data-ogsb] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+`
