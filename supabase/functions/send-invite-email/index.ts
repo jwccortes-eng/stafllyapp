@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendRawEmail } from "../_shared/send-raw-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -76,41 +77,10 @@ Deno.serve(async (req) => {
       ? `invite-email-${invitation_id}`
       : `invite-email-${to}-${Date.now()}`;
 
-    // Use service role client to enqueue email via pgmq
+    // Service role client for logging and invitation bookkeeping
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Get/create unsubscribe token (REQUIRED by Lovable Email API for transactional)
-    let unsubscribeToken: string | null = null;
-    {
-      const { data: tokenData, error: tokenErr } = await adminClient.rpc(
-        "get_or_create_unsubscribe_token",
-        { p_email: to }
-      );
-      if (tokenErr) {
-        console.error("Failed to get unsubscribe token", { to, error: tokenErr.message });
-      } else {
-        unsubscribeToken = tokenData as string;
-      }
-    }
-
-    const payload: Record<string, unknown> = {
-      queued_at: new Date().toISOString(),
-      to,
-      subject,
-      html,
-      text,
-      from: FROM_ADDRESS,
-      sender_domain: SENDER_DOMAIN,
-      purpose: "transactional",
-      label: "invite_email",
-      message_id: messageId,
-      idempotency_key: idempotencyKey,
-      unsubscribe_token: unsubscribeToken,
-      // NO run_id — the Lovable API creates a transactional run inline
-      // when idempotency_key + purpose:transactional are present
-    };
-
-    console.log("Enqueuing invite email", {
+    console.log("Sending invite email", {
       to,
       subject,
       message_id: messageId,
@@ -122,27 +92,46 @@ Deno.serve(async (req) => {
       sender_domain: SENDER_DOMAIN,
     });
 
-    const { data: msgId, error: enqueueErr } = await adminClient.rpc("enqueue_email", {
-      queue_name: "transactional_emails",
-      payload,
-    });
+    const logMetadata = {
+      subject,
+      enqueued_by: user.id,
+      company_id: company_id ?? null,
+      employee_id: employee_id ?? null,
+      invitation_id: invitation_id ?? null,
+      idempotency_key: idempotencyKey,
+    };
 
-    if (enqueueErr) {
-      console.error("Enqueue error:", {
-        error: enqueueErr.message,
+    let result: { sent: boolean; reason?: string };
+    try {
+      result = await sendRawEmail({
         to,
-        message_id: messageId,
-        company_id,
-        employee_id,
+        from: FROM_ADDRESS,
+        subject,
+        html,
+        text,
+        label: "invite_email",
+        idempotencyKey,
       });
+    } catch (sendErr) {
+      const detail = sendErr instanceof Error ? sendErr.message : String(sendErr);
+      console.error("Invite email send failed:", { detail, message_id: messageId });
 
-      // Update invitation status to failed if invitation_id provided
+      const { error: logErr } = await adminClient.from("email_send_log").insert({
+        recipient_email: to,
+        template_name: "invite_email",
+        status: "failed",
+        message_id: messageId,
+        error_message: detail.slice(0, 1000),
+        metadata: logMetadata,
+      });
+      if (logErr) console.error("email_send_log insert failed:", logErr.message);
+
       if (invitation_id) {
         await adminClient
           .from("employee_invitations")
           .update({
             status: "failed",
-            last_error: `Enqueue failed: ${enqueueErr.message}`,
+            last_error: `Send failed: ${detail}`,
             last_attempt_at: new Date().toISOString(),
           } as any)
           .eq("id", invitation_id);
@@ -150,56 +139,51 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          error: "Failed to enqueue email",
-          detail: enqueueErr.message,
+          error: "Failed to send email",
+          detail,
           message_id: messageId,
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Log pending state
-    await adminClient.from("email_send_log").insert({
+    const { error: logErr } = await adminClient.from("email_send_log").insert({
       recipient_email: to,
       template_name: "invite_email",
-      status: "pending",
+      status: result.sent ? "sent" : "suppressed",
       message_id: messageId,
-      metadata: {
-        subject,
-        enqueued_by: user.id,
-        company_id: company_id ?? null,
-        employee_id: employee_id ?? null,
-        invitation_id: invitation_id ?? null,
-        idempotency_key: idempotencyKey,
-      },
+      error_message: result.sent ? null : "Recipient suppressed",
+      metadata: logMetadata,
     });
+    if (logErr) console.error("email_send_log insert failed:", logErr.message);
 
-    // Update invitation status to queued (not "sent" — honest status)
     if (invitation_id) {
       await adminClient
         .from("employee_invitations")
         .update({
-          status: "queued",
+          status: result.sent ? "sent" : "failed",
+          last_error: result.sent ? null : "Recipient suppressed",
           provider_message_id: messageId,
           last_attempt_at: new Date().toISOString(),
-          attempts: 1, // Will be incremented by queue processor on retries
+          attempts: 1,
         } as any)
         .eq("id", invitation_id);
     }
 
-    console.log("Email enqueued successfully", {
-      msg_id: msgId,
+    console.log("Invite email processed", {
       message_id: messageId,
-      to,
+      sent: result.sent,
       invitation_id,
     });
 
     return new Response(
       JSON.stringify({
-        success: true,
+        success: result.sent,
         message_id: messageId,
-        status: "queued",
-        detail: "Email queued for delivery. Status will update when provider confirms.",
+        status: result.sent ? "sent" : "suppressed",
+        detail: result.sent
+          ? "Email accepted for delivery."
+          : "Recipient is suppressed (previous bounce, complaint or unsubscribe).",
       }),
       {
         status: 200,

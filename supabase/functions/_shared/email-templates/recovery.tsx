@@ -9,9 +9,7 @@ import {
   Head,
   Heading,
   Html,
-  Img,
   Preview,
-  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -20,32 +18,28 @@ interface RecoveryEmailProps {
   confirmationUrl: string
 }
 
-const LOGO_URL = 'https://jplhtputzixwqarqlrth.supabase.co/storage/v1/object/public/email-assets/stafly-logo.png'
-
 export const RecoveryEmail = ({
   siteName,
   confirmationUrl,
 }: RecoveryEmailProps) => (
-  <Html lang="es" dir="ltr">
-    <Head />
-    <Preview>Restablecer tu contraseña en StaflyApps</Preview>
+  <Html lang="en" dir="ltr">
+    <Head>
+      <style>{darkModeCss}</style>
+    </Head>
+    <Preview>Reset your password for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Section style={logoSection}>
-          <Img src={LOGO_URL} alt="StaflyApps" width="120" height="auto" style={logo} />
-        </Section>
-        <Heading style={h1}>Restablecer contraseña</Heading>
+        <Heading style={h1}>Reset your password</Heading>
         <Text style={text}>
-          Recibimos una solicitud para restablecer tu contraseña en StaflyApps.
-          Haz clic en el botón para crear una nueva contraseña.
+          We received a request to reset your password for {siteName}. Click
+          the button below to choose a new password.
         </Text>
-        <Section style={buttonSection}>
-          <Button style={button} href={confirmationUrl}>
-            Restablecer contraseña
-          </Button>
-        </Section>
+        <Button className="dm-btn" style={button} href={confirmationUrl}>
+          Reset Password
+        </Button>
         <Text style={footer}>
-          Si no solicitaste este cambio, puedes ignorar este correo. Tu contraseña no será modificada.
+          If you didn't request a password reset, you can safely ignore this
+          email. Your password will not be changed.
         </Text>
       </Container>
     </Body>
@@ -54,33 +48,35 @@ export const RecoveryEmail = ({
 
 export default RecoveryEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: "'Sora', 'Inter', Arial, sans-serif" }
-const container = { padding: '40px 28px', maxWidth: '480px', margin: '0 auto' }
-const logoSection = { marginBottom: '28px' }
-const logo = { display: 'block' as const }
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
+const container = { padding: '20px 25px' }
 const h1 = {
   fontSize: '22px',
-  fontWeight: '700' as const,
-  color: 'hsl(220, 60%, 7%)',
-  margin: '0 0 16px',
-  fontFamily: "'Sora', Arial, sans-serif",
+  fontWeight: 'bold' as const,
+  color: '#000000',
+  margin: '0 0 20px',
 }
 const text = {
   fontSize: '14px',
-  color: 'hsl(220, 15%, 46%)',
-  lineHeight: '1.6',
-  margin: '0 0 20px',
-  fontFamily: "'Inter', Arial, sans-serif",
+  color: '#55575d',
+  lineHeight: '1.5',
+  margin: '0 0 25px',
 }
-const buttonSection = { margin: '8px 0 28px' }
 const button = {
-  backgroundColor: 'hsl(222, 100%, 59%)',
+  backgroundColor: '#000000',
   color: '#ffffff',
   fontSize: '14px',
-  fontWeight: '600' as const,
-  borderRadius: '16px',
-  padding: '12px 28px',
+  border: '1px solid #000000',
+  borderRadius: '8px',
+  padding: '12px 20px',
   textDecoration: 'none',
-  fontFamily: "'Sora', Arial, sans-serif",
 }
-const footer = { fontSize: '12px', color: 'hsl(220, 15%, 46%)', margin: '30px 0 0', fontFamily: "'Inter', Arial, sans-serif" }
+const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+// Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
+const darkModeCss = `
+  @media (prefers-color-scheme: dark) {
+    .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+  }
+  [data-ogsc] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+  [data-ogsb] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+`
