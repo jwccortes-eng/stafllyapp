@@ -179,8 +179,10 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: result.sent,
         message_id: messageId,
-        status: "queued",
-        detail: "Email queued for delivery. Status will update when provider confirms.",
+        status: result.sent ? "sent" : "suppressed",
+        detail: result.sent
+          ? "Email accepted for delivery."
+          : "Recipient is suppressed (previous bounce, complaint or unsubscribe).",
       }),
       {
         status: 200,
