@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
 
         processed++;
 
-        // Send activation email via queue (transactional pattern)
+        // Send activation email through Lovable's managed email API
         if (send_email && emp.email) {
           try {
             const html = buildActivationEmail(emp, pin, companyName);
@@ -269,56 +269,52 @@ Deno.serve(async (req) => {
             const messageId = crypto.randomUUID();
             const idempotencyKey = `bulk-activation-${emp.id}-${Date.now()}`;
 
-            // Get/create unsubscribe token (REQUIRED by Lovable Email API for transactional)
-            let unsubscribeToken: string | null = null;
-            const { data: tokenData, error: tokenErr } = await adminClient.rpc(
-              "get_or_create_unsubscribe_token",
-              { p_email: emp.email }
-            );
-            if (tokenErr) {
-              console.error(`Failed to get unsubscribe token for ${emp.email}`, tokenErr.message);
-            } else {
-              unsubscribeToken = tokenData as string;
-            }
-
-            const { error: enqueueErr } = await adminClient.rpc("enqueue_email", {
-              queue_name: "transactional_emails",
-              payload: {
-                queued_at: new Date().toISOString(),
-                to: emp.email,
-                subject: `${companyName} — Your Employee Portal is Ready`,
-                html,
-                text,
-                from: `${companyName} via StaflyApps <noreply@notify.staflyapps.com>`,
-                sender_domain: "notify.staflyapps.com",
-                purpose: "transactional",
-                label: "portal_activation",
-                message_id: messageId,
-                idempotency_key: idempotencyKey,
-                unsubscribe_token: unsubscribeToken,
-              },
+            const result = await sendRawEmail({
+              to: emp.email,
+              from: `${companyName} via StaflyApps <noreply@notify.staflyapps.com>`,
+              subject: `${companyName} — Your Employee Portal is Ready`,
+              html,
+              text,
+              label: "portal_activation",
+              idempotencyKey,
             });
 
-            if (enqueueErr) {
-              errors.push(`Email enqueue for ${emp.first_name}: ${enqueueErr.message}`);
-            } else {
-              // Log pending state
-              await adminClient.from("email_send_log").insert({
-                recipient_email: emp.email,
-                template_name: "portal_activation",
-                status: "pending",
-                message_id: messageId,
-                metadata: {
-                  company_id,
-                  employee_id: emp.id,
-                  idempotency_key: idempotencyKey,
-                  campaign: "bulk_activation",
-                },
-              });
+            const { error: logErr } = await adminClient.from("email_send_log").insert({
+              recipient_email: emp.email,
+              template_name: "portal_activation",
+              status: result.sent ? "sent" : "suppressed",
+              message_id: messageId,
+              error_message: result.sent ? null : "Recipient suppressed",
+              metadata: {
+                company_id,
+                employee_id: emp.id,
+                idempotency_key: idempotencyKey,
+                campaign: "bulk_activation",
+              },
+            });
+            if (logErr) console.error("email_send_log insert failed:", logErr.message);
+
+            if (result.sent) {
               emailsSent++;
+            } else {
+              errors.push(`Email to ${emp.first_name}: destinatario suprimido`);
             }
           } catch (emailErr: any) {
-            errors.push(`Email to ${emp.first_name}: ${emailErr.message}`);
+            const detail = emailErr?.message ?? String(emailErr);
+            const { error: logErr } = await adminClient.from("email_send_log").insert({
+              recipient_email: emp.email,
+              template_name: "portal_activation",
+              status: "failed",
+              message_id: crypto.randomUUID(),
+              error_message: String(detail).slice(0, 1000),
+              metadata: {
+                company_id,
+                employee_id: emp.id,
+                campaign: "bulk_activation",
+              },
+            });
+            if (logErr) console.error("email_send_log insert failed:", logErr.message);
+            errors.push(`Email to ${emp.first_name}: ${detail}`);
           }
         }
 
