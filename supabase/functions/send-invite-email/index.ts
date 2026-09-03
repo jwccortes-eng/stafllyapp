@@ -9,7 +9,6 @@ const corsHeaders = {
 };
 
 const SENDER_DOMAIN = "notify.staflyapps.com";
-const PLATFORM_FROM = brandFrom(null);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
