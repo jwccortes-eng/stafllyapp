@@ -296,7 +296,25 @@ export default function Announcements() {
                         >
                           <BarChart3 className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(a)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={
+                            lockedIds.has(a.id)
+                              ? "Comunicado oficial publicado: crea una versión nueva"
+                              : officialIds.has(a.id)
+                                ? "Editar comunicado oficial"
+                                : "Editar anuncio"
+                          }
+                          onClick={() => {
+                            if (officialIds.has(a.id) || lockedIds.has(a.id)) {
+                              setOfficialId(a.id);
+                              setOfficialOpen(true);
+                              return;
+                            }
+                            openEdit(a);
+                          }}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         {canDelete && (
