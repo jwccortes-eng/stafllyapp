@@ -54,6 +54,8 @@ export default function Announcements() {
   const [officialOpen, setOfficialOpen] = useState(false);
   const [officialId, setOfficialId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [officialIds, setOfficialIds] = useState<Set<string>>(new Set());
+  const [lockedIds, setLockedIds] = useState<Set<string>>(new Set());
 
   const [editing, setEditing] = useState<Announcement | null>(null);
 
@@ -94,6 +96,21 @@ export default function Announcements() {
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
     setAnnouncements((data ?? []) as Announcement[]);
+
+    // Comunicados oficiales: cuáles ya tienen una versión publicada.
+    // Esos NO se editan directamente; exigen versión nueva.
+    const { data: versions } = await supabase
+      .from("announcement_versions")
+      .select("announcement_id, status, communication_type")
+      .eq("company_id", selectedCompanyId!);
+    const locked = new Set<string>();
+    const official = new Set<string>();
+    (versions ?? []).forEach((v: any) => {
+      official.add(v.announcement_id);
+      if (v.status === "published" || v.status === "superseded") locked.add(v.announcement_id);
+    });
+    setOfficialIds(official);
+    setLockedIds(locked);
     setLoading(false);
   };
 
@@ -241,6 +258,14 @@ export default function Announcements() {
                         <h3 className="font-semibold">{a.title}</h3>
                         <Badge variant={priorityColor(a.priority)} className="text-[10px]">{a.priority}</Badge>
                         {!a.published_at && <Badge variant="outline" className="text-[10px]">Borrador</Badge>}
+                        {officialIds.has(a.id) && (
+                          <Badge variant="outline" className="text-[10px] gap-1">
+                            <ShieldCheck className="h-3 w-3" /> Comunicado oficial
+                          </Badge>
+                        )}
+                        {lockedIds.has(a.id) && (
+                          <Badge variant="secondary" className="text-[10px]">Contenido bloqueado · requiere versión nueva</Badge>
+                        )}
                       </div>
                       {a.body && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{a.body}</p>}
 
@@ -279,7 +304,25 @@ export default function Announcements() {
                         >
                           <BarChart3 className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(a)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={
+                            lockedIds.has(a.id)
+                              ? "Comunicado oficial publicado: crea una versión nueva"
+                              : officialIds.has(a.id)
+                                ? "Editar comunicado oficial"
+                                : "Editar anuncio"
+                          }
+                          onClick={() => {
+                            if (officialIds.has(a.id) || lockedIds.has(a.id)) {
+                              setOfficialId(a.id);
+                              setOfficialOpen(true);
+                              return;
+                            }
+                            openEdit(a);
+                          }}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         {canDelete && (
