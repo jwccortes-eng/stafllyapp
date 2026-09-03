@@ -60,6 +60,70 @@ export default function MyAnnouncements() {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
 
+  // --- Comunicados oficiales (versión + estado por destinatario) ---
+  const { language } = useT();
+  const preferredLanguage: CommLanguage = language === "en" ? "en" : "es";
+  const [official, setOfficial] = useState<
+    Record<string, { version: AnnouncementVersion; state: string; acknowledgedAt: string | null }>
+  >({});
+  const [langChoice, setLangChoice] = useState<Record<string, CommLanguage>>({});
+  const [acking, setAcking] = useState<string | null>(null);
+
+  const loadOfficial = useCallback(async () => {
+    if (!employeeId) return;
+    const { data, error } = await supabase
+      .from("announcement_recipients")
+      .select("state, acknowledged_at, announcement_versions(*)")
+      .eq("employee_id", employeeId);
+    if (error) return;
+    const map: Record<string, { version: AnnouncementVersion; state: string; acknowledgedAt: string | null }> = {};
+    for (const row of (data ?? []) as any[]) {
+      const version = row.announcement_versions as AnnouncementVersion | null;
+      if (!version || version.status === "draft") continue;
+      const prev = map[version.announcement_id];
+      if (!prev || prev.version.version_number < version.version_number) {
+        map[version.announcement_id] = {
+          version,
+          state: row.state,
+          acknowledgedAt: row.acknowledged_at,
+        };
+      }
+    }
+    setOfficial(map);
+    // "Visto" = el trabajador tiene el contenido de esa versión delante.
+    for (const entry of Object.values(map)) {
+      if (entry.state === "available") {
+        await supabase.rpc("mark_announcement_viewed", { p_version_id: entry.version.id });
+      }
+    }
+  }, [employeeId]);
+
+  const handleAcknowledge = async (versionId: string, lang: CommLanguage) => {
+    setAcking(versionId);
+    const { error } = await supabase.rpc("acknowledge_announcement", {
+      p_version_id: versionId,
+      p_language: lang,
+    });
+    setAcking(null);
+    if (error) {
+      toast.error("No se registró tu confirmación", {
+        description: `${error.message}. Puedes intentarlo otra vez sin duplicar el registro.`,
+      });
+      return;
+    }
+    toast.success("Confirmación registrada", { description: "Queda como constancia con fecha y hora." });
+    loadOfficial();
+  };
+
+  const pendingCritical = useMemo(
+    () =>
+      Object.values(official).filter(
+        (o) => isCritical(o.version.communication_type) && o.state !== "acknowledged",
+      ).length,
+    [official],
+  );
+
+
   useEffect(() => {
     setChromeMode?.("shell");
     return () => setChromeMode?.("legacy");
