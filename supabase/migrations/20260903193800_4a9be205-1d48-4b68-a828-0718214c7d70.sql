@@ -1,0 +1,1 @@
+REVOKE DELETE ON public.announcement_versions FROM authenticated;
