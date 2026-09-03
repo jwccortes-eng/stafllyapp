@@ -366,12 +366,26 @@ export default function Employees() {
         });
         return;
       }
-      notifySuccess({
-        key: "bulk-invite",
-        title: "Invitaciones enviadas",
-        fact: `${data.processed} workers activados · ${data.emails_sent} emails enviados${data.skipped > 0 ? ` · ${data.skipped} omitidos` : ""}.`,
-        consequence: "Podrán acceder al portal en cuanto activen su cuenta.",
-      });
+      const suppressed = Number(data?.emails_suppressed ?? 0);
+      const failedEmails = Number(data?.emails_failed ?? 0);
+      const undelivered = suppressed + failedEmails;
+      // Verdad de entrega: las cuentas quedan activadas aunque el email no salga.
+      const factBase = `${data.processed} workers activados · ${data.emails_sent} emails enviados${data.skipped > 0 ? ` · ${data.skipped} omitidos` : ""}`;
+      if (undelivered > 0) {
+        notifyWarning({
+          key: "bulk-invite",
+          title: "Activaciones listas, algunos emails no salieron",
+          fact: `${factBase} · ${undelivered} sin enviar (restricción de entrega o error del correo).`,
+          consequence: "Comparte el acceso por WhatsApp o enlace a quienes no recibieron el email.",
+        });
+      } else {
+        notifySuccess({
+          key: "bulk-invite",
+          title: "Invitaciones enviadas",
+          fact: `${factBase}.`,
+          consequence: "Podrán acceder al portal en cuanto activen su cuenta.",
+        });
+      }
       fetchEmployees();
     } catch (e: any) {
       notifyError({
