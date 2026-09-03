@@ -244,6 +244,15 @@ export default function MyAnnouncements() {
         subtitle="Comunicaciones y novedades de la empresa"
       />
 
+      {pendingCritical > 0 && (
+        <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+          <p className="text-sm text-destructive font-medium">
+            Tienes {pendingCritical} comunicado(s) que requieren tu confirmación.
+          </p>
+        </div>
+      )}
+
       {announcements.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Megaphone className="h-8 w-8 mx-auto mb-3 opacity-30" />
@@ -255,8 +264,26 @@ export default function MyAnnouncements() {
             const pCfg = priorityConfig[a.priority] || priorityConfig.normal;
             const PriorityIcon = pCfg.icon;
             const fresh = isNew(a.published_at);
-            const mediaList = Array.isArray(a.media_urls) ? a.media_urls.filter(Boolean) : [];
             const annReactions = reactions[a.id] ?? [];
+
+            // Capa oficial: si esta persona es destinataria de una versión publicada,
+            // el contenido mostrado es el de la versión, no el legado.
+            const off = official[a.id] ?? null;
+            const version = off?.version ?? null;
+            const langs = version ? availableLanguages(version) : [];
+            const lang: CommLanguage = version
+              ? langChoice[a.id] ?? resolveDisplayLanguage(version, preferredLanguage)
+              : "es";
+            const content = version ? versionContent(version, lang) : null;
+            const needsAck = version ? requiresAcknowledgment(version.communication_type) : false;
+            const acknowledged = off?.state === "acknowledged";
+            const critical = version ? isCritical(version.communication_type) : false;
+
+            const displayTitle = content?.title || a.title;
+            const displayBody = content?.body ?? a.body;
+            const mediaList = version
+              ? (Array.isArray(version.media_urls) ? version.media_urls.filter(Boolean) : [])
+              : (Array.isArray(a.media_urls) ? a.media_urls.filter(Boolean) : []);
 
             return (
               <StaflyCard
@@ -266,14 +293,17 @@ export default function MyAnnouncements() {
                 className={cn(
                   "overflow-hidden transition-all",
                   a.pinned && "ring-1 ring-primary/20",
-                  a.priority === "urgent" && "border-destructive/30"
+                  a.priority === "urgent" && "border-destructive/30",
+                  critical && !acknowledged && "ring-1 ring-destructive/40"
                 )}
               >
                 {/* Priority banner */}
-                {a.priority === "urgent" && (
+                {(a.priority === "urgent" || (critical && !acknowledged)) && (
                   <div className="bg-destructive/10 px-4 py-1.5 flex items-center gap-2">
                     <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-                    <span className="text-[11px] font-bold text-destructive uppercase tracking-wider">Urgente</span>
+                    <span className="text-[11px] font-bold text-destructive uppercase tracking-wider">
+                      {critical && !acknowledged ? ACK_PENDING_LABEL[lang] : "Urgente"}
+                    </span>
                   </div>
                 )}
 
@@ -283,7 +313,8 @@ export default function MyAnnouncements() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         {a.pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
-                        <h3 className="text-sm font-semibold text-foreground">{a.title}</h3>
+                        {version && <ShieldCheck className="h-3 w-3 text-primary shrink-0" />}
+                        <h3 className="text-sm font-semibold text-foreground">{displayTitle}</h3>
                         {fresh && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-primary text-primary-foreground shrink-0 animate-pulse">
                             NUEVO
@@ -292,6 +323,7 @@ export default function MyAnnouncements() {
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {formatDistanceToNow(parseISO(a.published_at), { addSuffix: true, locale: es })}
+                        {version ? ` · v${version.version_number}` : ""}
                       </p>
                     </div>
                     {(a.priority === "high" || a.priority === "important") && (
@@ -302,8 +334,28 @@ export default function MyAnnouncements() {
                     )}
                   </div>
 
+                  {/* Selector de idioma — misma versión, otra variante */}
+                  {langs.length > 1 && (
+                    <div className="flex items-center gap-1">
+                      <Languages className="h-3 w-3 text-muted-foreground" />
+                      {langs.map((l) => (
+                        <button
+                          key={l}
+                          onClick={() => setLangChoice((prev) => ({ ...prev, [a.id]: l }))}
+                          className={cn(
+                            "text-[11px] px-2 py-1 rounded-full min-h-[32px]",
+                            lang === l ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground"
+                          )}
+                        >
+                          {l === "es" ? "Español" : "English"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Body */}
-                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{a.body}</p>
+                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{displayBody}</p>
+
 
                   {/* Media gallery — photos & videos */}
                   {mediaList.length > 0 && (
