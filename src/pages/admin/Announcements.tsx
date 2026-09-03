@@ -206,10 +206,16 @@ export default function Announcements() {
         title="Anuncios"
         subtitle="Comunicados internos para tu equipo"
         rightSlot={isAdmin ? (
-          <Button size="sm" onClick={() => { resetForm(); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-1" /> Nuevo anuncio
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => { resetForm(); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> Anuncio simple
+            </Button>
+            <Button size="sm" onClick={() => { setOfficialId(null); setOfficialOpen(true); }}>
+              <ShieldCheck className="h-4 w-4 mr-1" /> Comunicado oficial
+            </Button>
+          </div>
         ) : undefined}
+
       />
 
       {loading ? (
