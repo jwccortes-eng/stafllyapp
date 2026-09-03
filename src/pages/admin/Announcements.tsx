@@ -423,6 +423,30 @@ export default function Announcements() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {selectedCompanyId && (
+        <OfficialCommunicationDialog
+          open={officialOpen}
+          onOpenChange={setOfficialOpen}
+          companyId={selectedCompanyId}
+          announcementId={officialId}
+          canPublish={isAdmin}
+          onSaved={loadAnnouncements}
+        />
+      )}
+
+      <CommunicationDetailDialog
+        open={!!detailId}
+        onOpenChange={(o) => { if (!o) setDetailId(null); }}
+        announcementId={detailId}
+        canEdit={canEdit || isAdmin}
+        onNewVersion={() => {
+          setOfficialId(detailId);
+          setDetailId(null);
+          setOfficialOpen(true);
+        }}
+      />
     </div>
+
   );
 }
