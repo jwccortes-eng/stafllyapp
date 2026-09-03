@@ -13,10 +13,13 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Pin, Megaphone, Image, Link2, X, Loader2, ExternalLink, Upload, Film } from "lucide-react";
+import { Plus, Pencil, Trash2, Pin, Megaphone, Image, Link2, X, Loader2, ExternalLink, Upload, Film, ShieldCheck, BarChart3 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { OfficialCommunicationDialog } from "@/components/announcements/OfficialCommunicationDialog";
+import { CommunicationDetailDialog } from "@/components/announcements/CommunicationDetailDialog";
+
 
 interface Announcement {
   id: string;
