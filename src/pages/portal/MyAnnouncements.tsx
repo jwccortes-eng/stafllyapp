@@ -414,7 +414,32 @@ export default function MyAnnouncements() {
                     </a>
                   )}
 
+                  {/* Acuse de recibido — evidencia por versión, idempotente */}
+                  {version && needsAck && (
+                    acknowledged ? (
+                      <div className="flex items-center gap-2 rounded-lg bg-success/10 px-3 py-2">
+                        <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                        <span className="text-xs font-medium text-success">
+                          {ACK_CONFIRMED_LABEL[lang]}
+                          {off?.acknowledgedAt
+                            ? ` · ${new Date(off.acknowledgedAt).toLocaleString()}`
+                            : ""}
+                        </span>
+                      </div>
+                    ) : (
+                      <Button
+                        className="w-full min-h-[44px]"
+                        variant={critical ? "destructive" : "default"}
+                        disabled={acking === version.id}
+                        onClick={() => handleAcknowledge(version.id, lang)}
+                      >
+                        {ACK_CTA[lang]}
+                      </Button>
+                    )
+                  )}
+
                   {/* Reactions bar */}
+
                   <div className="flex items-center gap-1 pt-1 border-t border-border/50">
                     {/* Existing reactions */}
                     {annReactions.map(r => (
