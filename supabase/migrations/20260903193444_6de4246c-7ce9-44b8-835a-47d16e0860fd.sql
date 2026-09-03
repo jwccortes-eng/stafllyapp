@@ -1,0 +1,2 @@
+REVOKE ALL ON FUNCTION public.announcement_lock_official_content() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.announcement_version_assign_number() FROM PUBLIC, anon, authenticated;
