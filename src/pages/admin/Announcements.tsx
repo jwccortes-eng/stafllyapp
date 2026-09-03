@@ -94,6 +94,21 @@ export default function Announcements() {
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
     setAnnouncements((data ?? []) as Announcement[]);
+
+    // Comunicados oficiales: cuáles ya tienen una versión publicada.
+    // Esos NO se editan directamente; exigen versión nueva.
+    const { data: versions } = await supabase
+      .from("announcement_versions")
+      .select("announcement_id, status, communication_type")
+      .eq("company_id", selectedCompanyId!);
+    const locked = new Set<string>();
+    const official = new Set<string>();
+    (versions ?? []).forEach((v: any) => {
+      official.add(v.announcement_id);
+      if (v.status === "published" || v.status === "superseded") locked.add(v.announcement_id);
+    });
+    setOfficialIds(official);
+    setLockedIds(locked);
     setLoading(false);
   };
 
