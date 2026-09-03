@@ -50,6 +50,11 @@ export default function Announcements() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  // Comunicados oficiales (versionado + acuse)
+  const [officialOpen, setOfficialOpen] = useState(false);
+  const [officialId, setOfficialId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+
   const [editing, setEditing] = useState<Announcement | null>(null);
 
   // Form
