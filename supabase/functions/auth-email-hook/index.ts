@@ -15,7 +15,7 @@ const corsHeaders = {
 }
 
 // Configuration
-const SITE_NAME = "Staflycore"
+const SITE_NAME = "Stafly"
 const SENDER_DOMAIN = "notify.staflyapps.com"
 const ROOT_DOMAIN = "staflyapps.com"
 const FROM_DOMAIN = "staflyapps.com"
@@ -129,7 +129,7 @@ const handler = createAuthEmailHandler({
   sendUrl: Deno.env.get('LOVABLE_SEND_URL'),
   emails: {
     signup: {
-      subject: 'Confirm your email',
+      subject: 'Confirma tu correo · Confirm your email',
       render: (data) =>
         React.createElement(SignupEmail, {
           siteName: SITE_NAME,
@@ -139,7 +139,7 @@ const handler = createAuthEmailHandler({
         }),
     },
     invite: {
-      subject: "You've been invited",
+      subject: 'Tienes una invitación · You have an invitation',
       render: (data) =>
         React.createElement(InviteEmail, {
           siteName: SITE_NAME,
@@ -148,7 +148,7 @@ const handler = createAuthEmailHandler({
         }),
     },
     magiclink: {
-      subject: 'Your login link',
+      subject: 'Tu enlace de acceso · Your login link',
       render: (data) =>
         React.createElement(MagicLinkEmail, {
           siteName: SITE_NAME,
@@ -156,7 +156,7 @@ const handler = createAuthEmailHandler({
         }),
     },
     recovery: {
-      subject: 'Reset your password',
+      subject: 'Restablece tu contraseña · Reset your password',
       render: (data) =>
         React.createElement(RecoveryEmail, {
           siteName: SITE_NAME,
@@ -164,7 +164,7 @@ const handler = createAuthEmailHandler({
         }),
     },
     email_change: {
-      subject: 'Confirm your new email',
+      subject: 'Confirma tu correo nuevo · Confirm your new email',
       render: (data) =>
         React.createElement(EmailChangeEmail, {
           siteName: SITE_NAME,
@@ -175,9 +175,9 @@ const handler = createAuthEmailHandler({
         }),
     },
     reauthentication: {
-      subject: 'Your verification code',
+      subject: 'Tu código de verificación · Your verification code',
       render: (data) =>
-        React.createElement(ReauthenticationEmail, { token: data.token ?? '' }),
+        React.createElement(ReauthenticationEmail, { token: data.token ?? '', siteName: SITE_NAME }),
     },
   },
 })
