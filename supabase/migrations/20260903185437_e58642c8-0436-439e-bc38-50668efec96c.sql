@@ -1,0 +1,11 @@
+REVOKE EXECUTE ON FUNCTION public.announcement_new_version(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.publish_announcement_version(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.mark_announcement_viewed(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.acknowledge_announcement(uuid, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.announcement_version_recipients(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.announcement_can_manage(uuid, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.my_employee_ids() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.announcement_version_assign_number() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.announcement_version_immutability() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.announcement_ack_immutability() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.announcement_protect_evidence() FROM PUBLIC, anon, authenticated;

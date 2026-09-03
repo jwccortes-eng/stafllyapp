@@ -13,10 +13,13 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Pin, Megaphone, Image, Link2, X, Loader2, ExternalLink, Upload, Film } from "lucide-react";
+import { Plus, Pencil, Trash2, Pin, Megaphone, Image, Link2, X, Loader2, ExternalLink, Upload, Film, ShieldCheck, BarChart3 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { OfficialCommunicationDialog } from "@/components/announcements/OfficialCommunicationDialog";
+import { CommunicationDetailDialog } from "@/components/announcements/CommunicationDetailDialog";
+
 
 interface Announcement {
   id: string;
@@ -47,6 +50,11 @@ export default function Announcements() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  // Comunicados oficiales (versionado + acuse)
+  const [officialOpen, setOfficialOpen] = useState(false);
+  const [officialId, setOfficialId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+
   const [editing, setEditing] = useState<Announcement | null>(null);
 
   // Form
@@ -198,10 +206,16 @@ export default function Announcements() {
         title="Anuncios"
         subtitle="Comunicados internos para tu equipo"
         rightSlot={isAdmin ? (
-          <Button size="sm" onClick={() => { resetForm(); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-1" /> Nuevo anuncio
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => { resetForm(); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> Anuncio simple
+            </Button>
+            <Button size="sm" onClick={() => { setOfficialId(null); setOfficialOpen(true); }}>
+              <ShieldCheck className="h-4 w-4 mr-1" /> Comunicado oficial
+            </Button>
+          </div>
         ) : undefined}
+
       />
 
       {loading ? (
@@ -257,6 +271,14 @@ export default function Announcements() {
                     </div>
                     {isAdmin && (
                       <div className="flex gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Seguimiento y versiones"
+                          onClick={() => setDetailId(a.id)}
+                        >
+                          <BarChart3 className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => openEdit(a)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -267,6 +289,7 @@ export default function Announcements() {
                         )}
                       </div>
                     )}
+
                   </div>
                 </CardContent>
               </Card>
@@ -400,6 +423,30 @@ export default function Announcements() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {selectedCompanyId && (
+        <OfficialCommunicationDialog
+          open={officialOpen}
+          onOpenChange={setOfficialOpen}
+          companyId={selectedCompanyId}
+          announcementId={officialId}
+          canPublish={isAdmin}
+          onSaved={loadAnnouncements}
+        />
+      )}
+
+      <CommunicationDetailDialog
+        open={!!detailId}
+        onOpenChange={(o) => { if (!o) setDetailId(null); }}
+        announcementId={detailId}
+        canEdit={canEdit || isAdmin}
+        onNewVersion={() => {
+          setOfficialId(detailId);
+          setDetailId(null);
+          setOfficialOpen(true);
+        }}
+      />
     </div>
+
   );
 }

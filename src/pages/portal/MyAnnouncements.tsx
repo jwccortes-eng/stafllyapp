@@ -1,16 +1,30 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { StaflyPageShell } from "@/components/stafly-ui/StaflyPageShell";
 import { StaflyCard } from "@/components/stafly-ui/StaflyCard";
 import { usePortalChrome } from "@/components/stafly-ui/usePortalChrome";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
-import { Megaphone, Pin, ExternalLink, AlertTriangle, Bell, Heart, ThumbsUp, Laugh, PartyPopper, Play } from "lucide-react";
+import { Megaphone, Pin, ExternalLink, AlertTriangle, Bell, Heart, ThumbsUp, Laugh, PartyPopper, Play, ShieldCheck, CheckCircle2, Languages } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow, parseISO, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useT } from "@/i18n";
+import {
+  ACK_CTA,
+  ACK_CONFIRMED_LABEL,
+  ACK_PENDING_LABEL,
+  availableLanguages,
+  isCritical,
+  requiresAcknowledgment,
+  resolveDisplayLanguage,
+  versionContent,
+  type AnnouncementVersion,
+  type CommLanguage,
+} from "@/lib/announcements/official-communications";
+
 
 interface Announcement {
   id: string;
@@ -45,6 +59,70 @@ export default function MyAnnouncements() {
   const [loading, setLoading] = useState(true);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
+
+  // --- Comunicados oficiales (versión + estado por destinatario) ---
+  const { language } = useT();
+  const preferredLanguage: CommLanguage = language === "en" ? "en" : "es";
+  const [official, setOfficial] = useState<
+    Record<string, { version: AnnouncementVersion; state: string; acknowledgedAt: string | null }>
+  >({});
+  const [langChoice, setLangChoice] = useState<Record<string, CommLanguage>>({});
+  const [acking, setAcking] = useState<string | null>(null);
+
+  const loadOfficial = useCallback(async () => {
+    if (!employeeId) return;
+    const { data, error } = await supabase
+      .from("announcement_recipients")
+      .select("state, acknowledged_at, announcement_versions(*)")
+      .eq("employee_id", employeeId);
+    if (error) return;
+    const map: Record<string, { version: AnnouncementVersion; state: string; acknowledgedAt: string | null }> = {};
+    for (const row of (data ?? []) as any[]) {
+      const version = row.announcement_versions as AnnouncementVersion | null;
+      if (!version || version.status === "draft") continue;
+      const prev = map[version.announcement_id];
+      if (!prev || prev.version.version_number < version.version_number) {
+        map[version.announcement_id] = {
+          version,
+          state: row.state,
+          acknowledgedAt: row.acknowledged_at,
+        };
+      }
+    }
+    setOfficial(map);
+    // "Visto" = el trabajador tiene el contenido de esa versión delante.
+    for (const entry of Object.values(map)) {
+      if (entry.state === "available") {
+        await supabase.rpc("mark_announcement_viewed", { p_version_id: entry.version.id });
+      }
+    }
+  }, [employeeId]);
+
+  const handleAcknowledge = async (versionId: string, lang: CommLanguage) => {
+    setAcking(versionId);
+    const { error } = await supabase.rpc("acknowledge_announcement", {
+      p_version_id: versionId,
+      p_language: lang,
+    });
+    setAcking(null);
+    if (error) {
+      toast.error("No se registró tu confirmación", {
+        description: `${error.message}. Puedes intentarlo otra vez sin duplicar el registro.`,
+      });
+      return;
+    }
+    toast.success("Confirmación registrada", { description: "Queda como constancia con fecha y hora." });
+    loadOfficial();
+  };
+
+  const pendingCritical = useMemo(
+    () =>
+      Object.values(official).filter(
+        (o) => isCritical(o.version.communication_type) && o.state !== "acknowledged",
+      ).length,
+    [official],
+  );
+
 
   useEffect(() => {
     setChromeMode?.("shell");
@@ -104,6 +182,8 @@ export default function MyAnnouncements() {
   }, [employeeId]);
 
   useEffect(() => { loadAnnouncements(); }, [loadAnnouncements]);
+  useEffect(() => { loadOfficial(); }, [loadOfficial]);
+
 
   // Realtime subscriptions
   useEffect(() => {
@@ -164,6 +244,15 @@ export default function MyAnnouncements() {
         subtitle="Comunicaciones y novedades de la empresa"
       />
 
+      {pendingCritical > 0 && (
+        <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+          <p className="text-sm text-destructive font-medium">
+            Tienes {pendingCritical} comunicado(s) que requieren tu confirmación.
+          </p>
+        </div>
+      )}
+
       {announcements.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Megaphone className="h-8 w-8 mx-auto mb-3 opacity-30" />
@@ -175,8 +264,26 @@ export default function MyAnnouncements() {
             const pCfg = priorityConfig[a.priority] || priorityConfig.normal;
             const PriorityIcon = pCfg.icon;
             const fresh = isNew(a.published_at);
-            const mediaList = Array.isArray(a.media_urls) ? a.media_urls.filter(Boolean) : [];
             const annReactions = reactions[a.id] ?? [];
+
+            // Capa oficial: si esta persona es destinataria de una versión publicada,
+            // el contenido mostrado es el de la versión, no el legado.
+            const off = official[a.id] ?? null;
+            const version = off?.version ?? null;
+            const langs = version ? availableLanguages(version) : [];
+            const lang: CommLanguage = version
+              ? langChoice[a.id] ?? resolveDisplayLanguage(version, preferredLanguage)
+              : "es";
+            const content = version ? versionContent(version, lang) : null;
+            const needsAck = version ? requiresAcknowledgment(version.communication_type) : false;
+            const acknowledged = off?.state === "acknowledged";
+            const critical = version ? isCritical(version.communication_type) : false;
+
+            const displayTitle = content?.title || a.title;
+            const displayBody = content?.body ?? a.body;
+            const mediaList = version
+              ? (Array.isArray(version.media_urls) ? version.media_urls.filter(Boolean) : [])
+              : (Array.isArray(a.media_urls) ? a.media_urls.filter(Boolean) : []);
 
             return (
               <StaflyCard
@@ -186,14 +293,17 @@ export default function MyAnnouncements() {
                 className={cn(
                   "overflow-hidden transition-all",
                   a.pinned && "ring-1 ring-primary/20",
-                  a.priority === "urgent" && "border-destructive/30"
+                  a.priority === "urgent" && "border-destructive/30",
+                  critical && !acknowledged && "ring-1 ring-destructive/40"
                 )}
               >
                 {/* Priority banner */}
-                {a.priority === "urgent" && (
+                {(a.priority === "urgent" || (critical && !acknowledged)) && (
                   <div className="bg-destructive/10 px-4 py-1.5 flex items-center gap-2">
                     <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-                    <span className="text-[11px] font-bold text-destructive uppercase tracking-wider">Urgente</span>
+                    <span className="text-[11px] font-bold text-destructive uppercase tracking-wider">
+                      {critical && !acknowledged ? ACK_PENDING_LABEL[lang] : "Urgente"}
+                    </span>
                   </div>
                 )}
 
@@ -203,7 +313,8 @@ export default function MyAnnouncements() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         {a.pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
-                        <h3 className="text-sm font-semibold text-foreground">{a.title}</h3>
+                        {version && <ShieldCheck className="h-3 w-3 text-primary shrink-0" />}
+                        <h3 className="text-sm font-semibold text-foreground">{displayTitle}</h3>
                         {fresh && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-primary text-primary-foreground shrink-0 animate-pulse">
                             NUEVO
@@ -212,6 +323,7 @@ export default function MyAnnouncements() {
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {formatDistanceToNow(parseISO(a.published_at), { addSuffix: true, locale: es })}
+                        {version ? ` · v${version.version_number}` : ""}
                       </p>
                     </div>
                     {(a.priority === "high" || a.priority === "important") && (
@@ -222,8 +334,28 @@ export default function MyAnnouncements() {
                     )}
                   </div>
 
+                  {/* Selector de idioma — misma versión, otra variante */}
+                  {langs.length > 1 && (
+                    <div className="flex items-center gap-1">
+                      <Languages className="h-3 w-3 text-muted-foreground" />
+                      {langs.map((l) => (
+                        <button
+                          key={l}
+                          onClick={() => setLangChoice((prev) => ({ ...prev, [a.id]: l }))}
+                          className={cn(
+                            "text-[11px] px-2 py-1 rounded-full min-h-[32px]",
+                            lang === l ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground"
+                          )}
+                        >
+                          {l === "es" ? "Español" : "English"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Body */}
-                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{a.body}</p>
+                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{displayBody}</p>
+
 
                   {/* Media gallery — photos & videos */}
                   {mediaList.length > 0 && (
@@ -282,7 +414,32 @@ export default function MyAnnouncements() {
                     </a>
                   )}
 
+                  {/* Acuse de recibido — evidencia por versión, idempotente */}
+                  {version && needsAck && (
+                    acknowledged ? (
+                      <div className="flex items-center gap-2 rounded-lg bg-success/10 px-3 py-2">
+                        <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                        <span className="text-xs font-medium text-success">
+                          {ACK_CONFIRMED_LABEL[lang]}
+                          {off?.acknowledgedAt
+                            ? ` · ${new Date(off.acknowledgedAt).toLocaleString()}`
+                            : ""}
+                        </span>
+                      </div>
+                    ) : (
+                      <Button
+                        className="w-full min-h-[44px]"
+                        variant={critical ? "destructive" : "default"}
+                        disabled={acking === version.id}
+                        onClick={() => handleAcknowledge(version.id, lang)}
+                      >
+                        {ACK_CTA[lang]}
+                      </Button>
+                    )
+                  )}
+
                   {/* Reactions bar */}
+
                   <div className="flex items-center gap-1 pt-1 border-t border-border/50">
                     {/* Existing reactions */}
                     {annReactions.map(r => (
