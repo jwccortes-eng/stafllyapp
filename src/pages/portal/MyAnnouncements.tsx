@@ -182,6 +182,8 @@ export default function MyAnnouncements() {
   }, [employeeId]);
 
   useEffect(() => { loadAnnouncements(); }, [loadAnnouncements]);
+  useEffect(() => { loadOfficial(); }, [loadOfficial]);
+
 
   // Realtime subscriptions
   useEffect(() => {
