@@ -1,16 +1,30 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { StaflyPageShell } from "@/components/stafly-ui/StaflyPageShell";
 import { StaflyCard } from "@/components/stafly-ui/StaflyCard";
 import { usePortalChrome } from "@/components/stafly-ui/usePortalChrome";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
-import { Megaphone, Pin, ExternalLink, AlertTriangle, Bell, Heart, ThumbsUp, Laugh, PartyPopper, Play } from "lucide-react";
+import { Megaphone, Pin, ExternalLink, AlertTriangle, Bell, Heart, ThumbsUp, Laugh, PartyPopper, Play, ShieldCheck, CheckCircle2, Languages } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow, parseISO, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useT } from "@/i18n";
+import {
+  ACK_CTA,
+  ACK_CONFIRMED_LABEL,
+  ACK_PENDING_LABEL,
+  availableLanguages,
+  isCritical,
+  requiresAcknowledgment,
+  resolveDisplayLanguage,
+  versionContent,
+  type AnnouncementVersion,
+  type CommLanguage,
+} from "@/lib/announcements/official-communications";
+
 
 interface Announcement {
   id: string;
