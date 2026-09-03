@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendRawEmail } from "../_shared/send-raw-email.ts";
+import { brandFrom } from "../_shared/email-brand.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,7 +9,7 @@ const corsHeaders = {
 };
 
 const SENDER_DOMAIN = "notify.staflyapps.com";
-const FROM_ADDRESS = "StaflyApps <noreply@notify.staflyapps.com>";
+const PLATFORM_FROM = brandFrom(null);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -45,7 +46,9 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { to, subject, html, company_id, employee_id, invitation_id } = body;
+    const { to, subject, html, company_id, employee_id, invitation_id, company_name } = body;
+    // Marca por tenant: la compañía manda cuando el llamador la conoce.
+    const fromAddress = brandFrom(typeof company_name === "string" ? company_name : null);
 
     // ─── VALIDATION ───
     if (!to || typeof to !== "string") {
@@ -88,7 +91,7 @@ Deno.serve(async (req) => {
       company_id: company_id ?? "not_provided",
       employee_id: employee_id ?? "not_provided",
       invitation_id: invitation_id ?? "not_provided",
-      sender: FROM_ADDRESS,
+      sender: fromAddress,
       sender_domain: SENDER_DOMAIN,
     });
 
@@ -105,7 +108,7 @@ Deno.serve(async (req) => {
     try {
       result = await sendRawEmail({
         to,
-        from: FROM_ADDRESS,
+        from: fromAddress,
         subject,
         html,
         text,
@@ -180,7 +183,10 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: result.sent,
         message_id: messageId,
+        // Verdad de entrega explícita: SENT solo cuando el proveedor aceptó.
         status: result.sent ? "sent" : "suppressed",
+        delivery: result.sent ? "SENT" : "SUPPRESSED",
+        invitation_created: Boolean(invitation_id),
         detail: result.sent
           ? "Email accepted for delivery."
           : "Recipient is suppressed (previous bounce, complaint or unsubscribe).",
