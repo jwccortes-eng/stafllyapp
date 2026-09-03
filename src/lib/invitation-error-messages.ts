@@ -132,6 +132,7 @@ export const SUBSTATE_LABELS: Record<InviteDeliveryStatus, { label: string; desc
   revoked: { label: "Revocada", description: "Invitación revocada" },
   failed: { label: "Falló", description: "Error al enviar el email" },
   bounced: { label: "Email rebotado", description: "Dirección inválida o buzón inexistente" },
+  suppressed: { label: "No se pudo enviar", description: "Este correo tiene una restricción de entrega" },
   dlq: { label: "Sin entregar", description: "Agotó reintentos. Usa WhatsApp o cambia el email." },
   resent: { label: "Reenviada", description: "Invitación reenviada" },
   superseded: { label: "Reemplazada", description: "Reemplazada por una más reciente" },

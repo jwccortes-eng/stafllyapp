@@ -44,6 +44,7 @@ const STATUS_CONFIG: Record<InviteDeliveryStatus, { label: string; color: string
   revoked: { label: "Revocado", color: "bg-destructive/10 text-destructive", icon: XCircle, description: "Invitación revocada por admin" },
   failed: { label: "Fallido", color: "bg-destructive/10 text-destructive", icon: MailX, description: "Error al enviar el email" },
   bounced: { label: "Rebotado", color: "bg-destructive/10 text-destructive", icon: AlertCircle, description: "Email rebotó (dirección inválida)" },
+  suppressed: { label: "No se pudo enviar", color: "bg-destructive/10 text-destructive", icon: MailX, description: "Este correo tiene una restricción de entrega" },
   dlq: { label: "DLQ", color: "bg-destructive/10 text-destructive", icon: AlertCircle, description: "El email agotó sus reintentos y pasó a cola muerta" },
   resent: { label: "Reenviado", color: "bg-primary/10 text-primary", icon: RefreshCw, description: "Invitación reenviada" },
   superseded: { label: "Reemplazado", color: "bg-muted text-muted-foreground", icon: RefreshCw, description: "Esta invitación fue reemplazada por una más reciente" },
@@ -442,6 +443,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
           `,
           // Pass metadata for tracking
           company_id: selectedCompanyId,
+          company_name: companyName,
           employee_id: employee.id,
           invitation_id: inviteId,
         },
@@ -450,10 +452,13 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      // The edge function returns status: "queued" — show honest status
       const returnedMessageId = data?.message_id ?? null;
+      // Verdad de entrega: el backend distingue enviado de bloqueado por
+      // restricción del destinatario. La invitación existe igual.
+      const wasSent = data?.delivery === "SENT" || data?.status === "sent";
+      const nextStatus: InviteDeliveryStatus = wasSent ? "sent" : "suppressed";
 
-      setInviteStatus("queued");
+      setInviteStatus(nextStatus);
       setInviteChannel("email");
       setInviteSentAt(new Date().toISOString());
       setInviteRecipient(employee.email);
@@ -461,27 +466,45 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
       setAttempts(prev => prev + 1);
       setLastAttemptAt(new Date().toISOString());
       setStatusChangedAt(new Date().toISOString());
+      if (!wasSent) {
+        setLastError("Recipient suppressed");
+        setHumanError({
+          title: "No se pudo enviar la invitación a este correo",
+          message:
+            "Este correo tiene una restricción de entrega. Verifica la dirección o comparte el acceso por WhatsApp o enlace.",
+          technical: "recipient_suppressed",
+        });
+      }
 
-      // Update invitation record with queued status
       if (inviteId) {
         await supabase
           .from("employee_invitations")
           .update({
-            status: "queued",
+            status: wasSent ? "sent" : "failed",
             channel: "email",
             sent_at: new Date().toISOString(),
             invite_recipient: employee.email,
             provider_message_id: returnedMessageId,
+            last_error: wasSent ? null : "Recipient suppressed",
             last_attempt_at: new Date().toISOString(),
           } as any)
           .eq("id", inviteId);
       }
 
-      onInviteSent?.("email");
-      toast({
-        title: "Email en cola de envío",
-        description: `La invitación para ${employee.email} está siendo procesada. El estado se actualizará automáticamente.`,
-      });
+      if (wasSent) {
+        onInviteSent?.("email");
+        toast({
+          title: "Invitación enviada",
+          description: `El proveedor aceptó el email para ${employee.email}.`,
+        });
+      } else {
+        toast({
+          title: "No se pudo enviar la invitación",
+          description:
+            "Este correo tiene una restricción de entrega. Verifica la dirección o usa WhatsApp o el enlace directo.",
+          variant: "destructive",
+        });
+      }
     } catch (err: any) {
       const errorMsg = err?.message ?? "Error desconocido";
       const human = humanizeInvitationError(err);

@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendRawEmail } from "../_shared/send-raw-email.ts";
+import { brandFrom, brandName } from "../_shared/email-brand.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,53 +23,47 @@ function buildActivationEmail(
 ): string {
   // `pin` solo llega cuando esta invitación creó la credencial. Si la persona
   // ya tenía PIN, nunca se revela: usa el que ya conoce.
-  const pinRow = pin
-    ? `<tr><td style="padding: 4px 0; color: #777;">Temporary PIN:</td><td style="padding: 4px 0; font-weight: 600; font-family: monospace; font-size: 18px; letter-spacing: 4px;">${pin}</td></tr>`
-    : `<tr><td style="padding: 4px 0; color: #777;">PIN:</td><td style="padding: 4px 0; font-weight: 600;">Use the PIN you already have</td></tr>`;
+  // Bilingüe ES/EN: no hay preferencia de idioma confiable por persona.
+  const pinRowEs = pin
+    ? `<tr><td style="padding:4px 0;color:#777;">PIN temporal:</td><td style="padding:4px 0;font-weight:600;font-family:monospace;font-size:18px;letter-spacing:4px;">${pin}</td></tr>`
+    : `<tr><td style="padding:4px 0;color:#777;">PIN:</td><td style="padding:4px 0;font-weight:600;">Usa el PIN que ya tienes</td></tr>`;
+  const brand = brandName(companyName);
   return `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="font-family: 'Inter', Arial, sans-serif; background: #f5f6fa; margin: 0; padding: 0;">
+<body style="font-family: Inter, Arial, sans-serif; background: #f5f6fa; margin: 0; padding: 0;">
   <div style="max-width: 520px; margin: 40px auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
-    <div style="background: linear-gradient(135deg, #3366FF, #5B8DEF); padding: 32px 24px; text-align: center;">
-      <h1 style="color: #fff; font-size: 22px; margin: 0;">StaflyApps</h1>
-      <p style="color: rgba(255,255,255,0.85); font-size: 14px; margin: 8px 0 0;">${companyName}</p>
+    <div style="background: linear-gradient(135deg, #1a4dff, #5B8DEF); padding: 28px 24px; text-align: center;">
+      <h1 style="color: #fff; font-size: 20px; margin: 0;">${companyName}</h1>
+      <p style="color: rgba(255,255,255,0.85); font-size: 12px; margin: 6px 0 0;">powered by Stafly</p>
     </div>
-    <div style="padding: 32px 24px;">
-      <h2 style="font-size: 18px; color: #1a1a2e; margin: 0 0 16px;">Hi ${employee.first_name}! 👋</h2>
-      <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0 0 20px;">
-        Your employee portal at <strong>${companyName}</strong> has been activated. You now have access to:
+    <div style="padding: 28px 24px;">
+      <h2 style="font-size: 18px; color: #1a1a2e; margin: 0 0 12px;">¡Hola ${employee.first_name}!</h2>
+      <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0 0 18px;">
+        Tu portal de trabajador en <strong>${companyName}</strong> ya está activo. Desde ahí puedes ver tus turnos, marcar entrada y salida, y revisar tus horas y pagos.
       </p>
-      <ul style="font-size: 14px; color: #555; line-height: 1.8; padding-left: 20px; margin: 0 0 24px;">
-        <li>📅 View your assigned shifts</li>
-        <li>✅ Accept or decline shifts</li>
-        <li>⏰ Clock in and clock out</li>
-        <li>💰 Track your hours and payments</li>
-        <li>📊 View payment reports (hourly, daily & more)</li>
-        <li>📋 Access your work history</li>
-      </ul>
-      
-      <div style="background: #f0f4ff; border-radius: 12px; padding: 20px; margin: 0 0 24px;">
-        <p style="font-size: 13px; font-weight: 600; color: #3366FF; margin: 0 0 12px;">🔐 Your Login Credentials</p>
+      <div style="background: #f0f4ff; border-radius: 12px; padding: 18px; margin: 0 0 18px;">
+        <p style="font-size: 13px; font-weight: 600; color: #1a4dff; margin: 0 0 10px;">Tus datos de acceso · Your login</p>
         <table style="width: 100%; font-size: 14px; color: #333;">
-          <tr><td style="padding: 4px 0; color: #777;">Phone:</td><td style="padding: 4px 0; font-weight: 600;">${employee.phone_number}</td></tr>
-          ${pinRow}
+          <tr><td style="padding:4px 0;color:#777;">Teléfono / Phone:</td><td style="padding:4px 0;font-weight:600;">${employee.phone_number}</td></tr>
+          ${pinRowEs}
         </table>
       </div>
-
-      <div style="background: #fff8e6; border-radius: 12px; padding: 16px; margin: 0 0 24px; border: 1px solid #ffe0a0;">
-        <p style="font-size: 13px; color: #8b6914; margin: 0;">
-          ⚠️ <strong>Security note</strong> — You'll be asked to change your PIN after your first login.
-        </p>
-      </div>
-
-      <a href="https://staflyapps.com/portal" style="display: block; text-align: center; background: #3366FF; color: #fff; text-decoration: none; padding: 14px 24px; border-radius: 12px; font-size: 14px; font-weight: 600;">
-        Access Employee Portal →
+      <a href="https://staflyapps.com/portal" style="display:block;text-align:center;background:#1a4dff;color:#fff;text-decoration:none;padding:14px 24px;border-radius:12px;font-size:14px;font-weight:600;">
+        Entrar al portal · Open the portal
       </a>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:26px 0;">
+      <h2 style="font-size: 16px; color: #1a1a2e; margin: 0 0 12px;">Hi ${employee.first_name}!</h2>
+      <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0 0 12px;">
+        Your worker portal at <strong>${companyName}</strong> is active. Sign in with your phone number and your 4-digit PIN to see shifts, clock in and out, and review hours and payments.
+      </p>
+      <p style="font-size: 13px; color: #8b6914; background:#fff8e6; border:1px solid #ffe0a0; border-radius:12px; padding:14px; margin: 0;">
+        Por seguridad, cambia tu PIN después del primer ingreso. · For security, change your PIN after your first login.
+      </p>
     </div>
     <div style="padding: 16px 24px; background: #f8f9fc; text-align: center;">
-      <p style="font-size: 11px; color: #999; margin: 0;">StaflyApps · ${companyName} · Smart Workforce Management</p>
+      <p style="font-size: 11px; color: #999; margin: 0;">${brand}</p>
     </div>
   </div>
 </body>
@@ -177,6 +172,8 @@ Deno.serve(async (req) => {
     let processed = 0;
     let skipped = 0;
     let emailsSent = 0;
+    let emailsSuppressed = 0;
+    let emailsFailed = 0;
     const errors: string[] = [];
 
     for (const emp of employees) {
@@ -268,12 +265,13 @@ Deno.serve(async (req) => {
             const html = buildActivationEmail(emp, pin, companyName);
             const text = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
             const messageId = crypto.randomUUID();
-            const idempotencyKey = `bulk-activation-${emp.id}-${Date.now()}`;
+            // Idempotencia estable: un reintento del mismo día no duplica el envío.
+            const idempotencyKey = `bulk-activation-${emp.id}-${new Date().toISOString().slice(0, 10)}`;
 
             const result = await sendRawEmail({
               to: emp.email,
-              from: `${companyName} via StaflyApps <noreply@notify.staflyapps.com>`,
-              subject: `${companyName} — Your Employee Portal is Ready`,
+              from: brandFrom(companyName),
+              subject: `${companyName} — Tu portal ya está activo · Your portal is ready`,
               html,
               text,
               label: "portal_activation",
@@ -298,7 +296,10 @@ Deno.serve(async (req) => {
             if (result.sent) {
               emailsSent++;
             } else {
-              errors.push(`Email to ${emp.first_name}: destinatario suprimido`);
+              emailsSuppressed++;
+              errors.push(
+                `${emp.first_name} ${emp.last_name}: no se pudo enviar el email (restricción de entrega en ${emp.email}).`,
+              );
             }
           } catch (emailErr: any) {
             const detail = emailErr?.message ?? String(emailErr);
@@ -315,6 +316,7 @@ Deno.serve(async (req) => {
               },
             });
             if (logErr) console.error("email_send_log insert failed:", logErr.message);
+            emailsFailed++;
             errors.push(`Email to ${emp.first_name}: ${detail}`);
           }
         }
@@ -344,6 +346,8 @@ Deno.serve(async (req) => {
       processed,
       skipped,
       emails_sent: emailsSent,
+      emails_suppressed: emailsSuppressed,
+      emails_failed: emailsFailed,
       company_name: companyName,
       errors: errors.length > 0 ? errors : undefined,
     }), {

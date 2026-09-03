@@ -19016,10 +19016,6 @@ export type Database = {
         }
         Returns: string
       }
-      delete_email: {
-        Args: { message_id: number; queue_name: string }
-        Returns: boolean
-      }
       ecosystem_identity_attach_existing_employee_to_auth_user: {
         Args: {
           p_match_token: string
@@ -19036,7 +19032,6 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: Json
       }
-      email_queue_dispatch: { Args: never; Returns: undefined }
       emergency_worker_add_company_membership: {
         Args: {
           _company_id: string
@@ -19073,10 +19068,6 @@ export type Database = {
       employee_has_locked_payroll: {
         Args: { _employee_id: string }
         Returns: boolean
-      }
-      enqueue_email: {
-        Args: { payload: Json; queue_name: string }
-        Returns: number
       }
       expire_old_invitations: { Args: never; Returns: number }
       find_employee_duplicate_groups: {
@@ -19460,15 +19451,6 @@ export type Database = {
         }
         Returns: Json
       }
-      move_to_dlq: {
-        Args: {
-          dlq_name: string
-          message_id: number
-          payload: Json
-          source_queue: string
-        }
-        Returns: number
-      }
       my_employee_ids: { Args: never; Returns: string[] }
       next_company_shift_number: {
         Args: { _company_id: string }
@@ -19530,14 +19512,6 @@ export type Database = {
         Returns: Json
       }
       publish_shift_draft: { Args: { _shift_id: string }; Returns: Json }
-      read_email_batch: {
-        Args: { batch_size: number; queue_name: string; vt: number }
-        Returns: {
-          message: Json
-          msg_id: number
-          read_ct: number
-        }[]
-      }
       recalculate_rep_score: {
         Args: { _worker_profile_id: string }
         Returns: undefined

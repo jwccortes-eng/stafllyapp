@@ -12,6 +12,7 @@ export type InviteDeliveryStatus =
   | "superseded"
   | "failed"
   | "bounced"
+  | "suppressed"
   | "dlq"
   | "resent";
 
@@ -31,7 +32,8 @@ export function mapEmailLogStatusToInviteStatus(
     dlq: "dlq",
     bounced: "bounced",
     complained: "failed",
-    suppressed: "failed",
+    suppressed: "suppressed",
+    complaint_blocked: "suppressed",
   };
 
   return statusMap[emailLogStatus] ?? fallbackStatus;
@@ -42,5 +44,5 @@ export function isInviteStatusInFlight(status: InviteDeliveryStatus): boolean {
 }
 
 export function isInviteStatusFailure(status: InviteDeliveryStatus): boolean {
-  return status === "failed" || status === "bounced" || status === "dlq";
+  return status === "failed" || status === "bounced" || status === "dlq" || status === "suppressed";
 }
