@@ -113,6 +113,74 @@ export type Database = {
           },
         ]
       }
+      announcement_acknowledgments: {
+        Row: {
+          acknowledged_at: string
+          announcement_id: string
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          language_variant: string
+          metadata: Json
+          user_id: string | null
+          version_id: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          announcement_id: string
+          company_id: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          language_variant?: string
+          metadata?: Json
+          user_id?: string | null
+          version_id: string
+        }
+        Update: {
+          acknowledged_at?: string
+          announcement_id?: string
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          language_variant?: string
+          metadata?: Json
+          user_id?: string | null
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_acknowledgments_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_acknowledgments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_acknowledgments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_acknowledgments_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "announcement_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcement_reactions: {
         Row: {
           announcement_id: string
@@ -159,12 +227,169 @@ export type Database = {
           },
         ]
       }
+      announcement_recipients: {
+        Row: {
+          acknowledged_at: string | null
+          announcement_id: string
+          available_at: string
+          company_id: string
+          created_at: string
+          employee_id: string
+          first_viewed_at: string | null
+          id: string
+          requires_acknowledgment: boolean
+          state: string
+          updated_at: string
+          version_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          announcement_id: string
+          available_at?: string
+          company_id: string
+          created_at?: string
+          employee_id: string
+          first_viewed_at?: string | null
+          id?: string
+          requires_acknowledgment?: boolean
+          state?: string
+          updated_at?: string
+          version_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          announcement_id?: string
+          available_at?: string
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          first_viewed_at?: string | null
+          id?: string
+          requires_acknowledgment?: boolean
+          state?: string
+          updated_at?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_recipients_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_recipients_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_recipients_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_recipients_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "announcement_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcement_versions: {
+        Row: {
+          announcement_id: string
+          audience_employee_ids: string[]
+          audience_mode: string
+          body_en: string | null
+          body_es: string | null
+          communication_type: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          default_language: string
+          id: string
+          link_label: string | null
+          link_url: string | null
+          media_urls: Json
+          published_at: string | null
+          published_by: string | null
+          status: string
+          title_en: string | null
+          title_es: string | null
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          announcement_id: string
+          audience_employee_ids?: string[]
+          audience_mode?: string
+          body_en?: string | null
+          body_es?: string | null
+          communication_type?: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          default_language?: string
+          id?: string
+          link_label?: string | null
+          link_url?: string | null
+          media_urls?: Json
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+          title_en?: string | null
+          title_es?: string | null
+          updated_at?: string
+          version_number: number
+        }
+        Update: {
+          announcement_id?: string
+          audience_employee_ids?: string[]
+          audience_mode?: string
+          body_en?: string | null
+          body_es?: string | null
+          communication_type?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          default_language?: string
+          id?: string
+          link_label?: string | null
+          link_url?: string | null
+          media_urls?: Json
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+          title_en?: string | null
+          title_es?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_versions_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
+          archived_at: string | null
           body: string
+          communication_type: string
           company_id: string
           created_at: string
           created_by: string
+          current_version_id: string | null
           deleted_at: string | null
           id: string
           link_label: string | null
@@ -177,10 +402,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           body?: string
+          communication_type?: string
           company_id: string
           created_at?: string
           created_by: string
+          current_version_id?: string | null
           deleted_at?: string | null
           id?: string
           link_label?: string | null
@@ -193,10 +421,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           body?: string
+          communication_type?: string
           company_id?: string
           created_at?: string
           created_by?: string
+          current_version_id?: string | null
           deleted_at?: string | null
           id?: string
           link_label?: string | null
@@ -18523,6 +18754,10 @@ export type Database = {
       _eic_sign_match_token: { Args: { p_payload: Json }; Returns: string }
       _eic_verify_match_token: { Args: { p_token: string }; Returns: Json }
       _get_cron_secret: { Args: never; Returns: string }
+      acknowledge_announcement: {
+        Args: { p_language?: string; p_version_id: string }
+        Returns: Json
+      }
       admin_can_recover_employee: {
         Args: { _employee_id: string }
         Returns: Json
@@ -18555,6 +18790,27 @@ export type Database = {
           _user_id: string
         }
         Returns: Json
+      }
+      announcement_can_manage: {
+        Args: { _company_id: string; _permission: string }
+        Returns: boolean
+      }
+      announcement_new_version: {
+        Args: { p_announcement_id: string }
+        Returns: string
+      }
+      announcement_version_recipients: {
+        Args: { p_version_id: string }
+        Returns: {
+          acknowledged_at: string
+          available_at: string
+          employee_id: string
+          first_viewed_at: string
+          full_name: string
+          language_variant: string
+          requires_acknowledgment: boolean
+          state: string
+        }[]
       }
       anon_can_upload_onboarding_doc: {
         Args: { _path: string }
@@ -19180,6 +19436,10 @@ export type Database = {
         Args: { _fields: string[]; _record_id: string; _table_name: string }
         Returns: undefined
       }
+      mark_announcement_viewed: {
+        Args: { p_version_id: string }
+        Returns: Json
+      }
       merge_employees: {
         Args: {
           _confirm_master_name: string
@@ -19209,6 +19469,7 @@ export type Database = {
         }
         Returns: number
       }
+      my_employee_ids: { Args: never; Returns: string[] }
       next_company_shift_number: {
         Args: { _company_id: string }
         Returns: number
@@ -19259,6 +19520,10 @@ export type Database = {
           priority: number
           sampling_reason: string
         }[]
+      }
+      publish_announcement_version: {
+        Args: { p_version_id: string }
+        Returns: Json
       }
       publish_pay_statement: {
         Args: { _employee_id: string; _period_id: string; _source?: string }
