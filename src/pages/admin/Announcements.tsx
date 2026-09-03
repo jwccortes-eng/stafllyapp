@@ -271,6 +271,14 @@ export default function Announcements() {
                     </div>
                     {isAdmin && (
                       <div className="flex gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Seguimiento y versiones"
+                          onClick={() => setDetailId(a.id)}
+                        >
+                          <BarChart3 className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => openEdit(a)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -281,6 +289,7 @@ export default function Announcements() {
                         )}
                       </div>
                     )}
+
                   </div>
                 </CardContent>
               </Card>
