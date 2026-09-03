@@ -54,6 +54,8 @@ export default function Announcements() {
   const [officialOpen, setOfficialOpen] = useState(false);
   const [officialId, setOfficialId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [officialIds, setOfficialIds] = useState<Set<string>>(new Set());
+  const [lockedIds, setLockedIds] = useState<Set<string>>(new Set());
 
   const [editing, setEditing] = useState<Announcement | null>(null);
 
