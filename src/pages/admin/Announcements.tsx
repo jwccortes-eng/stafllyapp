@@ -258,6 +258,14 @@ export default function Announcements() {
                         <h3 className="font-semibold">{a.title}</h3>
                         <Badge variant={priorityColor(a.priority)} className="text-[10px]">{a.priority}</Badge>
                         {!a.published_at && <Badge variant="outline" className="text-[10px]">Borrador</Badge>}
+                        {officialIds.has(a.id) && (
+                          <Badge variant="outline" className="text-[10px] gap-1">
+                            <ShieldCheck className="h-3 w-3" /> Comunicado oficial
+                          </Badge>
+                        )}
+                        {lockedIds.has(a.id) && (
+                          <Badge variant="secondary" className="text-[10px]">Contenido bloqueado · requiere versión nueva</Badge>
+                        )}
                       </div>
                       {a.body && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{a.body}</p>}
 
