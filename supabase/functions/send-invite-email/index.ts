@@ -113,6 +113,8 @@ Deno.serve(async (req) => {
         text,
         label: "invite_email",
         idempotencyKey,
+        category: "transactional_access",
+        adminClient,
       });
     } catch (sendErr) {
       const detail = sendErr instanceof Error ? sendErr.message : String(sendErr);

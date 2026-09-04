@@ -276,6 +276,8 @@ Deno.serve(async (req) => {
               text,
               label: "portal_activation",
               idempotencyKey,
+              category: "transactional_access",
+              adminClient,
             });
 
             const { error: logErr } = await adminClient.from("email_send_log").insert({
