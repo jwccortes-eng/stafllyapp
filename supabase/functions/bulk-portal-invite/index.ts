@@ -283,9 +283,10 @@ Deno.serve(async (req) => {
             const { error: logErr } = await adminClient.from("email_send_log").insert({
               recipient_email: emp.email,
               template_name: "portal_activation",
-              status: result.sent ? "sent" : "suppressed",
+              // P0.3: aceptado por el API, no despachado todavía.
+              status: result.accepted ? "accepted" : "suppressed",
               message_id: messageId,
-              error_message: result.sent ? null : "Recipient suppressed",
+              error_message: result.accepted ? null : "Recipient suppressed",
               metadata: {
                 company_id,
                 employee_id: emp.id,
@@ -295,7 +296,7 @@ Deno.serve(async (req) => {
             });
             if (logErr) console.error("email_send_log insert failed:", logErr.message);
 
-            if (result.sent) {
+            if (result.accepted) {
               emailsSent++;
             } else {
               emailsSuppressed++;
@@ -325,7 +326,7 @@ Deno.serve(async (req) => {
 
         // Log the invitation
         try {
-          const inviteStatus = hasActivePortal ? "resent" : "sent";
+          const inviteStatus = hasActivePortal ? "resent" : "queued";
           await adminClient.from("employee_invitations").insert({
             company_id,
             employee_id: emp.id,
