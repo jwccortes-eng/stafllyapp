@@ -24,19 +24,54 @@ async function recordOutcome(
   const email = String(recipient).toLowerCase()
   const scope = SCOPE_BY_SOURCE[suppressionReason] ?? 'all'
 
-  const { error: logError } = await supabase.from('email_send_log').insert({
-    template_name: 'system',
-    recipient_email: email,
-    status: logStatus,
-    error_message: message,
-  })
-  if (logError) {
-    console.error('email_send_log insert failed', {
+  // Idempotencia: una reentrega del mismo evento no crea una segunda fila.
+  const { data: existing, error: existingError } = await supabase
+    .from('email_send_log')
+    .select('id')
+    .eq('template_name', 'system')
+    .eq('recipient_email', email)
+    .contains('metadata', { event_id: eventId })
+    .maybeSingle()
+
+  if (existingError) {
+    console.error('email_send_log dedupe read failed', {
       event_id: eventId,
-      code: logError.code,
-      message: logError.message,
+      code: existingError.code,
     })
-    throw new Error('email_send_log insert failed')
+    throw new Error('email_send_log dedupe read failed')
+  }
+
+  if (!existing) {
+    const { error: logError } = await supabase.from('email_send_log').insert({
+      template_name: 'system',
+      recipient_email: email,
+      status: logStatus,
+      error_message: message,
+      metadata: { event_id: eventId, source: suppressionReason },
+    })
+    if (logError) {
+      console.error('email_send_log insert failed', {
+        event_id: eventId,
+        code: logError.code,
+        message: logError.message,
+      })
+      throw new Error('email_send_log insert failed')
+    }
+  }
+
+  // Evento tardío sobre un envío concreto: avanza el estado del intento más
+  // reciente de ese destinatario sin retroceder ni duplicar.
+  const { error: advanceError } = await supabase
+    .from('email_send_log')
+    .update({ status: logStatus, error_message: message })
+    .eq('recipient_email', email)
+    .in('status', ['created', 'queued', 'accepted', 'sent'])
+    .gte('created_at', new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString())
+  if (advanceError) {
+    console.error('email_send_log advance failed', {
+      event_id: eventId,
+      code: advanceError.code,
+    })
   }
 
   const { error: suppressionError } = await supabase
