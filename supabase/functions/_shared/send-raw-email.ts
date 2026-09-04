@@ -10,12 +10,17 @@
  * son responsabilidad de Lovable: aquí no hay cola ni estado local.
  */
 import { EmailAPIError, sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.0'
+import {
+  categoryForLabel,
+  localSuppressionBlocks,
+  type EmailCategory,
+} from './email-policy.ts'
 
 export const SENDER_DOMAIN = 'notify.staflyapps.com'
 
 export type RawEmailResult =
   | { sent: true }
-  | { sent: false; reason: 'recipient_suppressed' }
+  | { sent: false; reason: 'recipient_suppressed'; scope?: string; source?: string }
 
 export interface RawEmailInput {
   to: string
@@ -26,12 +31,32 @@ export interface RawEmailInput {
   label: string
   idempotencyKey: string
   replyTo?: string
+  /** Categoría del envío; por defecto se deduce de `label`. */
+  category?: EmailCategory
+  /** Cliente service-role para consultar el registro local de supresión. */
+  adminClient?: any
 }
 
 export async function sendRawEmail(input: RawEmailInput): Promise<RawEmailResult> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   if (!apiKey) {
     throw new Error('LOVABLE_API_KEY is not configured')
+  }
+
+  const category = input.category ?? categoryForLabel(input.label)
+
+  // El registro local nunca amplía el bloqueo: una baja de marketing no frena
+  // seguridad ni acceso.
+  if (input.adminClient) {
+    const local = await localSuppressionBlocks(input.adminClient, input.to, category)
+    if (local.blocked) {
+      return {
+        sent: false,
+        reason: 'recipient_suppressed',
+        scope: local.scope,
+        source: local.source,
+      }
+    }
   }
 
   try {
