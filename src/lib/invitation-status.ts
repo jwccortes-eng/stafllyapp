@@ -2,7 +2,6 @@ export type InviteDeliveryStatus =
   | "created"
   | "queued"
   | "processing"
-  | "accepted"
   | "sent"
   | "provider_accepted"
   | "rejected"
