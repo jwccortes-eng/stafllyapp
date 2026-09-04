@@ -18,9 +18,19 @@ import {
 
 export const SENDER_DOMAIN = 'notify.staflyapps.com'
 
+/**
+ * P0.3 — Verdad de entrega: `accepted` significa que el API aceptó la
+ * solicitud, NO que el proveedor despachó el mensaje. El estado `sent` solo lo
+ * fija la reconciliación con los eventos reales del proveedor.
+ */
 export type RawEmailResult =
-  | { sent: true }
-  | { sent: false; reason: 'recipient_suppressed'; scope?: string; source?: string }
+  | { accepted: true }
+  | {
+      accepted: false
+      reason: 'recipient_suppressed'
+      scope?: string
+      source?: string
+    }
 
 export interface RawEmailInput {
   to: string
