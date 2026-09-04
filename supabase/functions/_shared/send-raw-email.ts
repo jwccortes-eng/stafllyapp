@@ -61,7 +61,7 @@ export async function sendRawEmail(input: RawEmailInput): Promise<RawEmailResult
     const local = await localSuppressionBlocks(input.adminClient, input.to, category)
     if (local.blocked) {
       return {
-        sent: false,
+        accepted: false,
         reason: 'recipient_suppressed',
         scope: local.scope,
         source: local.source,
@@ -87,10 +87,12 @@ export async function sendRawEmail(input: RawEmailInput): Promise<RawEmailResult
     )
   } catch (error) {
     if (error instanceof EmailAPIError && error.code === 'recipient_suppressed') {
-      return { sent: false, reason: 'recipient_suppressed', source: 'provider' }
+      return { accepted: false, reason: 'recipient_suppressed', source: 'provider' }
     }
     throw error
   }
 
-  return { sent: true }
+  // Aceptado por el API. El despacho efectivo se confirma por evento del
+  // proveedor (ver `reconcile-email-delivery`), nunca aquí.
+  return { accepted: true }
 }
