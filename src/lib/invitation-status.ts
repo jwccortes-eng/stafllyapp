@@ -2,8 +2,10 @@ export type InviteDeliveryStatus =
   | "created"
   | "queued"
   | "processing"
+  | "accepted"
   | "sent"
   | "provider_accepted"
+  | "rejected"
   | "delivered"
   | "opened"
   | "accepted"
@@ -26,8 +28,15 @@ export function mapEmailLogStatusToInviteStatus(
   // Nunca se deriva "delivered"/"opened" de un log de envío.
   const statusMap: Record<string, InviteDeliveryStatus> = {
     pending: "queued",
+    queued: "queued",
     processing: "processing",
+    created: "queued",
+    rate_limited: "queued",
+    // P0.3: aceptado por el API todavía NO es enviado.
+    accepted: "queued",
     sent: "sent",
+    delivered: "delivered",
+    rejected: "rejected",
     failed: "failed",
     dlq: "dlq",
     bounced: "bounced",
@@ -44,5 +53,11 @@ export function isInviteStatusInFlight(status: InviteDeliveryStatus): boolean {
 }
 
 export function isInviteStatusFailure(status: InviteDeliveryStatus): boolean {
-  return status === "failed" || status === "bounced" || status === "dlq" || status === "suppressed";
+  return (
+    status === "failed" ||
+    status === "rejected" ||
+    status === "bounced" ||
+    status === "dlq" ||
+    status === "suppressed"
+  );
 }
