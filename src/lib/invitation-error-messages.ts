@@ -121,9 +121,10 @@ export function missingContactMessage(opts: { hasEmail: boolean; hasPhone: boole
 // Sub-state chip labels — reusable across dialog and PortalAccessCard.
 export const SUBSTATE_LABELS: Record<InviteDeliveryStatus, { label: string; description: string }> = {
   created: { label: "Pendiente", description: "Invitación creada, no enviada aún" },
-  queued: { label: "En cola", description: "Email en cola de envío" },
+  queued: { label: "En camino", description: "Solicitud aceptada; falta la confirmación de despacho del proveedor" },
   processing: { label: "Procesando", description: "El backend está procesando el envío" },
-  sent: { label: "Enviada", description: "Aceptada por el proveedor" },
+  sent: { label: "Enviada", description: "El proveedor confirmó el despacho" },
+  rejected: { label: "No se pudo enviar", description: "El proveedor rechazó el envío" },
   provider_accepted: { label: "Aceptada por proveedor", description: "Proveedor confirmó recepción" },
   delivered: { label: "Entregada", description: "Email entregado al buzón" },
   opened: { label: "Abierta", description: "El trabajador abrió el email" },

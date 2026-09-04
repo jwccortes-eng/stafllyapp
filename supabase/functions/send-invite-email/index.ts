@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
       idempotency_key: idempotencyKey,
     };
 
-    let result: { sent: boolean; reason?: string };
+    let result: { accepted: boolean; reason?: string };
     try {
       result = await sendRawEmail({
         to,
@@ -154,9 +154,11 @@ Deno.serve(async (req) => {
     const { error: logErr } = await adminClient.from("email_send_log").insert({
       recipient_email: to,
       template_name: "invite_email",
-      status: result.sent ? "sent" : "suppressed",
+      // P0.3: "accepted" = el API aceptó la solicitud. "sent" solo lo fija la
+      // reconciliación con los eventos reales del proveedor.
+      status: result.accepted ? "accepted" : "suppressed",
       message_id: messageId,
-      error_message: result.sent ? null : "Recipient suppressed",
+      error_message: result.accepted ? null : "Recipient suppressed",
       metadata: logMetadata,
     });
     if (logErr) console.error("email_send_log insert failed:", logErr.message);
@@ -165,8 +167,8 @@ Deno.serve(async (req) => {
       await adminClient
         .from("employee_invitations")
         .update({
-          status: result.sent ? "sent" : "failed",
-          last_error: result.sent ? null : "Recipient suppressed",
+          status: result.accepted ? "queued" : "failed",
+          last_error: result.accepted ? null : "Recipient suppressed",
           provider_message_id: messageId,
           last_attempt_at: new Date().toISOString(),
           attempts: 1,
@@ -176,20 +178,21 @@ Deno.serve(async (req) => {
 
     console.log("Invite email processed", {
       message_id: messageId,
-      sent: result.sent,
+      accepted: result.accepted,
       invitation_id,
     });
 
     return new Response(
       JSON.stringify({
-        success: result.sent,
+        success: result.accepted,
         message_id: messageId,
-        // Verdad de entrega explícita: SENT solo cuando el proveedor aceptó.
-        status: result.sent ? "sent" : "suppressed",
-        delivery: result.sent ? "SENT" : "SUPPRESSED",
+        // Verdad de entrega: el API aceptó la solicitud; el despacho efectivo se
+        // confirma después con los eventos del proveedor.
+        status: result.accepted ? "accepted" : "suppressed",
+        delivery: result.accepted ? "ACCEPTED" : "SUPPRESSED",
         invitation_created: Boolean(invitation_id),
-        detail: result.sent
-          ? "Email accepted for delivery."
+        detail: result.accepted
+          ? "Solicitud aceptada. La entrega se confirma con el evento del proveedor."
           : "Recipient is suppressed (previous bounce, complaint or unsubscribe).",
       }),
       {

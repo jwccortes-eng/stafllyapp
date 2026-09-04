@@ -67,12 +67,14 @@ export async function sendRecoveryCodeEmail(
       message_id: messageId,
       template_name: "pin_recovery_code",
       recipient_email: to,
-      status: result.sent ? "sent" : "suppressed",
-      error_message: result.sent ? null : "Recipient suppressed",
+      // P0.3: aceptado por el API ≠ despachado. La reconciliación con los
+      // eventos del proveedor es quien fija "sent".
+      status: result.accepted ? "accepted" : "suppressed",
+      error_message: result.accepted ? null : "Recipient suppressed",
     });
     if (logError) console.error("[pin-recovery] log failed:", logError.message);
 
-    return result.sent;
+    return result.accepted;
   } catch (e) {
     const message = (e as any)?.message ?? "send failed";
     console.error("[pin-recovery] send failed:", message);

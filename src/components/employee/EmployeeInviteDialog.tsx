@@ -33,10 +33,11 @@ interface Props {
 
 const STATUS_CONFIG: Record<InviteDeliveryStatus, { label: string; color: string; icon: any; description: string }> = {
   created: { label: "Pendiente", color: "bg-muted text-muted-foreground", icon: Clock, description: "Invitación creada, no enviada aún" },
-  queued: { label: "En cola", color: "bg-primary/10 text-primary", icon: Loader2, description: "Email en cola de envío" },
+  queued: { label: "En camino", color: "bg-primary/10 text-primary", icon: Loader2, description: "Solicitud aceptada; falta la confirmación de despacho del proveedor" },
   processing: { label: "Procesando", color: "bg-primary/10 text-primary", icon: Loader2, description: "El backend está procesando el envío" },
-  sent: { label: "Enviado al proveedor", color: "bg-primary/10 text-primary", icon: Send, description: "El proveedor aceptó el email, aún sin confirmación final" },
+  sent: { label: "Enviado", color: "bg-primary/10 text-primary", icon: Send, description: "El proveedor confirmó el despacho del email" },
   provider_accepted: { label: "Aceptado por proveedor", color: "bg-primary/10 text-primary", icon: MailCheck, description: "Proveedor confirmó recepción" },
+  rejected: { label: "No se pudo enviar", color: "bg-destructive/10 text-destructive", icon: MailX, description: "El proveedor rechazó el envío" },
   delivered: { label: "Entregado", color: "bg-[hsl(var(--earning))]/10 text-[hsl(var(--earning))]", icon: CheckCircle2, description: "Email entregado al buzón" },
   opened: { label: "Abierto", color: "bg-warning/10 text-warning", icon: CheckCircle2, description: "El empleado abrió el email" },
   accepted: { label: "Activado", color: "bg-[hsl(var(--earning))]/10 text-[hsl(var(--earning))]", icon: CheckCircle2, description: "Cuenta activada exitosamente" },
@@ -453,10 +454,11 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
       if (data?.error) throw new Error(data.error);
 
       const returnedMessageId = data?.message_id ?? null;
-      // Verdad de entrega: el backend distingue enviado de bloqueado por
-      // restricción del destinatario. La invitación existe igual.
-      const wasSent = data?.delivery === "SENT" || data?.status === "sent";
-      const nextStatus: InviteDeliveryStatus = wasSent ? "sent" : "suppressed";
+      // P0.3 — Verdad de entrega: el API solo confirma que aceptó la solicitud.
+      // Nunca decimos "Enviado" antes de que el proveedor confirme el despacho.
+      const wasAccepted = data?.delivery === "ACCEPTED" || data?.status === "accepted";
+      const wasSent = wasAccepted;
+      const nextStatus: InviteDeliveryStatus = wasAccepted ? "queued" : "suppressed";
 
       setInviteStatus(nextStatus);
       setInviteChannel("email");
@@ -480,7 +482,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         await supabase
           .from("employee_invitations")
           .update({
-            status: wasSent ? "sent" : "failed",
+            status: wasAccepted ? "queued" : "failed",
             channel: "email",
             sent_at: new Date().toISOString(),
             invite_recipient: employee.email,
@@ -494,8 +496,8 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
       if (wasSent) {
         onInviteSent?.("email");
         toast({
-          title: "Invitación enviada",
-          description: `El proveedor aceptó el email para ${employee.email}.`,
+          title: "Invitación en camino",
+          description: `Solicitud aceptada para ${employee.email}. Confirmamos la entrega cuando el proveedor la despache.`,
         });
       } else {
         toast({

@@ -18,9 +18,19 @@ import {
 
 export const SENDER_DOMAIN = 'notify.staflyapps.com'
 
+/**
+ * P0.3 — Verdad de entrega: `accepted` significa que el API aceptó la
+ * solicitud, NO que el proveedor despachó el mensaje. El estado `sent` solo lo
+ * fija la reconciliación con los eventos reales del proveedor.
+ */
 export type RawEmailResult =
-  | { sent: true }
-  | { sent: false; reason: 'recipient_suppressed'; scope?: string; source?: string }
+  | { accepted: true }
+  | {
+      accepted: false
+      reason: 'recipient_suppressed'
+      scope?: string
+      source?: string
+    }
 
 export interface RawEmailInput {
   to: string
@@ -51,7 +61,7 @@ export async function sendRawEmail(input: RawEmailInput): Promise<RawEmailResult
     const local = await localSuppressionBlocks(input.adminClient, input.to, category)
     if (local.blocked) {
       return {
-        sent: false,
+        accepted: false,
         reason: 'recipient_suppressed',
         scope: local.scope,
         source: local.source,
@@ -77,10 +87,12 @@ export async function sendRawEmail(input: RawEmailInput): Promise<RawEmailResult
     )
   } catch (error) {
     if (error instanceof EmailAPIError && error.code === 'recipient_suppressed') {
-      return { sent: false, reason: 'recipient_suppressed', source: 'provider' }
+      return { accepted: false, reason: 'recipient_suppressed', source: 'provider' }
     }
     throw error
   }
 
-  return { sent: true }
+  // Aceptado por el API. El despacho efectivo se confirma por evento del
+  // proveedor (ver `reconcile-email-delivery`), nunca aquí.
+  return { accepted: true }
 }
