@@ -17076,6 +17076,7 @@ export type Database = {
           id: string
           metadata: Json | null
           reason: string
+          scope: string
         }
         Insert: {
           created_at?: string
@@ -17083,6 +17084,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           reason: string
+          scope?: string
         }
         Update: {
           created_at?: string
@@ -17090,6 +17092,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           reason?: string
+          scope?: string
         }
         Relationships: []
       }
