@@ -22,12 +22,12 @@ export function mapEmailLogStatusToInviteStatus(
 ): InviteDeliveryStatus {
   if (!emailLogStatus) return fallbackStatus;
 
+  // Verdad de entrega: la plataforma no emite acuses de entrega ni de apertura.
+  // Nunca se deriva "delivered"/"opened" de un log de envío.
   const statusMap: Record<string, InviteDeliveryStatus> = {
     pending: "queued",
     processing: "processing",
     sent: "sent",
-    delivered: "delivered",
-    opened: "opened",
     failed: "failed",
     dlq: "dlq",
     bounced: "bounced",

@@ -58,6 +58,9 @@ export async function sendRecoveryCodeEmail(
       text,
       label: "pin_recovery_code",
       idempotencyKey: messageId,
+      // Seguridad: nunca se frena por baja de marketing ni por queja de spam.
+      category: "security",
+      adminClient,
     });
 
     const { error: logError } = await adminClient.from("email_send_log").insert({
