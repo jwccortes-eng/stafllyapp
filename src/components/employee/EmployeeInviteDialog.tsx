@@ -33,11 +33,10 @@ interface Props {
 
 const STATUS_CONFIG: Record<InviteDeliveryStatus, { label: string; color: string; icon: any; description: string }> = {
   created: { label: "Pendiente", color: "bg-muted text-muted-foreground", icon: Clock, description: "Invitación creada, no enviada aún" },
-  queued: { label: "En cola", color: "bg-primary/10 text-primary", icon: Loader2, description: "Email en cola de envío" },
+  queued: { label: "En camino", color: "bg-primary/10 text-primary", icon: Loader2, description: "Solicitud aceptada; falta la confirmación de despacho del proveedor" },
   processing: { label: "Procesando", color: "bg-primary/10 text-primary", icon: Loader2, description: "El backend está procesando el envío" },
-  sent: { label: "Enviado al proveedor", color: "bg-primary/10 text-primary", icon: Send, description: "El proveedor aceptó el email, aún sin confirmación final" },
+  sent: { label: "Enviado", color: "bg-primary/10 text-primary", icon: Send, description: "El proveedor confirmó el despacho del email" },
   provider_accepted: { label: "Aceptado por proveedor", color: "bg-primary/10 text-primary", icon: MailCheck, description: "Proveedor confirmó recepción" },
-  queued: { label: "En camino", color: "bg-primary/10 text-primary", icon: Clock, description: "Solicitud aceptada; falta la confirmación de despacho del proveedor" },
   rejected: { label: "No se pudo enviar", color: "bg-destructive/10 text-destructive", icon: MailX, description: "El proveedor rechazó el envío" },
   delivered: { label: "Entregado", color: "bg-[hsl(var(--earning))]/10 text-[hsl(var(--earning))]", icon: CheckCircle2, description: "Email entregado al buzón" },
   opened: { label: "Abierto", color: "bg-warning/10 text-warning", icon: CheckCircle2, description: "El empleado abrió el email" },
