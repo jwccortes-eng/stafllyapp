@@ -77,7 +77,7 @@ export async function sendRawEmail(input: RawEmailInput): Promise<RawEmailResult
     )
   } catch (error) {
     if (error instanceof EmailAPIError && error.code === 'recipient_suppressed') {
-      return { sent: false, reason: 'recipient_suppressed' }
+      return { sent: false, reason: 'recipient_suppressed', source: 'provider' }
     }
     throw error
   }
