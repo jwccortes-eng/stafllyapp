@@ -6,15 +6,23 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-/** Registro informativo del resultado de entrega. Nunca decide envíos futuros. */
+import { SCOPE_BY_SOURCE, type SuppressionSource } from '../_shared/email-policy.ts'
+
+/**
+ * Registro informativo del resultado de entrega. Nunca decide envíos futuros
+ * fuera del alcance que corresponde al origen: una baja de marketing solo
+ * bloquea marketing; una queja bloquea además lo operativo no esencial; solo
+ * el rebote duro bloquea todo. Nunca borra usuarios, membresías ni datos.
+ */
 async function recordOutcome(
   recipient: string,
   logStatus: 'bounced' | 'complained' | 'suppressed',
-  suppressionReason: 'bounce' | 'complaint' | 'unsubscribe',
+  suppressionReason: SuppressionSource,
   message: string,
   eventId: string,
 ) {
   const email = String(recipient).toLowerCase()
+  const scope = SCOPE_BY_SOURCE[suppressionReason] ?? 'all'
 
   const { error: logError } = await supabase.from('email_send_log').insert({
     template_name: 'system',
@@ -33,7 +41,10 @@ async function recordOutcome(
 
   const { error: suppressionError } = await supabase
     .from('suppressed_emails')
-    .upsert({ email, reason: suppressionReason, metadata: null }, { onConflict: 'email' })
+    .upsert(
+      { email, reason: suppressionReason, scope, metadata: { event_id: eventId } },
+      { onConflict: 'email' },
+    )
   if (suppressionError) {
     console.error('suppressed_emails upsert failed', {
       event_id: eventId,
