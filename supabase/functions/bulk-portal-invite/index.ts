@@ -348,6 +348,8 @@ Deno.serve(async (req) => {
       total_eligible: employees.length,
       processed,
       skipped,
+      // P0.3: aceptados por el API; el despacho lo confirma la reconciliación.
+      emails_accepted: emailsSent,
       emails_sent: emailsSent,
       emails_suppressed: emailsSuppressed,
       emails_failed: emailsFailed,
