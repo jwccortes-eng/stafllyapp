@@ -26,7 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Upload, X, Film, Users, Search, Send, Save } from "lucide-react";
+import { Loader2, Upload, X, Film, Users, Search, Send, Save, Paperclip, FileText, FileSpreadsheet, File as FileIcon, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useEmployeeRoster } from "@/hooks/useEmployeeRoster";
@@ -40,6 +40,18 @@ import {
   mediaList,
   requiresAcknowledgment,
 } from "@/lib/announcements/official-communications";
+import {
+  ATTACHMENT_ACCEPT,
+  MAX_ATTACHMENTS_PER_VERSION,
+  MAX_ATTACHMENT_BYTES,
+  attachmentKindLabel,
+  attachmentList,
+  formatBytes,
+  resolveAttachmentUrl,
+  uploadAttachment,
+  type CommunicationAttachment,
+} from "@/lib/announcements/attachments";
+import { AnnouncementAttachments } from "./AnnouncementAttachments";
 import { AnnouncementMedia } from "./AnnouncementMedia";
 
 interface Props {
@@ -62,6 +74,7 @@ export function OfficialCommunicationDialog({
 }: Props) {
   const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
+  const attachRef = useRef<HTMLInputElement>(null);
   const { employees } = useEmployeeRoster(companyId);
 
   const [loading, setLoading] = useState(false);
@@ -80,6 +93,7 @@ export function OfficialCommunicationDialog({
   const [titleEn, setTitleEn] = useState("");
   const [bodyEn, setBodyEn] = useState("");
   const [media, setMedia] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<CommunicationAttachment[]>([]);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>("all_company");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
@@ -109,6 +123,7 @@ export function OfficialCommunicationDialog({
     setTitleEn("");
     setBodyEn("");
     setMedia([]);
+    setAttachments([]);
     setAudienceMode("all_company");
     setSelectedIds([]);
     setSearch("");
@@ -145,6 +160,7 @@ export function OfficialCommunicationDialog({
       setTitleEn(v.title_en ?? "");
       setBodyEn(v.body_en ?? "");
       setMedia(mediaList(v.media_urls));
+      setAttachments(attachmentList((v as any).attachments));
       setAudienceMode((v.audience_mode as AudienceMode) ?? "all_company");
       setSelectedIds((v.audience_employee_ids as string[]) ?? []);
     }
@@ -175,12 +191,65 @@ export function OfficialCommunicationDialog({
         toast.error(`No se pudo subir ${file.name}`, { description: error.message });
         continue;
       }
-      const { data } = supabase.storage.from("announcement-media").getPublicUrl(path);
-      urls.push(data.publicUrl);
+      // Almacén privado: se guarda la ruta, nunca una URL pública.
+      urls.push(path);
     }
     setMedia((prev) => [...prev, ...urls]);
     setUploading(false);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const [attaching, setAttaching] = useState(false);
+
+  const handleAttachUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const room = MAX_ATTACHMENTS_PER_VERSION - attachments.length;
+    if (room <= 0) {
+      toast.error("Máximo de adjuntos alcanzado", {
+        description: `Un comunicado admite hasta ${MAX_ATTACHMENTS_PER_VERSION} archivos.`,
+      });
+      if (attachRef.current) attachRef.current.value = "";
+      return;
+    }
+    const list = Array.from(files).slice(0, room);
+    if (files.length > room) {
+      toast.warning("Se omitieron algunos archivos", {
+        description: `Solo caben ${room} archivo(s) más en esta versión.`,
+      });
+    }
+    setAttaching(true);
+    const added: CommunicationAttachment[] = [];
+    for (const file of list) {
+      const result = await uploadAttachment(companyId, file);
+      if ("error" in result) {
+        toast.error(`No se pudo adjuntar ${file.name}`, { description: result.error });
+        continue;
+      }
+      added.push(result.attachment);
+    }
+    if (added.length > 0) setAttachments((prev) => [...prev, ...added]);
+    setAttaching(false);
+    if (attachRef.current) attachRef.current.value = "";
+  };
+
+  const openAttachment = async (att: CommunicationAttachment) => {
+    const url = await resolveAttachmentUrl(att.path);
+    if (!url) {
+      toast.error("No pudimos abrir el archivo", { description: "Vuelve a intentarlo en unos segundos." });
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const moveAttachment = (index: number, delta: number) => {
+    setAttachments((prev) => {
+      const next = [...prev];
+      const target = index + delta;
+      if (target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   };
 
   const effectiveTitle = titleEs.trim() || titleEn.trim();
@@ -245,6 +314,7 @@ export function OfficialCommunicationDialog({
         title_en: titleEn.trim() || null,
         body_en: bodyEn.trim() || null,
         media_urls: media as any,
+        attachments: attachments as any,
         audience_mode: audienceMode,
         audience_employee_ids: audienceMode === "selected" ? selectedIds : [],
       } as any)
@@ -439,6 +509,113 @@ export function OfficialCommunicationDialog({
                     {uploading ? "Subiendo..." : "Subir archivos"}
                   </Button>
                 </div>
+
+                {/* Adjuntos de esta versión */}
+                <div className="space-y-2">
+                  <Label>Adjuntos</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Hasta {MAX_ATTACHMENTS_PER_VERSION} archivos, {formatBytes(MAX_ATTACHMENT_BYTES)} por
+                    archivo. Imágenes, PDF, Word y Excel. Al publicar quedan fijos en esta versión.
+                  </p>
+                  {attachments.length > 0 && (
+                    <div className="space-y-2">
+                      {attachments.map((att, i) => (
+                        <div
+                          key={att.path}
+                          className="flex items-center gap-3 rounded-lg border border-border p-2"
+                        >
+                          {att.kind === "image" ? (
+                            <AnnouncementMedia
+                              url={att.path}
+                              alt={att.name}
+                              className="h-10 w-10 rounded object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
+                              {att.kind === "sheet" ? (
+                                <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                              ) : att.kind === "pdf" || att.kind === "doc" ? (
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <FileIcon className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{att.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {attachmentKindLabel(att.kind)} · {formatBytes(att.size)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Subir en la lista"
+                              disabled={i === 0}
+                              onClick={() => moveAttachment(i, -1)}
+                            >
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Bajar en la lista"
+                              disabled={i === attachments.length - 1}
+                              onClick={() => moveAttachment(i, 1)}
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Abrir adjunto"
+                              onClick={() => openAttachment(att)}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Eliminar adjunto"
+                              onClick={() =>
+                                setAttachments((prev) => prev.filter((_, idx) => idx !== i))
+                              }
+                            >
+                              <X className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <input
+                    ref={attachRef}
+                    type="file"
+                    accept={ATTACHMENT_ACCEPT}
+                    multiple
+                    className="hidden"
+                    onChange={handleAttachUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={attaching}
+                    onClick={() => attachRef.current?.click()}
+                  >
+                    {attaching ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : (
+                      <Paperclip className="h-4 w-4 mr-1" />
+                    )}
+                    {attaching ? "Subiendo..." : "Agregar archivos"}
+                  </Button>
+                </div>
               </TabsContent>
 
               <TabsContent value="audience" className="space-y-4 mt-0">
@@ -561,6 +738,7 @@ export function OfficialCommunicationDialog({
                       )}
                     </div>
                   )}
+                  <AnnouncementAttachments attachments={attachments} />
                   {requiresAcknowledgment(type) && (
                     <Button className="w-full min-h-[44px]" disabled>
                       {ACK_CTA[previewLang]}

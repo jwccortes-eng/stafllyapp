@@ -20,6 +20,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Search, CheckCircle2, Eye, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { AnnouncementAttachments } from "./AnnouncementAttachments";
+import { attachmentList } from "@/lib/announcements/attachments";
 import { cn } from "@/lib/utils";
 import {
   computeVersionStats,
@@ -184,6 +186,8 @@ export function CommunicationDetailDialog({
                   </div>
                   <Badge variant="secondary">{typeLabel(activeVersion.communication_type)}</Badge>
                 </div>
+
+                <AnnouncementAttachments attachments={attachmentList(activeVersion.attachments)} />
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <Kpi label="Destinatarios" value={stats.recipients} />

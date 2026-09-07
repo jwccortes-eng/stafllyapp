@@ -11,11 +11,15 @@ import { supabase } from "@/integrations/supabase/client";
 const BUCKET = "announcement-media";
 const MARKER = `/${BUCKET}/`;
 
-/** Ruta del objeto dentro del almacén a partir de la URL guardada. */
+/** Ruta del objeto dentro del almacén a partir de la URL o ruta guardada. */
 export function announcementMediaPath(url: string): string | null {
   if (!url) return null;
   const idx = url.indexOf(MARKER);
-  if (idx === -1) return null;
+  if (idx === -1) {
+    // Valor guardado como ruta directa del objeto (adjuntos nuevos).
+    if (/^https?:\/\//i.test(url)) return null;
+    return url.split("?")[0] || null;
+  }
   const raw = url.slice(idx + MARKER.length).split("?")[0];
   return raw ? decodeURIComponent(raw) : null;
 }

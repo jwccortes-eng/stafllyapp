@@ -25,6 +25,8 @@ import {
   type CommLanguage,
 } from "@/lib/announcements/official-communications";
 import { AnnouncementMedia } from "@/components/announcements/AnnouncementMedia";
+import { AnnouncementAttachments } from "@/components/announcements/AnnouncementAttachments";
+import { attachmentList } from "@/lib/announcements/attachments";
 
 
 interface Announcement {
@@ -384,6 +386,13 @@ export default function MyAnnouncements() {
                         </div>
                       ))}
                     </div>
+                  )}
+
+                  {version && (
+                    <AnnouncementAttachments
+                      attachments={attachmentList(version.attachments)}
+                      className="px-4 pb-2"
+                    />
                   )}
 
                   {/* Expanded image */}
