@@ -74,6 +74,7 @@ export function OfficialCommunicationDialog({
 }: Props) {
   const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
+  const attachRef = useRef<HTMLInputElement>(null);
   const { employees } = useEmployeeRoster(companyId);
 
   const [loading, setLoading] = useState(false);
@@ -122,6 +123,7 @@ export function OfficialCommunicationDialog({
     setTitleEn("");
     setBodyEn("");
     setMedia([]);
+    setAttachments([]);
     setAudienceMode("all_company");
     setSelectedIds([]);
     setSearch("");
@@ -158,6 +160,7 @@ export function OfficialCommunicationDialog({
       setTitleEn(v.title_en ?? "");
       setBodyEn(v.body_en ?? "");
       setMedia(mediaList(v.media_urls));
+      setAttachments(attachmentList((v as any).attachments));
       setAudienceMode((v.audience_mode as AudienceMode) ?? "all_company");
       setSelectedIds((v.audience_employee_ids as string[]) ?? []);
     }
@@ -258,6 +261,7 @@ export function OfficialCommunicationDialog({
         title_en: titleEn.trim() || null,
         body_en: bodyEn.trim() || null,
         media_urls: media as any,
+        attachments: attachments as any,
         audience_mode: audienceMode,
         audience_employee_ids: audienceMode === "selected" ? selectedIds : [],
       } as any)
