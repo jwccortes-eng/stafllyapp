@@ -738,6 +738,7 @@ export function OfficialCommunicationDialog({
                       )}
                     </div>
                   )}
+                  <AnnouncementAttachments attachments={attachments} />
                   {requiresAcknowledgment(type) && (
                     <Button className="w-full min-h-[44px]" disabled>
                       {ACK_CTA[previewLang]}
