@@ -24,6 +24,7 @@ import {
   type AnnouncementVersion,
   type CommLanguage,
 } from "@/lib/announcements/official-communications";
+import { AnnouncementMedia } from "@/components/announcements/AnnouncementMedia";
 
 
 interface Announcement {

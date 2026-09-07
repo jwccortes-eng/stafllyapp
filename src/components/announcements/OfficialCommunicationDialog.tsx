@@ -40,6 +40,7 @@ import {
   mediaList,
   requiresAcknowledgment,
 } from "@/lib/announcements/official-communications";
+import { AnnouncementMedia } from "./AnnouncementMedia";
 
 interface Props {
   open: boolean;
