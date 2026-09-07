@@ -509,6 +509,113 @@ export function OfficialCommunicationDialog({
                     {uploading ? "Subiendo..." : "Subir archivos"}
                   </Button>
                 </div>
+
+                {/* Adjuntos de esta versión */}
+                <div className="space-y-2">
+                  <Label>Adjuntos</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Hasta {MAX_ATTACHMENTS_PER_VERSION} archivos, {formatBytes(MAX_ATTACHMENT_BYTES)} por
+                    archivo. Imágenes, PDF, Word y Excel. Al publicar quedan fijos en esta versión.
+                  </p>
+                  {attachments.length > 0 && (
+                    <div className="space-y-2">
+                      {attachments.map((att, i) => (
+                        <div
+                          key={att.path}
+                          className="flex items-center gap-3 rounded-lg border border-border p-2"
+                        >
+                          {att.kind === "image" ? (
+                            <AnnouncementMedia
+                              url={att.path}
+                              alt={att.name}
+                              className="h-10 w-10 rounded object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
+                              {att.kind === "sheet" ? (
+                                <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                              ) : att.kind === "pdf" || att.kind === "doc" ? (
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <FileIcon className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{att.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {attachmentKindLabel(att.kind)} · {formatBytes(att.size)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Subir en la lista"
+                              disabled={i === 0}
+                              onClick={() => moveAttachment(i, -1)}
+                            >
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Bajar en la lista"
+                              disabled={i === attachments.length - 1}
+                              onClick={() => moveAttachment(i, 1)}
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Abrir adjunto"
+                              onClick={() => openAttachment(att)}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Eliminar adjunto"
+                              onClick={() =>
+                                setAttachments((prev) => prev.filter((_, idx) => idx !== i))
+                              }
+                            >
+                              <X className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <input
+                    ref={attachRef}
+                    type="file"
+                    accept={ATTACHMENT_ACCEPT}
+                    multiple
+                    className="hidden"
+                    onChange={handleAttachUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={attaching}
+                    onClick={() => attachRef.current?.click()}
+                  >
+                    {attaching ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : (
+                      <Paperclip className="h-4 w-4 mr-1" />
+                    )}
+                    {attaching ? "Subiendo..." : "Agregar archivos"}
+                  </Button>
+                </div>
               </TabsContent>
 
               <TabsContent value="audience" className="space-y-4 mt-0">
