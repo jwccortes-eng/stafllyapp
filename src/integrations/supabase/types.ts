@@ -304,6 +304,7 @@ export type Database = {
       announcement_versions: {
         Row: {
           announcement_id: string
+          attachments: Json
           audience_employee_ids: string[]
           audience_mode: string
           body_en: string | null
@@ -327,6 +328,7 @@ export type Database = {
         }
         Insert: {
           announcement_id: string
+          attachments?: Json
           audience_employee_ids?: string[]
           audience_mode?: string
           body_en?: string | null
@@ -350,6 +352,7 @@ export type Database = {
         }
         Update: {
           announcement_id?: string
+          attachments?: Json
           audience_employee_ids?: string[]
           audience_mode?: string
           body_en?: string | null
