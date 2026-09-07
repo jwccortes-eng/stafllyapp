@@ -92,6 +92,7 @@ export function OfficialCommunicationDialog({
   const [titleEn, setTitleEn] = useState("");
   const [bodyEn, setBodyEn] = useState("");
   const [media, setMedia] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<CommunicationAttachment[]>([]);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>("all_company");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
