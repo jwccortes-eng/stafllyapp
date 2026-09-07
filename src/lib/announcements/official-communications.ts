@@ -40,6 +40,8 @@ export interface AnnouncementVersion {
   title_en: string | null;
   body_en: string | null;
   media_urls: string[] | null;
+  /** Adjuntos congelados con la versión (ver `src/lib/announcements/attachments.ts`). */
+  attachments?: unknown;
   link_url: string | null;
   link_label: string | null;
   audience_mode: AudienceMode;
