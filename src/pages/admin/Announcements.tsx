@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { OfficialCommunicationDialog } from "@/components/announcements/OfficialCommunicationDialog";
 import { CommunicationDetailDialog } from "@/components/announcements/CommunicationDetailDialog";
+import { AnnouncementMedia } from "@/components/announcements/AnnouncementMedia";
 
 
 interface Announcement {
@@ -279,7 +280,7 @@ export default function Announcements() {
                                   <Film className="h-6 w-6 text-muted-foreground" />
                                 </div>
                               ) : (
-                                <img src={url} alt="" className="w-24 h-20 rounded-lg object-cover" />
+                                <AnnouncementMedia url={url} className="w-24 h-20 rounded-lg object-cover" />
                               )}
                             </div>
                           ))}
@@ -370,7 +371,7 @@ export default function Announcements() {
                             <Film className="h-5 w-5 text-muted-foreground" />
                           </div>
                         ) : (
-                          <img src={url} alt="" className="w-20 h-20 rounded-lg object-cover" />
+                          <AnnouncementMedia url={url} className="w-20 h-20 rounded-lg object-cover" />
                         )}
                         <button
                           onClick={() => removeMedia(i)}

@@ -40,6 +40,7 @@ import {
   mediaList,
   requiresAcknowledgment,
 } from "@/lib/announcements/official-communications";
+import { AnnouncementMedia } from "./AnnouncementMedia";
 
 interface Props {
   open: boolean;
@@ -401,7 +402,7 @@ export function OfficialCommunicationDialog({
                               <Film className="h-5 w-5 text-muted-foreground" />
                             </div>
                           ) : (
-                            <img src={url} alt="" className="w-20 h-20 rounded-lg object-cover" />
+                            <AnnouncementMedia url={url} className="w-20 h-20 rounded-lg object-cover" />
                           )}
                           <button
                             type="button"
@@ -552,9 +553,10 @@ export function OfficialCommunicationDialog({
                     <div className="grid grid-cols-2 gap-2">
                       {media.map((url) =>
                         isVideoUrl(url) ? (
-                          <video key={url} src={url} controls className="w-full rounded-lg" />
+                          <AnnouncementMedia key={url} url={url} className="w-full rounded-lg" />
                         ) : (
-                          <img key={url} src={url} alt="" className="w-full rounded-lg object-cover" />
+                          <AnnouncementMedia key={url} url={url} className="w-full rounded-lg object-cover" />
+
                         ),
                       )}
                     </div>
