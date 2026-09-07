@@ -191,12 +191,65 @@ export function OfficialCommunicationDialog({
         toast.error(`No se pudo subir ${file.name}`, { description: error.message });
         continue;
       }
-      const { data } = supabase.storage.from("announcement-media").getPublicUrl(path);
-      urls.push(data.publicUrl);
+      // Almacén privado: se guarda la ruta, nunca una URL pública.
+      urls.push(path);
     }
     setMedia((prev) => [...prev, ...urls]);
     setUploading(false);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const [attaching, setAttaching] = useState(false);
+
+  const handleAttachUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const room = MAX_ATTACHMENTS_PER_VERSION - attachments.length;
+    if (room <= 0) {
+      toast.error("Máximo de adjuntos alcanzado", {
+        description: `Un comunicado admite hasta ${MAX_ATTACHMENTS_PER_VERSION} archivos.`,
+      });
+      if (attachRef.current) attachRef.current.value = "";
+      return;
+    }
+    const list = Array.from(files).slice(0, room);
+    if (files.length > room) {
+      toast.warning("Se omitieron algunos archivos", {
+        description: `Solo caben ${room} archivo(s) más en esta versión.`,
+      });
+    }
+    setAttaching(true);
+    const added: CommunicationAttachment[] = [];
+    for (const file of list) {
+      const result = await uploadAttachment(companyId, file);
+      if ("error" in result) {
+        toast.error(`No se pudo adjuntar ${file.name}`, { description: result.error });
+        continue;
+      }
+      added.push(result.attachment);
+    }
+    if (added.length > 0) setAttachments((prev) => [...prev, ...added]);
+    setAttaching(false);
+    if (attachRef.current) attachRef.current.value = "";
+  };
+
+  const openAttachment = async (att: CommunicationAttachment) => {
+    const url = await resolveAttachmentUrl(att.path);
+    if (!url) {
+      toast.error("No pudimos abrir el archivo", { description: "Vuelve a intentarlo en unos segundos." });
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const moveAttachment = (index: number, delta: number) => {
+    setAttachments((prev) => {
+      const next = [...prev];
+      const target = index + delta;
+      if (target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   };
 
   const effectiveTitle = titleEs.trim() || titleEn.trim();
