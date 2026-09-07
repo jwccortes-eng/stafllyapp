@@ -26,7 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Upload, X, Film, Users, Search, Send, Save } from "lucide-react";
+import { Loader2, Upload, X, Film, Users, Search, Send, Save, Paperclip, FileText, FileSpreadsheet, File as FileIcon, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useEmployeeRoster } from "@/hooks/useEmployeeRoster";
@@ -40,6 +40,18 @@ import {
   mediaList,
   requiresAcknowledgment,
 } from "@/lib/announcements/official-communications";
+import {
+  ATTACHMENT_ACCEPT,
+  MAX_ATTACHMENTS_PER_VERSION,
+  MAX_ATTACHMENT_BYTES,
+  attachmentKindLabel,
+  attachmentList,
+  formatBytes,
+  resolveAttachmentUrl,
+  uploadAttachment,
+  type CommunicationAttachment,
+} from "@/lib/announcements/attachments";
+import { AnnouncementAttachments } from "./AnnouncementAttachments";
 import { AnnouncementMedia } from "./AnnouncementMedia";
 
 interface Props {
