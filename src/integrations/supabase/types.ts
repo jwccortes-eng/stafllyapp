@@ -18936,6 +18936,14 @@ export type Database = {
         Args: { _company_id: string }
         Returns: boolean
       }
+      can_read_announcement: {
+        Args: { p_announcement_id: string }
+        Returns: boolean
+      }
+      can_read_announcement_media: {
+        Args: { p_object_name: string }
+        Returns: boolean
+      }
       can_read_shift_chat: {
         Args: { _company_id: string; _shift_id: string; _user_id: string }
         Returns: boolean
