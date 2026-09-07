@@ -366,23 +366,17 @@ export default function MyAnnouncements() {
                       {mediaList.map((url, i) => (
                         <div key={i} className="relative rounded-xl overflow-hidden bg-muted">
                           {isVideo(url) ? (
-                            <video
-                              src={url}
-                              controls
-                              preload="metadata"
+                            <AnnouncementMedia
+                              url={url}
                               className="w-full max-h-64 object-cover rounded-xl"
-                            >
-                              Tu navegador no soporta video.
-                            </video>
+                            />
                           ) : (
-                            <img
-                              src={url}
-                              alt=""
+                            <AnnouncementMedia
+                              url={url}
                               className={cn(
                                 "w-full object-cover rounded-xl cursor-pointer transition-transform hover:scale-[1.02]",
                                 mediaList.length === 1 ? "max-h-80" : "max-h-48"
                               )}
-                              loading="lazy"
                               onClick={() => setExpandedMedia(expandedMedia === url ? null : url)}
                             />
                           )}
@@ -397,7 +391,7 @@ export default function MyAnnouncements() {
                       className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
                       onClick={() => setExpandedMedia(null)}
                     >
-                      <img src={expandedMedia} alt="" className="max-w-full max-h-full rounded-xl" />
+                      <AnnouncementMedia url={expandedMedia} className="max-w-full max-h-full rounded-xl" />
                     </div>
                   )}
 
