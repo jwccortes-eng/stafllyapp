@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "date-fns";
 import { PendingReviewPrompt } from "@/components/reviews/PendingReviewPrompt";
 import { NextBestActionCard } from "@/components/portal/home/NextBestActionCard";
+import { AttentionRequiredCard } from "@/components/portal/home/AttentionRequiredCard";
+import { useOfficialCommunications } from "@/hooks/useOfficialCommunications";
 import { TodayBlock } from "@/components/portal/home/TodayBlock";
 import { ProfileReadinessStrip } from "@/components/portal/home/ProfileReadinessStrip";
 import { WorkerHero, type WorkerHeroStatus } from "@/components/portal/home/WorkerHero";
