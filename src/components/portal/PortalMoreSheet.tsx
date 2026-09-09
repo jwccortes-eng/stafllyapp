@@ -8,6 +8,7 @@ import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { BuildVersionBadge } from "@/components/BuildVersionBadge";
 import { useT } from "@/i18n/LanguageContext";
+import { useOfficialCommunications } from "@/hooks/useOfficialCommunications";
 
 interface MoreItem {
   id: string;
