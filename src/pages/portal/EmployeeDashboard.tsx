@@ -404,6 +404,9 @@ export default function EmployeeDashboard() {
         status={heroStatus}
       />
 
+      {/* ── Requiere tu atención — acciones pendientes reales ── */}
+      <AttentionRequiredCard items={pendingItems} />
+
       {/* ── Update Center nudge (Phase 1, dismissible per session) ── */}
       <PortalUpdateBanner />
 
