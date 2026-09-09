@@ -26,6 +26,7 @@ import {
 } from "@/lib/announcements/official-communications";
 import { AnnouncementMedia } from "@/components/announcements/AnnouncementMedia";
 import { AnnouncementAttachments } from "@/components/announcements/AnnouncementAttachments";
+import { useOfficialCommunications } from "@/hooks/useOfficialCommunications";
 import { attachmentList } from "@/lib/announcements/attachments";
 
 
@@ -126,7 +127,7 @@ export default function MyAnnouncements() {
       .eq("id", employeeId)
       .maybeSingle();
 
-    if (!emp) { setLoading(false); return; }
+    if (!emp) { setFeedLoading(false); return; }
     setCompanyId(emp.company_id);
 
     const { data } = await supabase
@@ -166,11 +167,10 @@ export default function MyAnnouncements() {
       setReactions(grouped);
     }
 
-    setLoading(false);
+    setFeedLoading(false);
   }, [employeeId]);
 
   useEffect(() => { loadAnnouncements(); }, [loadAnnouncements]);
-  useEffect(() => { loadOfficial(); }, [loadOfficial]);
 
 
   // Realtime subscriptions
@@ -178,11 +178,11 @@ export default function MyAnnouncements() {
     if (!companyId) return;
     const channel = supabase
       .channel("employee-feed")
-      .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, () => loadAnnouncements())
+      .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, () => { loadAnnouncements(); loadOfficial(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "announcement_reactions" }, () => loadAnnouncements())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [companyId, loadAnnouncements]);
+  }, [companyId, loadAnnouncements, loadOfficial]);
 
   const toggleReaction = async (announcementId: string, emoji: string) => {
     if (!employeeId) return;
@@ -212,6 +212,9 @@ export default function MyAnnouncements() {
     important: { cls: "text-warning", bgCls: "bg-warning/10", label: "Importante", icon: Bell },
     normal: { cls: "text-muted-foreground", bgCls: "bg-muted", label: "Normal", icon: Megaphone },
   };
+
+  // Nunca se pinta una tarjeta parcial: se espera el feed Y la capa oficial.
+  const loading = feedLoading || officialLoading;
 
   if (loading) {
     return (
