@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "date-fns";
 import { PendingReviewPrompt } from "@/components/reviews/PendingReviewPrompt";
 import { NextBestActionCard } from "@/components/portal/home/NextBestActionCard";
+import { AttentionRequiredCard } from "@/components/portal/home/AttentionRequiredCard";
+import { useOfficialCommunications } from "@/hooks/useOfficialCommunications";
 import { TodayBlock } from "@/components/portal/home/TodayBlock";
 import { ProfileReadinessStrip } from "@/components/portal/home/ProfileReadinessStrip";
 import { WorkerHero, type WorkerHeroStatus } from "@/components/portal/home/WorkerHero";
@@ -58,6 +60,9 @@ const PAGE_KEY = "portal:dashboard";
 export default function EmployeeDashboard() {
   const { effectiveEmployeeId, stableEmployeeId, isResolvingEmployee } = useEffectiveEmployee();
   const employeeId = stableEmployeeId;
+  // Pendientes reales (hoy: comunicados oficiales por confirmar). Se refresca
+  // solo por realtime/foco; Home no duplica ni almacena esos datos.
+  const { pendingItems } = useOfficialCommunications();
   const { isModuleEnabled } = usePortalModules();
   const readiness = useEmployeeReadiness(employeeId);
   // Hydrate from cache so a tab-switch back to /portal renders content
@@ -403,6 +408,9 @@ export default function EmployeeDashboard() {
         avatarUrl={empAvatar}
         status={heroStatus}
       />
+
+      {/* ── Requiere tu atención — acciones pendientes reales ── */}
+      <AttentionRequiredCard items={pendingItems} />
 
       {/* ── Update Center nudge (Phase 1, dismissible per session) ── */}
       <PortalUpdateBanner />

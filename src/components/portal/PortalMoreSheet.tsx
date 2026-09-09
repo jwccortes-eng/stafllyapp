@@ -8,6 +8,7 @@ import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { BuildVersionBadge } from "@/components/BuildVersionBadge";
 import { useT } from "@/i18n/LanguageContext";
+import { useOfficialCommunications } from "@/hooks/useOfficialCommunications";
 
 interface MoreItem {
   id: string;
@@ -49,11 +50,16 @@ export function PortalMoreSheet({
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const { t } = useT();
+  const { hasOfficialCommunications } = useOfficialCommunications();
 
   if (!open) return null;
 
   const visibleItems = ALL_MORE_ITEMS.filter(
-    (item) => !item.moduleKey || isModuleEnabled(item.moduleKey)
+    (item) =>
+      !item.moduleKey ||
+      isModuleEnabled(item.moduleKey) ||
+      // Un comunicado oficial dirigido a esta persona no depende del muro general.
+      (item.id === "announcements" && hasOfficialCommunications)
   );
 
   const firstName = employeeName?.split(" ")[0] || "";
