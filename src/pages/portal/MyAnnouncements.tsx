@@ -59,47 +59,32 @@ export default function MyAnnouncements() {
   const { setChromeMode } = usePortalChrome();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [reactions, setReactions] = useState<Record<string, ReactionCount[]>>({});
-  const [loading, setLoading] = useState(true);
+  const [feedLoading, setFeedLoading] = useState(true);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
 
-  // --- Comunicados oficiales (versión + estado por destinatario) ---
+  // --- Comunicados oficiales (versión + estado + adjuntos, fuente única) ---
   const { language } = useT();
   const preferredLanguage: CommLanguage = language === "en" ? "en" : "es";
-  const [official, setOfficial] = useState<
-    Record<string, { version: AnnouncementVersion; state: string; acknowledgedAt: string | null }>
-  >({});
+  const {
+    byAnnouncementId: official,
+    entries: officialEntries,
+    loading: officialLoading,
+    refetch: loadOfficial,
+  } = useOfficialCommunications();
   const [langChoice, setLangChoice] = useState<Record<string, CommLanguage>>({});
   const [acking, setAcking] = useState<string | null>(null);
 
-  const loadOfficial = useCallback(async () => {
-    if (!employeeId) return;
-    const { data, error } = await supabase
-      .from("announcement_recipients")
-      .select("state, acknowledged_at, announcement_versions(*)")
-      .eq("employee_id", employeeId);
-    if (error) return;
-    const map: Record<string, { version: AnnouncementVersion; state: string; acknowledgedAt: string | null }> = {};
-    for (const row of (data ?? []) as any[]) {
-      const version = row.announcement_versions as AnnouncementVersion | null;
-      if (!version || version.status === "draft") continue;
-      const prev = map[version.announcement_id];
-      if (!prev || prev.version.version_number < version.version_number) {
-        map[version.announcement_id] = {
-          version,
-          state: row.state,
-          acknowledgedAt: row.acknowledged_at,
-        };
-      }
-    }
-    setOfficial(map);
-    // "Visto" = el trabajador tiene el contenido de esa versión delante.
-    for (const entry of Object.values(map)) {
+  // "Visto" = el trabajador tiene el contenido de esa versión delante.
+  useEffect(() => {
+    if (officialLoading) return;
+    for (const entry of officialEntries) {
       if (entry.state === "available") {
-        await supabase.rpc("mark_announcement_viewed", { p_version_id: entry.version.id });
+        supabase.rpc("mark_announcement_viewed", { p_version_id: entry.version.id });
       }
     }
-  }, [employeeId]);
+  }, [officialEntries, officialLoading]);
+
 
   const handleAcknowledge = async (versionId: string, lang: CommLanguage) => {
     setAcking(versionId);
