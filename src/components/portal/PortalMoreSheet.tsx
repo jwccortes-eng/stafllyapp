@@ -49,6 +49,7 @@ export function PortalMoreSheet({
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const { t } = useT();
+  const { hasOfficialCommunications } = useOfficialCommunications();
 
   if (!open) return null;
 
