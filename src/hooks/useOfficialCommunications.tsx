@@ -105,8 +105,10 @@ export function useOfficialCommunications() {
   //    vuelve a leer la unidad completa. Nunca se parchea el estado a mano.
   useEffect(() => {
     if (!employeeId) return;
+    // Topic único por instancia: el hook se monta en Home, feed, guard y menú.
+    // Reutilizar el mismo topic hace que solo una instancia reciba eventos.
     const channel = supabase
-      .channel(`official-comms-${employeeId}`)
+      .channel(`official-comms-${employeeId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "announcement_recipients", filter: `employee_id=eq.${employeeId}` },
