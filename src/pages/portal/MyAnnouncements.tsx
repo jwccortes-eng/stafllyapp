@@ -105,10 +105,10 @@ export default function MyAnnouncements() {
 
   const pendingCritical = useMemo(
     () =>
-      Object.values(official).filter(
+      officialEntries.filter(
         (o) => isCritical(o.version.communication_type) && o.state !== "acknowledged",
       ).length,
-    [official],
+    [officialEntries],
   );
 
 
