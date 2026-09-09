@@ -53,7 +53,11 @@ export function PortalMoreSheet({
   if (!open) return null;
 
   const visibleItems = ALL_MORE_ITEMS.filter(
-    (item) => !item.moduleKey || isModuleEnabled(item.moduleKey)
+    (item) =>
+      !item.moduleKey ||
+      isModuleEnabled(item.moduleKey) ||
+      // Un comunicado oficial dirigido a esta persona no depende del muro general.
+      (item.id === "announcements" && hasOfficialCommunications)
   );
 
   const firstName = employeeName?.split(" ")[0] || "";

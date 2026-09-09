@@ -22,6 +22,7 @@ import AdminLayout from "./components/AdminLayout";
 import EmployeeLayout from "./components/EmployeeLayout";
 import ModuleGate from "./components/ModuleGate";
 import { CompanyRequiredGuard } from "./components/CompanyRequiredGuard";
+import { OfficialCommunicationsGuard } from "@/components/portal/OfficialCommunicationsGuard";
 import { PortalModuleGuard } from "./components/portal/PortalModuleGuard";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminHome from "./pages/admin/Home";
@@ -473,7 +474,7 @@ function App() {
                 <Route path="accumulated" element={<PortalModuleGuard moduleKey="my_payments"><Accumulated /></PortalModuleGuard>} />
                 <Route path="shifts" element={<PortalModuleGuard moduleKey="my_shifts"><MyShifts /></PortalModuleGuard>} />
                 <Route path="shifts/:shiftId" element={<PortalModuleGuard moduleKey="my_shifts"><PortalShiftDetail /></PortalModuleGuard>} />
-                <Route path="announcements" element={<PortalModuleGuard moduleKey="my_announcements"><MyAnnouncements /></PortalModuleGuard>} />
+                <Route path="announcements" element={<OfficialCommunicationsGuard><MyAnnouncements /></OfficialCommunicationsGuard>} />
                 <Route path="resources" element={<PortalModuleGuard moduleKey="my_resources"><PortalResources /></PortalModuleGuard>} />
                 <Route path="clock" element={<PortalModuleGuard moduleKey="my_clock"><PortalClock /></PortalModuleGuard>} />
                 <Route path="paystub/:periodId" element={<PortalModuleGuard moduleKey="my_payments"><PayStub /></PortalModuleGuard>} />
