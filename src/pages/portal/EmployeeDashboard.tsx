@@ -60,6 +60,9 @@ const PAGE_KEY = "portal:dashboard";
 export default function EmployeeDashboard() {
   const { effectiveEmployeeId, stableEmployeeId, isResolvingEmployee } = useEffectiveEmployee();
   const employeeId = stableEmployeeId;
+  // Pendientes reales (hoy: comunicados oficiales por confirmar). Se refresca
+  // solo por realtime/foco; Home no duplica ni almacena esos datos.
+  const { pendingItems } = useOfficialCommunications();
   const { isModuleEnabled } = usePortalModules();
   const readiness = useEmployeeReadiness(employeeId);
   // Hydrate from cache so a tab-switch back to /portal renders content
