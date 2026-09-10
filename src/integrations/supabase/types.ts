@@ -403,6 +403,9 @@ export type Database = {
           published_at: string | null
           title: string
           updated_at: string
+          withdrawal_reason: string | null
+          withdrawn_at: string | null
+          withdrawn_by: string | null
         }
         Insert: {
           archived_at?: string | null
@@ -422,6 +425,9 @@ export type Database = {
           published_at?: string | null
           title: string
           updated_at?: string
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
         }
         Update: {
           archived_at?: string | null
@@ -441,6 +447,9 @@ export type Database = {
           published_at?: string | null
           title?: string
           updated_at?: string
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
         }
         Relationships: [
           {
@@ -19896,6 +19905,10 @@ export type Database = {
           p_patch: Json
           p_surface?: string
         }
+        Returns: Json
+      }
+      withdraw_announcement: {
+        Args: { p_announcement_id: string; p_reason: string }
         Returns: Json
       }
       worker_can_access_employee_doc_path: {

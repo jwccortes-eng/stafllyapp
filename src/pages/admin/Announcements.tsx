@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Pin, Megaphone, Image, Link2, X, Loader2, ExternalLink, Upload, Film, ShieldCheck, BarChart3 } from "lucide-react";
+import { Plus, Pencil, Trash2, Pin, Megaphone, Image, Link2, X, Loader2, ExternalLink, Upload, Film, ShieldCheck, BarChart3, Ban } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -35,6 +35,10 @@ interface Announcement {
   media_urls: any[];
   link_url: string | null;
   link_label: string | null;
+  /** Retiro canónico: distinto de archivar y de eliminar. */
+  withdrawn_at: string | null;
+  withdrawn_by: string | null;
+  withdrawal_reason: string | null;
 }
 
 export default function Announcements() {
@@ -59,6 +63,10 @@ export default function Announcements() {
   const [lockedIds, setLockedIds] = useState<Set<string>>(new Set());
 
   const [editing, setEditing] = useState<Announcement | null>(null);
+  // Retiro de comunicado: siempre con motivo y confirmación explícita.
+  const [withdrawTarget, setWithdrawTarget] = useState<Announcement | null>(null);
+  const [withdrawReason, setWithdrawReason] = useState("");
+  const [withdrawing, setWithdrawing] = useState(false);
 
   // Form
   const [title, setTitle] = useState("");
@@ -210,6 +218,26 @@ export default function Announcements() {
     setDeleteId(null);
   };
 
+  const handleWithdraw = async () => {
+    if (!withdrawTarget || !withdrawReason.trim()) return;
+    setWithdrawing(true);
+    const { error } = await supabase.rpc("withdraw_announcement" as any, {
+      p_announcement_id: withdrawTarget.id,
+      p_reason: withdrawReason.trim(),
+    });
+    setWithdrawing(false);
+    if (error) {
+      toast.error("No se pudo retirar el comunicado", { description: error.message });
+      return;
+    }
+    toast.success("Comunicado retirado", {
+      description: "Deja de requerir acción. La publicación y las confirmaciones se conservan.",
+    });
+    setWithdrawTarget(null);
+    setWithdrawReason("");
+    loadAnnouncements();
+  };
+
   const priorityColor = (p: string) => {
     if (p === "urgent") return "destructive";
     if (p === "important") return "default";
@@ -267,7 +295,18 @@ export default function Announcements() {
                         {lockedIds.has(a.id) && (
                           <Badge variant="secondary" className="text-[10px]">Contenido bloqueado · requiere versión nueva</Badge>
                         )}
+                        {a.withdrawn_at && (
+                          <Badge variant="outline" className="text-[10px] gap-1 border-destructive/40 text-destructive">
+                            <Ban className="h-3 w-3" /> Retirado
+                          </Badge>
+                        )}
                       </div>
+                      {a.withdrawn_at && (
+                        <p className="text-[11px] text-destructive mt-1">
+                          Retirado el {format(new Date(a.withdrawn_at), "dd/MM/yyyy HH:mm")}
+                          {a.withdrawal_reason ? ` · Motivo: ${a.withdrawal_reason}` : ""}
+                        </p>
+                      )}
                       {a.body && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{a.body}</p>}
 
                       {/* Media preview */}
@@ -326,6 +365,16 @@ export default function Announcements() {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
+                        {lockedIds.has(a.id) && !a.withdrawn_at && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Retirar comunicado"
+                            onClick={() => { setWithdrawTarget(a); setWithdrawReason(""); }}
+                          >
+                            <Ban className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                         {canDelete && (
                           <Button variant="ghost" size="icon" onClick={() => setDeleteId(a.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -467,6 +516,46 @@ export default function Announcements() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Retiro de comunicado: nunca en un solo clic, motivo obligatorio */}
+      <Dialog open={!!withdrawTarget} onOpenChange={(o) => { if (!o) { setWithdrawTarget(null); setWithdrawReason(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Retirar comunicado</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Este comunicado dejará de requerir acción de sus destinatarios. La publicación,
+              la audiencia y las confirmaciones existentes se conservarán como evidencia histórica.
+            </p>
+            {withdrawTarget && (
+              <p className="text-sm font-medium">{withdrawTarget.title}</p>
+            )}
+            <div>
+              <Label>Motivo del retiro *</Label>
+              <Textarea
+                value={withdrawReason}
+                onChange={(e) => setWithdrawReason(e.target.value)}
+                rows={3}
+                placeholder="Explica por qué se retira este comunicado"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setWithdrawTarget(null); setWithdrawReason(""); }}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!withdrawReason.trim() || withdrawing}
+              onClick={handleWithdraw}
+            >
+              {withdrawing && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              Confirmar retiro
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {selectedCompanyId && (
         <OfficialCommunicationDialog
