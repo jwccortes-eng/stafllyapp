@@ -266,9 +266,11 @@ export default function MyAnnouncements() {
               ? langChoice[a.id] ?? resolveDisplayLanguage(version, preferredLanguage)
               : "es";
             const content = version ? versionContent(version, lang) : null;
-            const needsAck = version ? requiresAcknowledgment(version.communication_type) : false;
+            // Comunicado retirado: queda como histórico, nunca pide acción.
+            const withdrawn = off?.withdrawn === true;
+            const needsAck = version && !withdrawn ? requiresAcknowledgment(version.communication_type) : false;
             const acknowledged = off?.state === "acknowledged";
-            const critical = version ? isCritical(version.communication_type) : false;
+            const critical = version && !withdrawn ? isCritical(version.communication_type) : false;
 
             const displayTitle = content?.title || a.title;
             const displayBody = content?.body ?? a.body;
@@ -306,9 +308,14 @@ export default function MyAnnouncements() {
                         {a.pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
                         {version && <ShieldCheck className="h-3 w-3 text-primary shrink-0" />}
                         <h3 className="text-sm font-semibold text-foreground">{displayTitle}</h3>
-                        {fresh && (
+                        {fresh && !withdrawn && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-primary text-primary-foreground shrink-0 animate-pulse">
                             NUEVO
+                          </span>
+                        )}
+                        {withdrawn && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-muted text-muted-foreground shrink-0">
+                            RETIRADO
                           </span>
                         )}
                       </div>

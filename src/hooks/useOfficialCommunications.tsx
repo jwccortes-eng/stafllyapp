@@ -20,6 +20,8 @@ export interface OfficialEntry {
   version: AnnouncementVersion;
   state: RecipientState;
   acknowledgedAt: string | null;
+  /** Comunicado retirado: nunca exige acción, solo queda como histórico. */
+  withdrawn: boolean;
 }
 
 /**
@@ -77,10 +79,26 @@ export function useOfficialCommunications() {
           version,
           state: row.state as RecipientState,
           acknowledgedAt: row.acknowledged_at ?? null,
+          withdrawn: false,
         });
       }
     }
-    const list = [...byAnnouncement.values()];
+
+    // Retiro canónico: un comunicado retirado deja de ser legible para quien no
+    // confirmó (lo decide la base). Quien sí confirmó lo conserva como histórico
+    // marcado "Retirado", nunca como acción pendiente.
+    let list = [...byAnnouncement.values()];
+    if (list.length > 0) {
+      const { data: parents } = await supabase
+        .from("announcements")
+        .select("id, withdrawn_at")
+        .in("id", list.map((e) => e.announcementId));
+      const readable = new Map<string, string | null>();
+      for (const p of (parents ?? []) as any[]) readable.set(p.id, p.withdrawn_at ?? null);
+      list = list
+        .filter((e) => readable.has(e.announcementId))
+        .map((e) => ({ ...e, withdrawn: readable.get(e.announcementId) != null }));
+    }
     setEntries(list);
     loadedForRef.current = employeeId;
     setLoading(false);
@@ -144,11 +162,15 @@ export function useOfficialCommunications() {
     return map;
   }, [entries]);
 
-  /** Pendientes reales: requieren acuse y aún no fueron confirmados. */
+  /**
+   * Pendientes reales: requieren acuse, aún no fueron confirmados y el
+   * comunicado no está retirado. Un comunicado retirado nunca exige acción.
+   */
   const pendingItems = useMemo<AttentionItem[]>(() => {
     return entries
       .filter(
         (e) =>
+          !e.withdrawn &&
           requiresAcknowledgment(e.version.communication_type) &&
           e.state !== "acknowledged",
       )
