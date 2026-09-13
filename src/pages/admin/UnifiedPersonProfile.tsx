@@ -88,6 +88,7 @@ import { IdentifiersBlock } from "@/components/employee/IdentifiersBlock";
 
 import { cn } from "@/lib/utils";
 import { isDocDialogOpen, subscribeDocDialog } from "@/lib/document-dialog-suspend";
+import { isExcludedAssignmentStatus } from "@/lib/shifts/assignment-status-truth";
 
 type EmployeeRecord = Record<string, any>;
 
