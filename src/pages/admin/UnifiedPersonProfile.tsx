@@ -607,19 +607,25 @@ export default function UnifiedPersonProfile() {
         key: "attendance",
         label: "Attendance · 30d",
         icon: Clock,
-        value: attendance30d.shifts > 0
-          ? `${attendance30d.shifts} shift${attendance30d.shifts === 1 ? "" : "s"}`
-          : "No shifts",
-        hint: attendance30d.shifts === 0
-          ? "Nothing scheduled in last 30 days"
-          : attendance30d.lateCount + attendance30d.noShowCount > 0
-            ? `${attendance30d.lateCount} late · ${attendance30d.noShowCount} no-show`
-            : "On track",
-        tone: attendance30d.noShowCount > 0
-          ? "destructive"
-          : attendance30d.lateCount > 0
-            ? "warning"
-            : attendance30d.shifts > 0 ? "success" : "muted",
+        value: !attendance30d.available
+          ? "—"
+          : attendance30d.shifts > 0
+            ? `${attendance30d.worked}/${attendance30d.shifts} worked`
+            : "No shifts",
+        hint: !attendance30d.available
+          ? "Attendance source unavailable"
+          : attendance30d.shifts === 0
+            ? "No assigned shifts in last 30 days"
+            : attendance30d.worked === attendance30d.shifts
+              ? "Clock-in evidence on every assigned shift"
+              : `${attendance30d.shifts - attendance30d.worked} without clock-in evidence`,
+        tone: !attendance30d.available
+          ? "muted"
+          : attendance30d.shifts === 0
+            ? "muted"
+            : attendance30d.worked === attendance30d.shifts
+              ? "success"
+              : "warning",
       },
       {
         key: "last-clock-in",
