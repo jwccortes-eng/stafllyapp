@@ -88,6 +88,7 @@ import { IdentifiersBlock } from "@/components/employee/IdentifiersBlock";
 
 import { cn } from "@/lib/utils";
 import { isDocDialogOpen, subscribeDocDialog } from "@/lib/document-dialog-suspend";
+import { isExcludedAssignmentStatus } from "@/lib/shifts/assignment-status-truth";
 
 type EmployeeRecord = Record<string, any>;
 
@@ -175,9 +176,14 @@ export default function UnifiedPersonProfile() {
   const [onboardingDocsCount, setOnboardingDocsCount] = useState<{
     pending: number; rejected: number; expired: number;
   }>({ pending: 0, rejected: 0, expired: 0 });
-  const [attendance30d, setAttendance30d] = useState<{ shifts: number; lateCount: number; noShowCount: number }>({
-    shifts: 0, lateCount: 0, noShowCount: 0,
-  });
+  const [attendance30d, setAttendance30d] = useState<{
+    /** false = no pudimos leer la fuente; nunca mostrar un cero inventado. */
+    available: boolean;
+    /** Turnos asignados vivos en los últimos 30 días. */
+    shifts: number;
+    /** De esos, cuántos tienen fichaje real (evidencia de asistencia). */
+    worked: number;
+  }>({ available: true, shifts: 0, worked: 0 });
   const [lastPayrollDate, setLastPayrollDate] = useState<string | null>(null);
   const [frontDeskVisits, setFrontDeskVisits] = useState<any[]>([]);
 
@@ -258,7 +264,10 @@ export default function UnifiedPersonProfile() {
     };
 
     (async () => {
-      const [docsRes, activityRes, shiftsRes, payrollRes, visitsRes, onbDocsRes] = await Promise.all([
+      const attendanceCutoffIso = new Date(Date.now() - 30 * 24 * 3600 * 1000)
+        .toISOString()
+        .split("T")[0];
+      const [docsRes, activityRes, shiftsRes, workedRes, payrollRes, visitsRes, onbDocsRes] = await Promise.all([
         sb.from("employee_documents").select("review_status").eq("employee_id", id),
         sb
           .from("activity_log")
@@ -267,12 +276,22 @@ export default function UnifiedPersonProfile() {
           .eq("entity_type", "employee")
           .order("created_at", { ascending: false })
           .limit(8),
+        // Los turnos de una persona viven en shift_assignments, NO en una
+        // columna scheduled_shifts.employee_id (que no existe).
         sb
-          .from("scheduled_shifts")
-          .select("id, date, start_time, end_time, status, title")
+          .from("shift_assignments")
+          .select("id, status, shift_id, scheduled_shifts!inner(id, date, start_time, end_time, status, title, deleted_at)")
           .eq("employee_id", id)
-          .order("date", { ascending: false })
-          .limit(6),
+          .gte("scheduled_shifts.date", attendanceCutoffIso)
+          .is("scheduled_shifts.deleted_at", null)
+          .order("date", { ascending: false, referencedTable: "scheduled_shifts" })
+          .limit(60),
+        // Evidencia real de asistencia: fichajes, nunca horas planificadas.
+        sb
+          .from("time_entries")
+          .select("shift_id, clock_in")
+          .eq("employee_id", id)
+          .gte("clock_in", `${attendanceCutoffIso}T00:00:00Z`),
         sb
           .from("time_entries")
           .select("clock_in")
@@ -315,18 +334,30 @@ export default function UnifiedPersonProfile() {
       setOnboardingDocsCount(onbAgg);
 
       setRecentActivity((activityRes.data ?? []) as any[]);
-      const shifts = (shiftsRes.data ?? []) as any[];
+
+      // Asignaciones vivas de los últimos 30 días, aplanadas al formato de la lista.
+      const assignments = ((shiftsRes.data ?? []) as any[]).filter(
+        (a: any) => a.scheduled_shifts && !isExcludedAssignmentStatus(a.status),
+      );
+      const shifts = assignments.map((a: any) => ({
+        id: a.scheduled_shifts.id,
+        date: a.scheduled_shifts.date,
+        start_time: a.scheduled_shifts.start_time,
+        end_time: a.scheduled_shifts.end_time,
+        status: a.scheduled_shifts.status,
+        title: a.scheduled_shifts.title,
+      }));
       setRecentShifts(shifts);
 
-      const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
-      const recent = shifts.filter((s: any) => {
-        const d = s.date ? new Date(s.date).getTime() : 0;
-        return d >= cutoff;
-      });
+      // Asistencia = turnos asignados vs. fichajes reales. Sin fuente, no se
+      // inventa un cero: el bloque se marca como no disponible.
+      const workedShiftIds = new Set(
+        ((workedRes?.data ?? []) as any[]).map((t: any) => t.shift_id).filter(Boolean),
+      );
       setAttendance30d({
-        shifts: recent.length,
-        lateCount: recent.filter((s: any) => String(s.status).toLowerCase() === "late").length,
-        noShowCount: recent.filter((s: any) => String(s.status).toLowerCase() === "no_show").length,
+        available: !shiftsRes?.error && !workedRes?.error,
+        shifts: shifts.length,
+        worked: shifts.filter((s: any) => workedShiftIds.has(s.id)).length,
       });
 
       const lastPay = (payrollRes.data ?? [])[0] as any;
@@ -577,19 +608,25 @@ export default function UnifiedPersonProfile() {
         key: "attendance",
         label: "Attendance · 30d",
         icon: Clock,
-        value: attendance30d.shifts > 0
-          ? `${attendance30d.shifts} shift${attendance30d.shifts === 1 ? "" : "s"}`
-          : "No shifts",
-        hint: attendance30d.shifts === 0
-          ? "Nothing scheduled in last 30 days"
-          : attendance30d.lateCount + attendance30d.noShowCount > 0
-            ? `${attendance30d.lateCount} late · ${attendance30d.noShowCount} no-show`
-            : "On track",
-        tone: attendance30d.noShowCount > 0
-          ? "destructive"
-          : attendance30d.lateCount > 0
-            ? "warning"
-            : attendance30d.shifts > 0 ? "success" : "muted",
+        value: !attendance30d.available
+          ? "—"
+          : attendance30d.shifts > 0
+            ? `${attendance30d.worked}/${attendance30d.shifts} worked`
+            : "No shifts",
+        hint: !attendance30d.available
+          ? "Attendance source unavailable"
+          : attendance30d.shifts === 0
+            ? "No assigned shifts in last 30 days"
+            : attendance30d.worked === attendance30d.shifts
+              ? "Clock-in evidence on every assigned shift"
+              : `${attendance30d.shifts - attendance30d.worked} without clock-in evidence`,
+        tone: !attendance30d.available
+          ? "muted"
+          : attendance30d.shifts === 0
+            ? "muted"
+            : attendance30d.worked === attendance30d.shifts
+              ? "success"
+              : "warning",
       },
       {
         key: "last-clock-in",
