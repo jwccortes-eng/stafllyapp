@@ -103,8 +103,13 @@ export interface HubShiftLike {
 
 /** Contadores globales ya existentes (tenant-scoped, sólo lectura). */
 export interface HubCounts {
-  /** Horas / fichajes pendientes de revisión antes de payroll. */
+  /**
+   * Fichajes reales esperando decisión de revisión (`time_entries.status='pending'`).
+   * Definición canónica en `src/lib/operations/operational-counts.ts`.
+   */
   pendingHours?: number | null;
+  /** Fichajes con el reloj abierto (en turno o falta marcar salida). Otro concepto. */
+  openClock?: number | null;
   /** Documentos pendientes de revisión (no bloqueante). */
   docsPending?: number | null;
   /** Periodos de pago abiertos. */

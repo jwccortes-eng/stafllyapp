@@ -23,6 +23,7 @@ import { useTodayHubPermissions } from "@/hooks/useTodayHubPermissions";
 
 import { supabase } from "@/integrations/supabase/client";
 import { notifyError } from "@/lib/feedback/notify";
+import { fetchOperationalHoursCounts } from "@/lib/operations/operational-counts";
 import {
   InsightCard,
   KpiCard,
@@ -60,16 +61,16 @@ function useHubCounts(companyId: string | null) {
     setError(null);
     (async () => {
       const sb: any = supabase;
+      // Fuente única de los contadores de fichajes: src/lib/operations/operational-counts.ts
       const [hours, docs, periods] = await Promise.all([
-        sb.from("time_entries").select("id", { count: "exact", head: true })
-          .eq("company_id", companyId).is("clock_out", null),
+        fetchOperationalHoursCounts(supabase, companyId),
         sb.from("employee_documents").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("review_status", "pending"),
         sb.from("pay_periods").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("status", "open"),
       ]);
       if (cancelled) return;
-      const firstErr = hours?.error || docs?.error || periods?.error;
+      const firstErr = (hours.failed ? new Error("time_entries") : null) || docs?.error || periods?.error;
       if (firstErr) {
         setError("No pudimos cargar los contadores operativos.");
         setCounts({});
@@ -82,7 +83,8 @@ function useHubCounts(companyId: string | null) {
         });
       } else {
         setCounts({
-          pendingHours: hours?.count ?? 0,
+          pendingHours: hours.hoursNeedingReview ?? 0,
+          openClock: hours.openClock ?? 0,
           docsPending: docs?.count ?? 0,
           openPeriods: periods?.count ?? 0,
         });
