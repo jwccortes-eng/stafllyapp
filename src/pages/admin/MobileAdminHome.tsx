@@ -20,6 +20,10 @@ import {
   OX9_EYEBROW, OX9_BLOCK_TITLE, OX9_ICON, OX9_ICON_TILE,
 } from "@/lib/ox/continuity";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
+import {
+  fetchOperationalHoursCounts,
+  fetchPendingWorkerResponsesCount,
+} from "@/lib/operations/operational-counts";
 
 /**
  * OX-5 — Mobile Presence Compression.
@@ -126,15 +130,13 @@ export default function MobileAdminHome() {
 
     (async () => {
       const today = new Date().toISOString().split("T")[0];
-      const [shiftsRes, openRes, reviewRes, respRes] = await Promise.all([
+      // Contadores de fichajes y respuestas: una sola definición compartida con
+      // el Today Hub (src/lib/operations/operational-counts.ts).
+      const [shiftsRes, hours, resp] = await Promise.all([
         supabase.from("scheduled_shifts").select("id", { count: "exact", head: true })
           .eq("company_id", selectedCompanyId).eq("date", today).is("deleted_at", null),
-        supabase.from("time_entries").select("id", { count: "exact", head: true })
-          .eq("company_id", selectedCompanyId).is("clock_out", null),
-        supabase.from("time_entries").select("id", { count: "exact", head: true })
-          .eq("company_id", selectedCompanyId).eq("status", "pending"),
-        supabase.from("shift_assignments").select("id", { count: "exact", head: true })
-          .eq("company_id", selectedCompanyId).eq("status", "pending"),
+        fetchOperationalHoursCounts(supabase, selectedCompanyId),
+        fetchPendingWorkerResponsesCount(supabase, selectedCompanyId, today),
       ]);
       if (!alive) return;
 
@@ -147,25 +149,25 @@ export default function MobileAdminHome() {
             }),
       );
       setClockedIn(
-        openRes.error
+        hours.openClock === null
           ? errorMetric("workers")
-          : countMetric(openRes.count ?? 0, "workers", {
+          : countMetric(hours.openClock, "workers", {
               zero: "Nadie tiene el fichaje abierto ahora mismo.",
               some: (n) => `${n === 1 ? "Worker sigue" : "Workers siguen"} con el fichaje abierto.`,
             }),
       );
       setHoursToReview(
-        reviewRes.error
+        hours.hoursNeedingReview === null
           ? errorMetric("registros")
-          : countMetric(reviewRes.count ?? 0, "registros", {
+          : countMetric(hours.hoursNeedingReview, "registros", {
               zero: "No hay horas pendientes de revisión.",
               some: (n) => `${n === 1 ? "Registro de horas espera" : "Registros de horas esperan"} tu aprobación.`,
             }),
       );
       setPendingResponses(
-        respRes.error
+        resp.count === null
           ? errorMetric("respuestas")
-          : countMetric(respRes.count ?? 0, "respuestas", {
+          : countMetric(resp.count, "respuestas", {
               zero: "Todos los workers asignados ya respondieron.",
               some: (n) => `${n === 1 ? "Worker asignado no ha" : "Workers asignados no han"} respondido.`,
             }),
