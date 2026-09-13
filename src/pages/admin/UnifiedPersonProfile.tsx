@@ -328,18 +328,30 @@ export default function UnifiedPersonProfile() {
       setOnboardingDocsCount(onbAgg);
 
       setRecentActivity((activityRes.data ?? []) as any[]);
-      const shifts = (shiftsRes.data ?? []) as any[];
+
+      // Asignaciones vivas de los últimos 30 días, aplanadas al formato de la lista.
+      const assignments = ((shiftsRes.data ?? []) as any[]).filter(
+        (a: any) => a.scheduled_shifts && !isExcludedAssignmentStatus(a.status),
+      );
+      const shifts = assignments.map((a: any) => ({
+        id: a.scheduled_shifts.id,
+        date: a.scheduled_shifts.date,
+        start_time: a.scheduled_shifts.start_time,
+        end_time: a.scheduled_shifts.end_time,
+        status: a.scheduled_shifts.status,
+        title: a.scheduled_shifts.title,
+      }));
       setRecentShifts(shifts);
 
-      const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
-      const recent = shifts.filter((s: any) => {
-        const d = s.date ? new Date(s.date).getTime() : 0;
-        return d >= cutoff;
-      });
+      // Asistencia = turnos asignados vs. fichajes reales. Sin fuente, no se
+      // inventa un cero: el bloque se marca como no disponible.
+      const workedShiftIds = new Set(
+        ((workedRes?.data ?? []) as any[]).map((t: any) => t.shift_id).filter(Boolean),
+      );
       setAttendance30d({
-        shifts: recent.length,
-        lateCount: recent.filter((s: any) => String(s.status).toLowerCase() === "late").length,
-        noShowCount: recent.filter((s: any) => String(s.status).toLowerCase() === "no_show").length,
+        available: !shiftsRes?.error && !workedRes?.error,
+        shifts: shifts.length,
+        worked: shifts.filter((s: any) => workedShiftIds.has(s.id)).length,
       });
 
       const lastPay = (payrollRes.data ?? [])[0] as any;
