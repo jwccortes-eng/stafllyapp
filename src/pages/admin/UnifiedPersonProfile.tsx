@@ -175,9 +175,14 @@ export default function UnifiedPersonProfile() {
   const [onboardingDocsCount, setOnboardingDocsCount] = useState<{
     pending: number; rejected: number; expired: number;
   }>({ pending: 0, rejected: 0, expired: 0 });
-  const [attendance30d, setAttendance30d] = useState<{ shifts: number; lateCount: number; noShowCount: number }>({
-    shifts: 0, lateCount: 0, noShowCount: 0,
-  });
+  const [attendance30d, setAttendance30d] = useState<{
+    /** false = no pudimos leer la fuente; nunca mostrar un cero inventado. */
+    available: boolean;
+    /** Turnos asignados vivos en los últimos 30 días. */
+    shifts: number;
+    /** De esos, cuántos tienen fichaje real (evidencia de asistencia). */
+    worked: number;
+  }>({ available: true, shifts: 0, worked: 0 });
   const [lastPayrollDate, setLastPayrollDate] = useState<string | null>(null);
   const [frontDeskVisits, setFrontDeskVisits] = useState<any[]>([]);
 
