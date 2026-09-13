@@ -258,7 +258,10 @@ export default function UnifiedPersonProfile() {
     };
 
     (async () => {
-      const [docsRes, activityRes, shiftsRes, payrollRes, visitsRes, onbDocsRes] = await Promise.all([
+      const attendanceCutoffIso = new Date(Date.now() - 30 * 24 * 3600 * 1000)
+        .toISOString()
+        .split("T")[0];
+      const [docsRes, activityRes, shiftsRes, workedRes, payrollRes, visitsRes, onbDocsRes] = await Promise.all([
         sb.from("employee_documents").select("review_status").eq("employee_id", id),
         sb
           .from("activity_log")
@@ -267,12 +270,22 @@ export default function UnifiedPersonProfile() {
           .eq("entity_type", "employee")
           .order("created_at", { ascending: false })
           .limit(8),
+        // Los turnos de una persona viven en shift_assignments, NO en una
+        // columna scheduled_shifts.employee_id (que no existe).
         sb
-          .from("scheduled_shifts")
-          .select("id, date, start_time, end_time, status, title")
+          .from("shift_assignments")
+          .select("id, status, shift_id, scheduled_shifts!inner(id, date, start_time, end_time, status, title, deleted_at)")
           .eq("employee_id", id)
-          .order("date", { ascending: false })
-          .limit(6),
+          .gte("scheduled_shifts.date", attendanceCutoffIso)
+          .is("scheduled_shifts.deleted_at", null)
+          .order("date", { ascending: false, referencedTable: "scheduled_shifts" })
+          .limit(60),
+        // Evidencia real de asistencia: fichajes, nunca horas planificadas.
+        sb
+          .from("time_entries")
+          .select("shift_id, clock_in")
+          .eq("employee_id", id)
+          .gte("clock_in", `${attendanceCutoffIso}T00:00:00Z`),
         sb
           .from("time_entries")
           .select("clock_in")
