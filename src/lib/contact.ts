@@ -6,7 +6,7 @@ export const STAFLY_PHONE_DISPLAY_INTL = "+1 718 751 5197";
 export const STAFLY_WHATSAPP_BASE = "https://wa.me/17187515197";
 export const STAFLY_SMS_URL = "sms:+17187515197";
 
-// Official StaflyApps email — only set via env. Do NOT default to a Parceros address.
+// Official Stafly Core email — only set via env. Do NOT default to a Parceros address.
 export const STAFLY_EMAIL =
   (import.meta.env.VITE_STAFLY_CONTACT_EMAIL as string) || "";
 export const STAFLY_MAILTO = STAFLY_EMAIL ? `mailto:${STAFLY_EMAIL}` : "";
@@ -28,13 +28,13 @@ export function buildStaflyMailto(subject: string, body: string) {
 
 export function contactWhatsApp() {
   return buildStaflyWhatsAppUrl(
-    "Hi, I'd like to learn more about StaflyApps for my company."
+    "Hi, I'd like to learn more about Stafly Core for my company."
   );
 }
 
 export function contactSms() {
   return buildStaflySmsUrl(
-    "Hi, I'd like to learn more about StaflyApps for my company."
+    "Hi, I'd like to learn more about Stafly Core for my company."
   );
 }
 
@@ -55,35 +55,35 @@ export const STAFLY_COMMERCIAL = {
 };
 
 export function bookDemo() {
-  return buildStaflyWhatsAppUrl("Hi, I'd like to book a StaflyApps demo.");
+  return buildStaflyWhatsAppUrl("Hi, I'd like to book a Stafly Core demo.");
 }
 
 export function bookSetupCall() {
-  return buildStaflyWhatsAppUrl("Hi, I'd like to start the StaflyApps guided setup.");
+  return buildStaflyWhatsAppUrl("Hi, I'd like to start the Stafly Core guided setup.");
 }
 
 export function contactSales() {
-  return buildStaflyWhatsAppUrl("Hi, I'd like to talk about StaflyApps plans for my company.");
+  return buildStaflyWhatsAppUrl("Hi, I'd like to talk about Stafly Core plans for my company.");
 }
 
 export function guidedSetupPaymentOrWhatsApp() {
   if (STAFLY_COMMERCIAL.setupPaymentUrl) return STAFLY_COMMERCIAL.setupPaymentUrl;
   return buildStaflyWhatsAppUrl(
-    "Hi, I'd like to start the StaflyApps guided setup for $299."
+    "Hi, I'd like to start the Stafly Core guided setup for $299."
   );
 }
 
 export function starterPaymentOrWhatsApp() {
   if (STAFLY_COMMERCIAL.starterPaymentUrl) return STAFLY_COMMERCIAL.starterPaymentUrl;
   return buildStaflyWhatsAppUrl(
-    "Hi, I'd like to talk about the StaflyApps Starter plan at $149/month."
+    "Hi, I'd like to talk about the Stafly Core Starter plan at $149/month."
   );
 }
 
 export function operationsPaymentOrWhatsApp() {
   if (STAFLY_COMMERCIAL.operationsPaymentUrl) return STAFLY_COMMERCIAL.operationsPaymentUrl;
   return buildStaflyWhatsAppUrl(
-    "Hi, I'd like to talk about the StaflyApps Operations plan at $299/month."
+    "Hi, I'd like to talk about the Stafly Core Operations plan at $299/month."
   );
 }
 
