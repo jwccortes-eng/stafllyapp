@@ -362,6 +362,8 @@ export function evaluateEntitlement(
       status: "NEEDS_REVIEW",
       reason: "El plan de la empresa no puede resolverse sin ambigüedad.",
       conflicts: resolution.conflicts,
+      informational: resolution.informational,
+      context: resolution.context,
     };
   }
 
