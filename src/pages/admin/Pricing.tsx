@@ -192,7 +192,7 @@ export default function Pricing() {
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Tu solicitud de upgrade fue enviada</p>
                 <p className="text-xs text-muted-foreground">
-                  Nuestro equipo se pondrá en contacto contigo pronto para activar tu plan Pro.
+                  Nuestro equipo se pondrá en contacto contigo pronto para activar tu plan Operations.
                 </p>
               </div>
             </div>
