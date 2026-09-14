@@ -83,10 +83,10 @@ const ALL_PAID_MODULES = Object.keys(MODULE_PLAN_MAP);
 export type PlanId = PlanCode;
 export const PLAN_LIMITS = {
   free: { maxEmployees: 10, maxAdmins: 2, label: "Starter" },
-  paid_manual: { maxEmployees: 999, maxAdmins: 10, label: "Pro" },
-  enterprise: { maxEmployees: Infinity, maxAdmins: Infinity, label: "Enterprise" },
+  paid_manual: { maxEmployees: 999, maxAdmins: 10, label: "Operations" },
+  enterprise: { maxEmployees: Infinity, maxAdmins: Infinity, label: "Scale" },
   // Legacy aliases
-  pro: { maxEmployees: 100, maxAdmins: 3, label: "Pro" },
+  pro: { maxEmployees: 100, maxAdmins: 3, label: "Operations" },
 } as const;
 
 export type PremiumFeature = string;
