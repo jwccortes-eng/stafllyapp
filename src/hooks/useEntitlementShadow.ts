@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { getCanonicalUsage } from "@/lib/commercial/active-worker-usage";
+import { getCompanyOverrides } from "@/lib/commercial/entitlement-overrides";
 import {
   evaluateEntitlement,
   type CompanyEntitlementInput,
