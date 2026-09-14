@@ -328,6 +328,8 @@ export interface EntitlementEvaluation {
   status: ShadowStatus;
   reason: string;
   conflicts: string[];
+  informational: string[];
+  context: EntitlementContext;
 }
 
 const NEAR_LIMIT_RATIO = 0.9;
