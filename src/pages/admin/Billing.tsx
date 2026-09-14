@@ -13,6 +13,7 @@ import { es } from "date-fns/locale";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
 import UpgradeRequestDialog from "@/components/billing/UpgradeRequestDialog";
 import { PageHeader } from "@/components/ui/page-header";
+import EntitlementDiagnosticPanel from "@/components/billing/EntitlementDiagnosticPanel";
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   active: { label: "Activo", variant: "default" },
@@ -147,6 +148,8 @@ export default function Billing() {
           </CardContent>
         </Card>
       )}
+
+      <EntitlementDiagnosticPanel />
 
       {/* Billing history */}
       <Card>
