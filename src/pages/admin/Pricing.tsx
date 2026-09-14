@@ -257,7 +257,7 @@ export default function Pricing() {
                             onClick={() => setUpgradeOpen(true)}
                           >
                             <Sparkles className="h-4 w-4 mr-1.5" />
-                            Solicitar plan Pro
+                            Solicitar plan Operations
                           </Button>
                         )}
                         <Button

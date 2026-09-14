@@ -21,9 +21,9 @@ export interface CompanyPlan {
 
 /** Plan display info */
 export const PLAN_INFO: Record<PlanCode, { label: string; description: string }> = {
-  free: { label: "Starter (Gratis)", description: "Funciones básicas para equipos pequeños" },
-  paid_manual: { label: "Pro", description: "Funciones avanzadas para operaciones completas" },
-  enterprise: { label: "Enterprise", description: "Acceso completo, sin límites, soporte dedicado" },
+  free: { label: "Starter", description: "Funciones básicas para equipos pequeños" },
+  paid_manual: { label: "Operations", description: "Funciones avanzadas para operaciones completas" },
+  enterprise: { label: "Scale", description: "Acceso completo, sin límites, soporte dedicado" },
 };
 
 /** Default limits per plan */
