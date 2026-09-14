@@ -123,11 +123,17 @@ export interface PlanResolution {
   subscription_plan: CanonicalPlan | null;
   confidence: PlanConfidence;
   needs_review: boolean;
+  /** Discrepancias que requieren decisión humana. */
   conflicts: string[];
+  /** Observaciones que NO requieren decisión (metadato obsoleto, tenant interno). */
+  informational: string[];
+  context: EntitlementContext;
 }
 
 export function resolveCanonicalPlan(c: CompanyEntitlementInput): PlanResolution {
   const conflicts: string[] = [];
+  const informational: string[] = [];
+  const context = resolveEntitlementContext(c);
   const legacyRaw = (c.plan_code ?? "").trim().toLowerCase();
   const legacy = LEGACY_PLAN_MAP[legacyRaw] ?? null;
   const subRaw = (c.subscription_plan ?? "").trim().toLowerCase();
@@ -147,9 +153,17 @@ export function resolveCanonicalPlan(c: CompanyEntitlementInput): PlanResolution
   }
 
   if (sub && plan && sub !== plan) {
-    conflicts.push(
-      `subscriptions.plan (${sub}) no coincide con el plan efectivo de la empresa (${plan})`,
-    );
+    const msg = `subscriptions.plan (${sub}) no coincide con la clasificación de la empresa (${plan})`;
+    if (context === "internal") {
+      // Tenant interno: la suscripción no lo convierte en cliente de pago.
+      informational.push(`${msg} — tenant interno/test, sin lectura comercial`);
+    } else if (PLAN_RANK[sub] < PLAN_RANK[plan]) {
+      // La clasificación de empresa manda; la fila de suscripción es metadato
+      // obsoleto y no está conectada a enforcement de facturación.
+      informational.push(`${msg} — metadato legacy/obsoleto, manda la clasificación de empresa`);
+    } else {
+      conflicts.push(msg);
+    }
   }
 
   if (!plan) {
@@ -161,6 +175,8 @@ export function resolveCanonicalPlan(c: CompanyEntitlementInput): PlanResolution
       confidence: "low",
       needs_review: true,
       conflicts,
+      informational,
+      context,
     };
   }
 
@@ -175,6 +191,8 @@ export function resolveCanonicalPlan(c: CompanyEntitlementInput): PlanResolution
     confidence,
     needs_review: conflicts.length > 0,
     conflicts,
+    informational,
+    context,
   };
 }
 
