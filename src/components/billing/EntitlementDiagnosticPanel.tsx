@@ -72,8 +72,11 @@ export default function EntitlementDiagnosticPanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{planText}</Badge>
+          {workers.context === "internal" && (
+            <Badge variant="secondary">Espacio interno de pruebas</Badge>
+          )}
           {workers.conflicts.length > 0 && (
             <span className="text-xs text-muted-foreground">
               Señales de plan que no coinciden
