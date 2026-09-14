@@ -72,8 +72,8 @@ const statusLabel: Record<string, string> = {
 };
 
 const planLabel = (code: string) => {
-  if (code === "enterprise") return "Enterprise";
-  if (code === "paid_manual") return "Pro";
+  if (code === "enterprise") return "Scale";
+  if (code === "paid_manual") return "Operations";
   return "Starter";
 };
 
@@ -247,10 +247,6 @@ export default function Pricing() {
                     {isCurrent ? (
                       <div className="w-full text-center text-sm text-muted-foreground py-2">
                         ✓ Este es tu plan actual
-                      </div>
-                    ) : p.isFree ? (
-                      <div className="w-full text-center text-sm text-muted-foreground py-2">
-                        Incluido gratis
                       </div>
                     ) : (
                       <>
