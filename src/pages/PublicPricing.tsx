@@ -162,7 +162,7 @@ export default function PublicPricing() {
           Stafly Core is built for real staffing operations. Every plan includes scheduling, attendance and a worker portal.
         </p>
         <p className="mt-3 text-sm font-medium max-w-xl mx-auto" style={{ color: "hsl(220,10%,40%)" }}>
-          Monthly plans start at $149/month. Guided setup starts at $299 one-time.
+          {PRICING_SUMMARY_LINE}
         </p>
       </section>
 
