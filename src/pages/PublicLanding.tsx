@@ -205,7 +205,7 @@ export default function PublicLanding() {
               Guided setup, not self-service chaos
             </h2>
             <p className="text-sm sm:text-base text-muted-foreground mt-3 max-w-2xl mx-auto">
-              StaflyApps is built for service companies that need more than another tool. We help you configure your workspace, workers, first schedule, attendance flow, documents, and payroll-ready hour review before going live.
+              Stafly Core is built for service companies that need more than another tool. We help you configure your workspace, workers, first schedule, attendance flow, documents, and payroll-ready hour review before going live.
             </p>
           </div>
 
@@ -214,7 +214,7 @@ export default function PublicLanding() {
               <span className="text-4xl font-bold font-heading text-foreground">$299</span>
               <span className="text-sm text-muted-foreground">starting price</span>
             </div>
-            <p className="text-sm font-semibold text-foreground mb-1">Guided setup starts at $299</p>
+            <p className="text-sm font-semibold text-foreground mb-1">Guided implementation starts at $299 one-time</p>
             <p className="text-sm text-muted-foreground mb-5">
               Start with guided setup. We'll help you organize your operation step by step.
             </p>
@@ -302,7 +302,7 @@ export default function PublicLanding() {
               Built for every stage of growth
             </h2>
             <p className="text-sm sm:text-base text-muted-foreground mt-3 max-w-xl mx-auto">
-              Start with Core, unlock Operations, and scale with Enterprise modules.
+              Start with Starter, run weekly operations, and grow into Scale.
             </p>
           </div>
 
@@ -417,7 +417,7 @@ export default function PublicLanding() {
             )}
           </div>
           <p className="text-[11px] text-muted-foreground/60">
-            © {new Date().getFullYear()} StaflyApps · staflyapps.com
+            © {new Date().getFullYear()} Stafly · staflyapps.com
           </p>
         </div>
       </footer>

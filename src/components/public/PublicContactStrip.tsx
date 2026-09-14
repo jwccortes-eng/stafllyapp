@@ -12,8 +12,8 @@ interface Props {
 
 export function PublicContactStrip({ className = "" }: Props) {
   const mailto = buildStaflyMailto(
-    "StaflyApps inquiry",
-    "Hi, I'd like to learn more about StaflyApps for my company."
+    "Stafly Core inquiry",
+    "Hi, I'd like to learn more about Stafly Core for my company."
   );
 
   return (
@@ -53,7 +53,7 @@ export function PublicContactStrip({ className = "" }: Props) {
         </div>
 
         <p className="mt-6 text-[11px] text-muted-foreground/80 leading-relaxed">
-          Guided setup starts at $299. New companies are activated manually after review.
+          Guided implementation starts at $299 one-time. New companies are activated manually after review.
         </p>
       </div>
     </section>

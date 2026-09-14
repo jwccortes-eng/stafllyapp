@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { useState } from "react";
+import { PUBLIC_PLANS, PRICING_SUMMARY_LINE } from "@/lib/commercial/pricing";
 
 
 /* ── Demo Form ── */
@@ -69,62 +70,8 @@ function DemoForm() {
   );
 }
 
-/* ── Plans ── */
-/* ── Plans ── */
-const plans = [
-  {
-    name: "Starter",
-    price: "$149",
-    period: "/ month",
-    subtitle: "For small teams getting organized.",
-    limit: "Up to 25 active workers",
-    features: [
-      "Worker directory",
-      "Basic shift scheduling",
-      "Attendance visibility",
-      "Document readiness basics",
-    ],
-    cta: "Talk to us",
-    getHref: () => starterPaymentOrWhatsApp(),
-    highlighted: false,
-  },
-  {
-    name: "Operations",
-    price: "$299",
-    period: "/ month",
-    subtitle: "For staffing/service companies running weekly operations.",
-    limit: "Up to 75 active workers",
-    features: [
-      "Workers and roles",
-      "Shift planning and publishing",
-      "Attendance tracking",
-      "Documents",
-      "Payroll-ready hour reports",
-      "Admin operations dashboard",
-      "Guided onboarding support",
-    ],
-    cta: "Talk to us",
-    getHref: () => operationsPaymentOrWhatsApp(),
-    highlighted: true,
-  },
-  {
-    name: "Scale",
-    price: "$599+",
-    period: " or Custom",
-    subtitle: "For multi-location or high-volume operations.",
-    limit: "150+ active workers",
-    features: [
-      "Multi-team operations",
-      "Advanced admin workflows",
-      "Priority setup",
-      "Migration support",
-      "Custom operational review",
-    ],
-    cta: "Contact sales",
-    getHref: () => contactSales(),
-    highlighted: false,
-  },
-];
+/* ── Plans (canonical source: src/lib/commercial/pricing.ts) ── */
+const plans = PUBLIC_PLANS;
 
 /* ── Modules ── */
 const moduleGroups = [
@@ -215,7 +162,7 @@ export default function PublicPricing() {
           Stafly Core is built for real staffing operations. Every plan includes scheduling, attendance and a worker portal.
         </p>
         <p className="mt-3 text-sm font-medium max-w-xl mx-auto" style={{ color: "hsl(220,10%,40%)" }}>
-          Monthly plans start at $149/month. Guided setup starts at $299 one-time.
+          {PRICING_SUMMARY_LINE}
         </p>
       </section>
 

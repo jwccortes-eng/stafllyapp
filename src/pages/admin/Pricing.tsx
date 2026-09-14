@@ -12,56 +12,55 @@ import UpgradeRequestDialog from "@/components/billing/UpgradeRequestDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
+// Etiquetas comerciales alineadas con el modelo público canónico
+// (src/lib/commercial/pricing.ts). Los `id` siguen siendo los códigos de plan
+// internos existentes — no se cambia ninguna lógica de billing.
 const plans = [
   {
     id: "free" as PlanCode,
     name: "Starter",
-    price: "$0",
+    price: "$149",
     period: "/mes",
-    description: "Para equipos pequeños que están iniciando",
+    description: "Para equipos pequeños que se están organizando",
     features: [
-      "Hasta 2 administradores",
-      "Hasta 10 empleados",
-      "Directorio y turnos básicos",
-      "Portal de empleados",
-      "Reloj de entrada/salida básico",
-      "Anuncios",
-      "Aplicaciones de empleo",
+      "Hasta 25 trabajadores activos",
+      "Directorio de trabajadores",
+      "Programación básica de turnos",
+      "Visibilidad de asistencia",
+      "Documentos básicos",
     ],
-    isFree: true,
   },
   {
     id: "paid_manual" as PlanCode,
-    name: "Pro",
-    price: "Personalizado",
-    period: "",
-    description: "Para empresas en crecimiento",
+    name: "Operations",
+    price: "$299",
+    period: "/mes",
+    description: "Para empresas de servicios con operación semanal",
     popular: true,
     features: [
-      "Administradores ampliados",
-      "Empleados ampliados o ilimitados",
-      "Nómina completa y reconciliación",
-      "Reportes avanzados",
-      "Clientes y ubicaciones",
-      "Command center",
-      "Chat interno",
-      "Automatizaciones",
-      "Soporte prioritario",
+      "Hasta 75 trabajadores activos",
+      "Trabajadores y roles",
+      "Planificación y publicación de turnos",
+      "Control de asistencia",
+      "Documentos",
+      "Reportes de horas listas para nómina",
+      "Panel de operaciones",
+      "Acompañamiento en el onboarding",
     ],
   },
   {
     id: "enterprise" as PlanCode,
-    name: "Enterprise",
-    price: "A medida",
-    period: "",
-    description: "Para operaciones de gran escala",
+    name: "Scale",
+    price: "$599+",
+    period: " o a medida",
+    description: "Para operaciones multi-sede o de alto volumen",
     features: [
-      "Todo lo de Pro",
-      "Admins y empleados ilimitados",
-      "Soporte dedicado",
-      "Onboarding personalizado",
-      "SLA garantizado",
-      "Integraciones a medida",
+      "150+ trabajadores activos",
+      "Operación multi-equipo",
+      "Flujos administrativos avanzados",
+      "Configuración prioritaria",
+      "Soporte de migración",
+      "Revisión operativa a medida",
     ],
   },
 ];
@@ -73,8 +72,8 @@ const statusLabel: Record<string, string> = {
 };
 
 const planLabel = (code: string) => {
-  if (code === "enterprise") return "Enterprise";
-  if (code === "paid_manual") return "Pro";
+  if (code === "enterprise") return "Scale";
+  if (code === "paid_manual") return "Operations";
   return "Starter";
 };
 
@@ -193,7 +192,7 @@ export default function Pricing() {
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Tu solicitud de upgrade fue enviada</p>
                 <p className="text-xs text-muted-foreground">
-                  Nuestro equipo se pondrá en contacto contigo pronto para activar tu plan Pro.
+                  Nuestro equipo se pondrá en contacto contigo pronto para activar tu plan Operations.
                 </p>
               </div>
             </div>
@@ -249,10 +248,6 @@ export default function Pricing() {
                       <div className="w-full text-center text-sm text-muted-foreground py-2">
                         ✓ Este es tu plan actual
                       </div>
-                    ) : p.isFree ? (
-                      <div className="w-full text-center text-sm text-muted-foreground py-2">
-                        Incluido gratis
-                      </div>
                     ) : (
                       <>
                         {!hasRequestedUpgrade && (
@@ -262,7 +257,7 @@ export default function Pricing() {
                             onClick={() => setUpgradeOpen(true)}
                           >
                             <Sparkles className="h-4 w-4 mr-1.5" />
-                            Solicitar plan Pro
+                            Solicitar plan Operations
                           </Button>
                         )}
                         <Button

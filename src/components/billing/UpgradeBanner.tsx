@@ -48,7 +48,7 @@ export default function UpgradeBanner({ feature, moduleKey }: UpgradeBannerProps
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-foreground">
-            {feature ? `"${feature}" requiere plan ${requiredPlan || 'Pro'}` : "Desbloquea todas las funciones"}
+            {feature ? `"${feature}" requiere plan ${requiredPlan || 'Operations'}` : "Desbloquea todas las funciones"}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             Contacta a nuestro equipo para activar funciones avanzadas.
