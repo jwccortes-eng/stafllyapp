@@ -34,7 +34,7 @@ export function useEntitlementShadow(companyIdOverride?: string | null) {
         supabase
           .from("companies")
           .select(
-            "id, name, plan_code, plan_status, paid_features_enabled, max_employees, max_admins, is_active",
+            "id, name, plan_code, plan_status, paid_features_enabled, max_employees, max_admins, is_active, is_demo, is_sandbox, is_test",
           )
           .eq("id", companyId)
           .maybeSingle(),
