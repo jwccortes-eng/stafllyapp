@@ -419,6 +419,8 @@ export function evaluateEntitlement(
     status,
     reason,
     conflicts: resolution.conflicts,
+    informational: resolution.informational,
+    context: resolution.context,
   };
 }
 
