@@ -81,6 +81,10 @@ export interface CompanyEntitlementInput {
   max_employees: number | null;
   max_admins: number | null;
   is_active: boolean | null;
+  /** Marcadores existentes de tenant interno (`is_demo`/`is_sandbox`/`is_test`). */
+  is_demo?: boolean | null;
+  is_sandbox?: boolean | null;
+  is_test?: boolean | null;
   /** Fila de `subscriptions` (señal secundaria, hoy NO autoritativa). */
   subscription_plan?: string | null;
   subscription_status?: string | null;
@@ -89,6 +93,24 @@ export interface CompanyEntitlementInput {
   /** Uso canónico ya calculado (ver `active-worker-usage`). */
   usage: Partial<Record<EntitlementKey, number>>;
 }
+
+/**
+ * P1.1 — CONTEXTO DE TENANT.
+ *
+ * Un tenant interno (demo/sandbox/test) NO es un cliente comercial: sus
+ * discrepancias de plan no son conflictos que requieran decisión comercial,
+ * y no debe distorsionar métricas, análisis de clientes ni reglas futuras de
+ * facturación. Se reutilizan los marcadores YA existentes en `companies`.
+ */
+export type EntitlementContext = "commercial" | "internal";
+
+export const resolveEntitlementContext = (
+  c: Pick<CompanyEntitlementInput, "is_demo" | "is_sandbox" | "is_test">,
+): EntitlementContext =>
+  c.is_demo === true || c.is_sandbox === true || c.is_test === true ? "internal" : "commercial";
+
+/** Orden comercial de los planes (para distinguir metadato obsoleto de conflicto real). */
+const PLAN_RANK: Record<CanonicalPlan, number> = { starter: 1, operations: 2, scale: 3 };
 
 /* ============================================================
  * 3. RESOLUCIÓN DE PLAN
