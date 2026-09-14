@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { getCanonicalUsage } from "@/lib/commercial/active-worker-usage";
+import { getCompanyOverrides } from "@/lib/commercial/entitlement-overrides";
 import {
   evaluateEntitlement,
   type CompanyEntitlementInput,
@@ -33,7 +34,7 @@ export function useEntitlementShadow(companyIdOverride?: string | null) {
         supabase
           .from("companies")
           .select(
-            "id, name, plan_code, plan_status, paid_features_enabled, max_employees, max_admins, is_active",
+            "id, name, plan_code, plan_status, paid_features_enabled, max_employees, max_admins, is_active, is_demo, is_sandbox, is_test",
           )
           .eq("id", companyId)
           .maybeSingle(),
@@ -58,9 +59,12 @@ export function useEntitlementShadow(companyIdOverride?: string | null) {
         max_employees: c.max_employees ?? null,
         max_admins: c.max_admins ?? null,
         is_active: c.is_active ?? null,
+        is_demo: c.is_demo ?? null,
+        is_sandbox: c.is_sandbox ?? null,
+        is_test: c.is_test ?? null,
         subscription_plan: (subRes.data as any)?.plan ?? null,
         subscription_status: (subRes.data as any)?.status ?? null,
-        overrides: [],
+        overrides: getCompanyOverrides(companyId),
         usage,
       };
 

@@ -6,6 +6,7 @@ import {
   PLAN_ENTITLEMENTS,
   type CompanyEntitlementInput,
 } from "@/lib/commercial/entitlements";
+import { getCompanyOverrides, STAFLY_DEMO_COMPANY_ID } from "@/lib/commercial/entitlement-overrides";
 
 const company = (o: Partial<CompanyEntitlementInput>): CompanyEntitlementInput => ({
   id: "c",
@@ -129,5 +130,64 @@ describe("canonical entitlements (shadow mode)", () => {
       1,
     );
     expect(d.allowed_under_future_rules).toBe(true);
+  });
+});
+
+describe("P1.1 — resolución de conflictos conocidos", () => {
+  it("My Staff Solution resuelve a Scale con capacidad contractual pese a la suscripción obsoleta", () => {
+    const c = company({
+      id: "37f92f75-7af4-4496-aa10-793e14b09ed9",
+      name: "My Staff Solution LLC",
+      plan_code: "enterprise",
+      paid_features_enabled: true,
+      max_employees: 9999,
+      max_admins: 99,
+      subscription_plan: "operations",
+      usage: { active_workers: 67, admin_users: 5 },
+    });
+    const e = evaluateEntitlement(c, "active_workers");
+    expect(e.plan).toBe("scale");
+    expect(e.effective_limit).toBeNull();
+    expect(e.status).toBe("CUSTOM");
+    expect(e.conflicts).toHaveLength(0);
+    expect(e.informational.join(" ")).toContain("legacy");
+  });
+
+  it("un tenant interno no se convierte en cliente comercial por su suscripción", () => {
+    const c = company({
+      id: "876d404e-535e-4518-9541-80bc02298f90",
+      name: "Sandbox",
+      plan_code: "free",
+      is_sandbox: true,
+      is_test: true,
+      subscription_plan: "pro",
+      usage: { active_workers: 5, admin_users: 2 },
+    });
+    const e = evaluateEntitlement(c, "active_workers");
+    expect(e.context).toBe("internal");
+    expect(e.plan).toBe("starter");
+    expect(e.conflicts).toHaveLength(0);
+    expect(e.status).not.toBe("NEEDS_REVIEW");
+  });
+
+  it("el override explícito de Stafly Demo gana a la columna legacy de administradores", () => {
+    const c = company({
+      id: STAFLY_DEMO_COMPANY_ID,
+      name: "Stafly Demo",
+      plan_code: "enterprise",
+      is_demo: true,
+      max_employees: 10,
+      max_admins: 2,
+      overrides: getCompanyOverrides(STAFLY_DEMO_COMPANY_ID),
+      usage: { active_workers: 7, admin_users: 9 },
+    });
+    const e = evaluateEntitlement(c, "admin_users");
+    expect(e.effective_limit).toBe(10);
+    expect(e.override?.reason).toBe("internal_demo");
+    expect(e.status).toBe("NEAR_LIMIT");
+  });
+
+  it("el override solo aplica a la empresa nombrada", () => {
+    expect(getCompanyOverrides("b653f344-b07a-44a2-ae2c-cf06bfb0645a")).toHaveLength(0);
   });
 });
