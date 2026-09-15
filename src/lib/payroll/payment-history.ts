@@ -122,14 +122,43 @@ export function summarizePaymentHistory(
 }
 
 /**
- * Lee los reportes históricos importados del propio trabajador.
- * RLS limita las filas a `employees.user_id = auth.uid()`: no hay forma de
- * ver filas de otra persona ni de otra empresa.
+ * Ids de trabajador de la persona autenticada: su ficha viva en cada empresa
+ * más sus fichas fusionadas de la misma empresa. Es el mismo criterio que usa
+ * el RPC canónico `user_identity_employee_ids`.
+ */
+async function ownEmployeeIds(): Promise<string[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth?.user?.id;
+  if (!uid) return [];
+
+  const { data: own } = await supabase
+    .from("employees")
+    .select("id")
+    .eq("user_id", uid);
+  const ids = ((own ?? []) as Array<{ id: string }>).map((e) => e.id);
+  if (ids.length === 0) return [];
+
+  const { data: shadows } = await supabase
+    .from("employees")
+    .select("id")
+    .in("merged_into_employee_id", ids);
+
+  return [...new Set([...ids, ...((shadows ?? []) as Array<{ id: string }>).map((e) => e.id)])];
+}
+
+/**
+ * Lee los reportes históricos importados de la persona autenticada.
+ * Se filtra explícitamente por sus propios registros de trabajador: una cuenta
+ * con permisos amplios (admin) tampoco ve pagos ajenos en su portal.
  */
 export async function fetchWorkerHistoricalReports(): Promise<HistoricalPayReport[]> {
+  const employeeIds = await ownEmployeeIds();
+  if (employeeIds.length === 0) return [];
+
   const { data: bp, error } = await supabase
     .from("period_base_pay")
     .select("period_id, base_total_pay, company_id")
+    .in("employee_id", employeeIds)
     .not("import_id", "is", null);
 
   if (error) throw error;
