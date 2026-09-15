@@ -664,6 +664,15 @@ function DesktopPeriodSummary() {
       </TabsContent>
 
       <TabsContent value="summary" className="space-y-5 mt-0">
+        {/* Período sin datos de pago: nunca mostrar ceros como si la nómina estuviera lista */}
+        {selectedPeriod && rows.length === 0 && (
+          <StaflyAlertBanner
+            tone="info"
+            title="Este período todavía no tiene datos de pago cargados."
+            description="Importa o genera los datos del período para ver el resumen."
+          />
+        )}
+
         {/* KPI Cards */}
         {rows.length > 0 && (
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
