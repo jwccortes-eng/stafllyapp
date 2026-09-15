@@ -658,7 +658,14 @@ function DesktopPeriodSummary() {
 
       <TabsContent value="statements" className="space-y-5 mt-0">
         {selectedPeriod ? (
-          <BulkPublishPanel periodId={selectedPeriod} />
+          <ReceiptDistributionQueue
+            periodId={selectedPeriod}
+            periodLabel={
+              selectedPeriodObj
+                ? `${selectedPeriodObj.start_date} – ${selectedPeriodObj.end_date}`
+                : null
+            }
+          />
         ) : (
           <p className="text-sm text-muted-foreground">Selecciona un periodo para ver los recibos.</p>
         )}
