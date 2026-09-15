@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { describeConsolidation, type ConsolidationOutcome } from "@/lib/payroll/rate-resolver";
-import BulkPublishPanel from "@/components/payroll/BulkPublishPanel";
+import ReceiptDistributionQueue from "@/components/payroll/ReceiptDistributionQueue";
 
 
 /**
