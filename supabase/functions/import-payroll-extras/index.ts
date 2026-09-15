@@ -271,7 +271,7 @@ async function handleBridge(
   const blockers: string[] = [...guard.blockers];
   let grandApproved = 0;
   let grandComponents = 0;
-  let matched = 0, ambiguous = 0, notFound = 0, overrides = 0, parseIssues = 0;
+  let matched = 0, ambiguous = 0, notFound = 0, overrides = 0, parseIssues = 0, duplicates = 0;
   const seenEmployeeIds = new Set<string>();
 
   for (const row of rows) {
@@ -309,6 +309,7 @@ async function handleBridge(
 
     if (identityStatus === "MATCHED" && employeeId) {
       if (seenEmployeeIds.has(employeeId)) {
+        duplicates++;
         identityStatus = "AMBIGUOUS";
         warnings.push("Este trabajador aparece en más de una fila del archivo.");
       } else {
