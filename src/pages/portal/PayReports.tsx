@@ -155,7 +155,7 @@ export default function PayReports() {
                                 {statementStatusLabel({ paid_at: r.paid_at })}
                               </StaflyStatusBadge>
                             ) : (
-                              <StaflyStatusBadge tone="muted" icon={Archive}>
+                              <StaflyStatusBadge tone="neutral" icon={Archive}>
                                 Reporte histórico
                               </StaflyStatusBadge>
                             )}
