@@ -268,7 +268,7 @@ async function handleBridge(
   const movementExisting = new Set((existingMovements ?? []).map((m: any) => `${m.employee_id}|${m.concept_id}`));
 
   const previewRows: any[] = [];
-  const blockers: string[] = [];
+  const blockers: string[] = [...guard.blockers];
   let grandApproved = 0;
   let grandComponents = 0;
   let matched = 0, ambiguous = 0, notFound = 0, overrides = 0, parseIssues = 0;
