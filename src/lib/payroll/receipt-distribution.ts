@@ -214,9 +214,10 @@ export function deriveDistributionRow(
     portalLabel: portal.label,
     hasPendingInvitation: portal.status === "invited",
     status,
-    blocker: preview.blocking_reason,
+    blocker: preview.blocking_reason ?? (isCanonicalCandidate ? null : ctx.candidacy?.reason ?? null),
     hasOverride: preview.has_override,
     pendingCount,
+    candidacy: ctx.candidacy ?? null,
     preview,
   };
 }
