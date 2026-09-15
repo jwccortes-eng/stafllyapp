@@ -171,6 +171,11 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
   );
   const selectedTotal = selectedRows.reduce((s, r) => s + r.amount, 0);
   const selectedNoAccess = selectedRows.filter((r) => !r.portalAccess).length;
+  /** Aserción de unicidad: nunca dos recibos de la misma persona en el periodo. */
+  const duplicateConflicts = useMemo(
+    () => assertUniqueReceiptCandidates(selectedRows),
+    [selectedRows],
+  );
 
   const toggle = (row: DistributionRow) => {
     if (!row.eligible) return;
