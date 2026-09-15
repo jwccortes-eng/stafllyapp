@@ -68,6 +68,7 @@ interface Props {
 
 interface EmployeeLite {
   id: string;
+  company_id: string | null;
   first_name: string | null;
   last_name: string | null;
   user_id: string | null;
@@ -75,6 +76,7 @@ interface EmployeeLite {
   phone_number: string | null;
   email: string | null;
   employer_identification: string | null;
+  merged_into_employee_id: string | null;
   avatar_url: string | null;
 }
 
