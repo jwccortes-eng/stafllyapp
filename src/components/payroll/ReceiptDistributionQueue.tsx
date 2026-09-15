@@ -541,8 +541,13 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
             )}
             <div className="max-h-48 overflow-y-auto rounded-md border p-2 text-xs">
               {selectedRows.map((r) => (
-                <div key={r.employeeId} className="flex justify-between gap-2 py-0.5">
-                  <span className="truncate">{r.workerName}</span>
+                <div key={r.employeeId} className="flex items-baseline justify-between gap-2 py-0.5">
+                  <span className="min-w-0 truncate">
+                    {r.workerName}
+                    <span className="ml-1 font-mono text-[10px] text-muted-foreground">
+                      {r.employeeId}
+                    </span>
+                  </span>
                   <span className="font-mono">{bulkMoney(r.amount)}</span>
                 </div>
               ))}
