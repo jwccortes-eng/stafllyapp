@@ -215,6 +215,16 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
 
   const runPublish = async () => {
     if (!confirmChecked) return;
+    // Última barrera antes de escribir: unicidad persona+empresa+periodo.
+    if (assertUniqueReceiptCandidates(selectedRows).length > 0) {
+      setPreviewOpen(false);
+      notifyWarning({
+        title: "Publicación detenida por duplicado de persona",
+        fact: "La selección contiene dos candidatos de la misma persona en este periodo.",
+        consequence: "No se publicó ningún recibo de esos casos.",
+      });
+      return;
+    }
     setWorking(true);
     try {
       const res = await bulkPublish(
