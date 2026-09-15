@@ -188,9 +188,19 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
   };
 
   const selectEligible = () =>
+    // `eligible` ya exige candidato canónico: excluye auxiliares, identidad,
+    // publicados y bloqueados.
     setSelected(new Set(visible.filter((r) => r.eligible).map((r) => r.employeeId)));
 
   const openPreview = () => {
+    if (duplicateConflicts.length > 0) {
+      notifyWarning({
+        title: "Hay más de un recibo para la misma persona",
+        fact: `${duplicateConflicts.length} caso(s) con dos candidatos en este periodo.`,
+        consequence: "No se abrió la publicación: revisa la identidad antes de continuar.",
+      });
+      return;
+    }
     if (selectedRows.length === 0) {
       notifyWarning({
         title: "No hay recibos seleccionados",
