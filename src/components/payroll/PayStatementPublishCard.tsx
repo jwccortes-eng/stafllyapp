@@ -188,17 +188,26 @@ export default function PayStatementPublishCard({ periodId, employeeId }: Props)
 
             {preview?.has_override && (
               <div className="rounded-md border p-3 text-sm">
-                <Badge variant="secondary" className="mb-2">Total aprobado externo</Badge>
+                <Badge variant="secondary" className="mb-2">Cierre externo aprobado</Badge>
                 <p className="text-xs text-muted-foreground">
-                  Desglose: <span className="font-mono">{money(preview.computed_total)}</span>
+                  Desglose aprobado visible:{" "}
+                  <span className="font-mono">{money(preview.computed_total)}</span>
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Total aprobado:{" "}
+                  Cierre externo aprobado:{" "}
                   <span className="font-mono">{money(preview.frozen_total_preview)}</span>
                 </p>
+                <p className="text-xs text-muted-foreground">
+                  Diferencia:{" "}
+                  <span className="font-mono">
+                    {preview.frozen_total_preview - preview.computed_total >= 0 ? "+" : "−"}
+                    {money(Math.abs(preview.frozen_total_preview - preview.computed_total))}
+                  </span>
+                </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  El servidor congelará el total aprobado. No se recalcula ni se crean
-                  movimientos compensatorios.
+                  El cierre externo incluye componentes que no tienen un movimiento
+                  equivalente aprobado en Stafly. El servidor congelará el total aprobado:
+                  no se recalcula ni se crean movimientos compensatorios.
                 </p>
               </div>
             )}
