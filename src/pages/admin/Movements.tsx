@@ -12,7 +12,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Lock, DollarSign, Pencil, ShieldCheck, ShieldX, Clock3, Eye } from "lucide-react";
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,7 +22,6 @@ import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useCompany } from "@/hooks/useCompany";
 import { safeRead, safeSheetToJson, getSheetNames, getSheet } from "@/lib/safe-xlsx";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { EntityCard } from "@/components/entities/EntityCard";
@@ -557,7 +555,7 @@ export default function Movements() {
                   <TableCell className="text-right font-mono text-xs tabular-nums">{movement.quantity ?? "—"}</TableCell>
                   <TableCell className="text-right font-mono text-xs tabular-nums">{movement.rate != null ? formatMoney(movement.rate) : "—"}</TableCell>
                   <TableCell className={cn("text-right font-mono font-semibold tabular-nums", movement.approval_status === "denied" ? "text-muted-foreground line-through" : movement.concepts?.category === "extra" ? "text-success" : "text-destructive")}>{movement.concepts?.category === "extra" ? "+" : "−"}{formatMoney(Math.abs(movement.total_value))}</TableCell>
-                  <TableCell><button type="button" onClick={() => setDetailMovement(movement)} className="max-w-[180px] truncate text-left text-xs text-muted-foreground hover:text-foreground" title="Ver detalle">{movement.note || "Sin origen registrado"}</button></TableCell>
+                  <TableCell><Button type="button" variant="link" size="sm" onClick={() => setDetailMovement(movement)} className="h-auto max-w-[180px] justify-start truncate p-0 text-left text-xs font-normal text-muted-foreground" title="Ver detalle">{movement.note || "Sin origen registrado"}</Button></TableCell>
                   <TableCell>{movementActions(movement)}</TableCell>
                 </TableRow>
               ))}
@@ -662,6 +660,6 @@ export default function Movements() {
       <div className="mt-8">
         <AuditPanel entityType="movement" title="Actividad de novedades" hideViews compact />
       </div>
-    </div>
+    </OperationalWorkspace>
   );
 }
