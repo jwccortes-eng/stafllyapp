@@ -20,6 +20,10 @@ import {
   type BridgePreviewResult,
   type Payroll142RawRow,
 } from "@/lib/payroll/payroll142-bridge";
+import {
+  detectFileRange,
+  evaluatePayrollImportGuards,
+} from "@/lib/payroll/import-period-guard";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -136,6 +140,21 @@ export default function ExternalPayrollCloseImport({ companyId, periods }: Props
     }
     setImporting(false);
   };
+
+  const selectedPeriod = useMemo(
+    () => periods.find((p) => p.id === periodId) ?? null,
+    [periods, periodId],
+  );
+
+  /** Aviso local antes de llamar al preview. La autoridad es el servidor. */
+  const localGuard = useMemo(() => {
+    if (!selectedPeriod || !fileName) return null;
+    return evaluatePayrollImportGuards({
+      fileName,
+      period: selectedPeriod,
+      publishedStatements: 0,
+    });
+  }, [selectedPeriod, fileName]);
 
   const s = preview?.summary;
   const blocked = !!s && !s.canImport;
