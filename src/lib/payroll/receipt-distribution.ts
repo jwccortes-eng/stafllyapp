@@ -168,12 +168,21 @@ export function deriveDistributionRow(
   // El acceso real es `employees.user_id`; el preview lo confirma server-side.
   const portalAccess = portal.hasPortalAccess || preview.portal_access;
   const published = preview.readiness === "published";
-  const eligible = preview.readiness === "ready";
+  const role = ctx.candidacy?.role ?? "canonical_candidate";
+  const isCanonicalCandidate = role === "canonical_candidate";
+  // Elegible = listo server-side Y candidato canónico de recibo del periodo.
+  const eligible = preview.readiness === "ready" && isCanonicalCandidate;
   const pendingCount = preview.pending_count;
 
   let status: DistributionStatus;
   if (published) {
     status = portalAccess ? "PUBLISHED_VISIBLE" : "PUBLISHED_NO_ACCESS";
+  } else if (role === "auxiliary_duplicate") {
+    status = "AUXILIARY_DUPLICATE";
+  } else if (role === "auxiliary_no_approved_payroll") {
+    status = "AUXILIARY_NO_APPROVED_PAYROLL";
+  } else if (role === "identity_review") {
+    status = "IDENTITY_REVIEW";
   } else if (preview.readiness === "blocked") {
     status = classifyBlocker(preview.blocking_reason);
     if (status === "BLOCKED_PENDING_ADJUSTMENT" && pendingCount === 0) {
