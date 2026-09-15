@@ -435,6 +435,12 @@ async function handleBridge(
     grandDifference: round2(grandApproved - grandComponents),
     canImport: blockers.length === 0,
     blockers,
+    // Guardarraíles P0
+    fileRange: guard.fileRange,
+    guardBlockers: guard.blockers,
+    guardWarnings: guard.warnings,
+    publishedStatements: publishedStatements ?? 0,
+    duplicateCandidates: duplicates,
   };
 
   if (mode === "preview") {
@@ -443,6 +449,9 @@ async function handleBridge(
   }
 
   // ---------------- IMPORT CONTROLADO ----------------
+  if (guard.blockers.length > 0) {
+    return json({ error: guard.blockers.join(" "), summary, rows: previewRows }, 409);
+  }
   if (blockers.length > 0) {
     return json({ error: "Hay filas bloqueadas. Resuelve identidad y parseo antes de importar.", summary, rows: previewRows }, 409);
   }
