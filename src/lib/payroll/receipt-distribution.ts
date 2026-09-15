@@ -51,7 +51,7 @@ export interface DistributionRow {
 
 export const DISTRIBUTION_COPY: Record<
   DistributionStatus,
-  { label: string; tone: "success" | "warn" | "critical" | "neutral"; help: string }
+  { label: string; tone: "success" | "warning" | "critical" | "neutral"; help: string }
 > = {
   READY_TO_PUBLISH: {
     label: "Listo para publicar",
@@ -70,12 +70,12 @@ export const DISTRIBUTION_COPY: Record<
   },
   NEEDS_ACCOUNT: {
     label: "Necesita acceso",
-    tone: "warn",
+    tone: "warning",
     help: "Nómina correcta, pero no tiene cuenta activa: no podría abrir el recibo.",
   },
   IDENTITY_REVIEW: {
     label: "Revisión de identidad",
-    tone: "warn",
+    tone: "warning",
     help: "La identidad canónica de esta persona necesita evidencia humana.",
   },
   PUBLISHED_VISIBLE: {
@@ -85,7 +85,7 @@ export const DISTRIBUTION_COPY: Record<
   },
   PUBLISHED_NO_ACCESS: {
     label: "Publicado sin acceso",
-    tone: "warn",
+    tone: "warning",
     help: "El recibo existe y está congelado, pero el trabajador aún no puede abrirlo.",
   },
   OTHER_BLOCKER: {

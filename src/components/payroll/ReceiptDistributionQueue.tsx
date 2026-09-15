@@ -389,7 +389,7 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
                         <StaflyStatusBadge tone={DISTRIBUTION_COPY[r.status].tone} dot>
                           {DISTRIBUTION_COPY[r.status].label}
                         </StaflyStatusBadge>
-                        <StaflyStatusBadge tone={r.portalAccess ? "success" : "warn"}>
+                        <StaflyStatusBadge tone={r.portalAccess ? "success" : "warning"}>
                           {r.portalLabel}
                         </StaflyStatusBadge>
                       </div>
