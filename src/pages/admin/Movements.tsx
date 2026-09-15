@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
-import { DataTableToolbar } from "@/components/ui/data-table-toolbar";
 
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,9 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Search, Lock, ArrowUpDown, TrendingUp, TrendingDown, DollarSign, Pencil, ShieldCheck, ShieldX, Clock3 } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Lock, DollarSign, Pencil, ShieldCheck, ShieldX, Clock3, Eye } from "lucide-react";
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -25,12 +22,12 @@ import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useCompany } from "@/hooks/useCompany";
 import { safeRead, safeSheetToJson, getSheetNames, getSheet } from "@/lib/safe-xlsx";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
-import { KpiCard } from "@/components/ui/kpi-card";
-import { ProgressBar } from "@/components/ui/progress-bar";
-import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { EntityCard } from "@/components/entities/EntityCard";
+import { buildWorkerEntityView } from "@/lib/entities/entity-presenters";
+import { OperationalWorkspace, WorkspaceSearch } from "@/components/stafly-ui/OperationalWorkspace";
+import { StaflyFilterBar, StaflyStatusBadge } from "@/components/stafly-ui";
 
 interface Employee { id: string; first_name: string; last_name: string; }
 interface Period { id: string; start_date: string; end_date: string; status: string; }
@@ -39,7 +36,15 @@ interface Movement {
   id: string; employee_id: string; period_id: string; concept_id: string;
   quantity: number | null; rate: number | null; total_value: number; note: string | null;
   approval_status: string; approval_note: string | null; approved_by: string | null;
-  employees: { first_name: string; last_name: string; } | null;
+  employees: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    avatar_url: string | null;
+    employer_identification: string | null;
+    is_active: boolean | null;
+    user_id: string | null;
+  } | null;
   concepts: { name: string; category: string; } | null;
 }
 
@@ -53,6 +58,25 @@ interface ImportResult {
 }
 
 const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+type MovementFilter = "all" | "extra" | "deduction" | "pending" | "approved";
+
+const formatMoney = (value: number) => value.toLocaleString("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+});
+
+const formatPeriod = (period?: Period) => {
+  if (!period) return "Selecciona un período";
+  const start = new Date(`${period.start_date}T12:00:00`);
+  const end = new Date(`${period.end_date}T12:00:00`);
+  const sameMonth = start.getMonth() === end.getMonth();
+  const startLabel = new Intl.DateTimeFormat("es-US", sameMonth
+    ? { day: "numeric" }
+    : { month: "short", day: "numeric" }).format(start);
+  const endLabel = new Intl.DateTimeFormat("es-US", { month: "short", day: "numeric", year: "numeric" }).format(end);
+  return `${startLabel}–${endLabel}`;
+};
 
 export default function Movements() {
   const { selectedCompanyId } = useCompany();
@@ -65,6 +89,8 @@ export default function Movements() {
   const [concepts, setConcepts] = useState<Concept[]>([]);
   const [filterPeriod, setFilterPeriod] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [movementFilter, setMovementFilter] = useState<MovementFilter>("all");
+  const [detailMovement, setDetailMovement] = useState<Movement | null>(null);
   const [open, setOpen] = useState(false);
   const [employeePopoverOpen, setEmployeePopoverOpen] = useState(false);
   const [form, setForm] = useState({
@@ -124,7 +150,7 @@ export default function Movements() {
     if (!periodId) return;
     const { data } = await supabase
       .from("movements")
-      .select("*, employees(first_name, last_name), concepts(name, category)")
+      .select("*, employees(id, first_name, last_name, avatar_url, employer_identification, is_active, user_id), concepts(name, category)")
       .eq("period_id", periodId)
       .order("created_at", { ascending: false });
     setMovements((data as Movement[]) ?? []);
@@ -319,327 +345,233 @@ export default function Movements() {
   const okCount = importResults?.filter(r => r.status === "ok").length ?? 0;
   const errCount = importResults?.filter(r => r.status === "error").length ?? 0;
 
-  // Computed KPI values
+  // Presentational aggregation only: no persisted payroll total is created.
   const filtered = movements.filter(m => {
+    const matchesType = movementFilter === "all"
+      || (movementFilter === "extra" && m.concepts?.category === "extra")
+      || (movementFilter === "deduction" && m.concepts?.category !== "extra")
+      || (movementFilter === "pending" && m.approval_status === "pending")
+      || (movementFilter === "approved" && m.approval_status === "approved");
+    if (!matchesType) return false;
     if (!searchTerm.trim()) return true;
     const s = normalize(searchTerm);
     const empName = normalize(`${m.employees?.first_name ?? ""} ${m.employees?.last_name ?? ""}`);
     const conceptName = normalize(m.concepts?.name ?? "");
-    return empName.includes(s) || conceptName.includes(s);
+    return empName.includes(s) || conceptName.includes(s) || normalize(m.note ?? "").includes(s);
   });
-  const approvedMovements = filtered.filter(m => m.approval_status === "approved");
-  const pendingCount = filtered.filter(m => m.approval_status === "pending").length;
-  const deniedCount = filtered.filter(m => m.approval_status === "denied").length;
-  const extrasCount = approvedMovements.filter(m => m.concepts?.category === "extra").length;
-  const deductionsCount = approvedMovements.filter(m => m.concepts?.category !== "extra").length;
-  const extrasTotal = approvedMovements.filter(m => m.concepts?.category === "extra").reduce((s, m) => s + m.total_value, 0);
-  const deductionsTotal = approvedMovements.filter(m => m.concepts?.category !== "extra").reduce((s, m) => s + m.total_value, 0);
-  const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const approvedMovements = movements.filter(m => m.approval_status === "approved");
+  const pendingCount = movements.filter(m => m.approval_status === "pending").length;
+  const extrasTotal = approvedMovements.filter(m => m.concepts?.category === "extra").reduce((sum, m) => sum + Math.abs(m.total_value), 0);
+  const deductionsTotal = approvedMovements.filter(m => m.concepts?.category !== "extra").reduce((sum, m) => sum + Math.abs(m.total_value), 0);
+  const movementNet = extrasTotal - deductionsTotal;
+
+  const movementFilters = [
+    { value: "all", label: "Todos", count: movements.length },
+    { value: "extra", label: "Extras", count: movements.filter(m => m.concepts?.category === "extra").length },
+    { value: "deduction", label: "Deducciones", count: movements.filter(m => m.concepts?.category !== "extra").length },
+    { value: "pending", label: "Pendientes", count: pendingCount },
+    { value: "approved", label: "Aprobados", count: approvedMovements.length },
+  ];
+
+  const movementTypeBadge = (movement: Movement) => (
+    <StaflyStatusBadge tone={movement.concepts?.category === "extra" ? "success" : "critical"}>
+      {movement.concepts?.category === "extra" ? "Extra" : "Deducción"}
+    </StaflyStatusBadge>
+  );
+
+  const movementStatusBadge = (movement: Movement) => {
+    if (movement.approval_status === "approved") return <StaflyStatusBadge tone="success" icon={ShieldCheck}>Aprobado</StaflyStatusBadge>;
+    if (movement.approval_status === "pending") return <StaflyStatusBadge tone="warning" icon={Clock3}>Pendiente</StaflyStatusBadge>;
+    return <StaflyStatusBadge tone="critical" icon={ShieldX} title={movement.approval_note || "Sin motivo"}>Denegado</StaflyStatusBadge>;
+  };
+
+  const movementActions = (movement: Movement, compact = false) => (
+    <div className="flex items-center gap-1">
+      {canApprove && movement.approval_status === "pending" && (
+        <>
+          <Button variant="ghost" size="icon" className="text-success hover:text-success" onClick={() => handleApprove(movement.id)} title="Aprobar" aria-label="Aprobar ajuste">
+            <ShieldCheck className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => openDenyDialog(movement.id)} title="Denegar" aria-label="Denegar ajuste">
+            <ShieldX className="h-4 w-4" />
+          </Button>
+        </>
+      )}
+      {compact && (
+        <Button variant="ghost" size="icon" onClick={() => setDetailMovement(movement)} title="Ver detalle" aria-label="Ver detalle del ajuste">
+          <Eye className="h-4 w-4" />
+        </Button>
+      )}
+      <Button variant="ghost" size="icon" onClick={() => openEditMovement(movement)} disabled={isPeriodClosed} title="Editar" aria-label="Editar ajuste">
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => requestDelete(movement.id)} className="text-destructive hover:text-destructive" disabled={isPeriodClosed} title="Eliminar" aria-label="Eliminar ajuste">
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+
+  const identityFor = (movement: Movement, mobile = false) => {
+    const employee = movement.employees;
+    const view = buildWorkerEntityView({
+      id: employee?.id ?? movement.employee_id,
+      first_name: employee?.first_name,
+      last_name: employee?.last_name,
+      avatar_url: employee?.avatar_url,
+      employer_identification: employee?.employer_identification,
+      is_active: employee?.is_active,
+      user_id: employee?.user_id,
+    });
+    return (
+      <EntityCard
+        kind="worker"
+        name={view.name}
+        avatarUrl={employee?.avatar_url}
+        reference={view.reference}
+        status={view.status}
+        statusLabel={view.statusLabel}
+        density="compact"
+        bare
+        primaryDetail={mobile ? view.primaryDetail : undefined}
+        className="p-0 sm:p-0"
+      />
+    );
+  };
+
+  const headerActions = (
+    <>
+      <Dialog open={importOpen} onOpenChange={(value) => { setImportOpen(value); if (!value) setImportResults(null); }}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" disabled={isPeriodClosed}><Upload className="h-4 w-4 mr-1.5" />Importar</Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Importar ajustes desde archivo</DialogTitle>
+            <DialogDescription>Columnas: <strong>Empleado</strong>, <strong>Concepto</strong>, y opcionalmente Cantidad, Tarifa, Total, Nota.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <FormField label="Período destino">
+              <div className="mt-1 text-sm font-medium">{formatPeriod(selectedPeriod)}</div>
+            </FormField>
+            <FormField label="Archivo Excel o CSV" htmlFor="import-file">
+              <Input id="import-file" type="file" accept=".xlsx,.xls,.csv" onChange={handleImportFile} disabled={importing || !filterPeriod} className="mt-1" />
+            </FormField>
+            {importing && <div className="py-4 text-center text-muted-foreground">Procesando...</div>}
+            {importResults && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <StaflyStatusBadge tone="success" icon={CheckCircle2}>{okCount} procesados</StaflyStatusBadge>
+                  {errCount > 0 && <StaflyStatusBadge tone="critical" icon={XCircle}>{errCount} omitidos</StaflyStatusBadge>}
+                  <Button variant="ghost" size="sm" onClick={exportResultsCSV} className="ml-auto"><Download className="h-4 w-4 mr-1" />Exportar</Button>
+                </div>
+                <div className="max-h-[300px] overflow-y-auto rounded-lg border">
+                  <Table>
+                    <TableHeader><TableRow><TableHead className="w-14">Fila</TableHead><TableHead>Empleado</TableHead><TableHead>Concepto</TableHead><TableHead className="w-16">Estado</TableHead><TableHead>Detalle</TableHead></TableRow></TableHeader>
+                    <TableBody>{importResults.map((result, index) => (
+                      <TableRow key={index} className={result.status === "error" ? "bg-destructive/5" : ""}>
+                        <TableCell className="font-mono text-xs">{result.row}</TableCell>
+                        <TableCell className="text-sm">{result.employeeName}</TableCell>
+                        <TableCell className="text-sm">{result.conceptName}</TableCell>
+                        <TableCell>{result.status === "ok" ? <CheckCircle2 className="h-4 w-4 text-success" /> : <AlertTriangle className="h-4 w-4 text-destructive" />}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{result.status === "ok" ? formatMoney(result.totalValue ?? 0) : result.reason}</TableCell>
+                      </TableRow>
+                    ))}</TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm" disabled={isPeriodClosed}><Plus className="h-4 w-4 mr-1.5" />Nuevo ajuste</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Registrar ajuste</DialogTitle></DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-3">
+            <FormField label="Empleado">
+              <Popover open={employeePopoverOpen} onOpenChange={setEmployeePopoverOpen}>
+                <PopoverTrigger asChild><Button variant="outline" role="combobox" className="w-full justify-between font-normal">{form.employee_id ? (() => { const employee = employees.find(item => item.id === form.employee_id); return employee ? `${employee.first_name} ${employee.last_name}` : "Seleccionar"; })() : "Buscar empleado..."}<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start"><Command><CommandInput placeholder="Buscar por nombre..." /><CommandList><CommandEmpty>No encontrado.</CommandEmpty><CommandGroup>{employees.map(employee => <CommandItem key={employee.id} value={`${employee.first_name} ${employee.last_name}`} onSelect={() => { setForm(current => ({ ...current, employee_id: employee.id })); setEmployeePopoverOpen(false); }}><Check className={cn("mr-2 h-4 w-4", form.employee_id === employee.id ? "opacity-100" : "opacity-0")} />{employee.first_name} {employee.last_name}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
+              </Popover>
+            </FormField>
+            <FormField label="Período"><Select value={form.period_id || filterPeriod} onValueChange={value => setForm(current => ({ ...current, period_id: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{periods.map(period => <SelectItem key={period.id} value={period.id}>{formatPeriod(period)}</SelectItem>)}</SelectContent></Select></FormField>
+            <FormField label="Concepto"><Select value={form.concept_id} onValueChange={value => setForm(current => ({ ...current, concept_id: value }))}><SelectTrigger><SelectValue placeholder="Seleccionar concepto" /></SelectTrigger><SelectContent>{concepts.map(concept => <SelectItem key={concept.id} value={concept.id}>{concept.name} ({concept.category})</SelectItem>)}</SelectContent></Select></FormField>
+            {selectedConcept && selectedConcept.calc_mode !== "manual_value" && <div className="grid grid-cols-2 gap-3"><FormField label="Cantidad"><Input type="number" step="0.01" value={form.quantity} onChange={event => setForm(current => ({ ...current, quantity: event.target.value }))} /></FormField><FormField label="Valor unitario"><Input type="number" step="0.01" value={form.rate} onChange={event => setForm(current => ({ ...current, rate: event.target.value }))} /></FormField></div>}
+            <FormField label="Total"><Input type="number" step="0.01" value={form.total_value} onChange={event => setForm(current => ({ ...current, total_value: event.target.value }))} required /></FormField>
+            <FormField label="Origen o nota"><Textarea value={form.note} onChange={event => setForm(current => ({ ...current, note: event.target.value }))} rows={2} /></FormField>
+            <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : "Registrar"}</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <PageHeader
-        variant="2"
-        title="Novedades"
-        subtitle="Extras y deducciones por periodo"
-        badge="Semanal"
-        rightSlot={<div className="flex gap-2">
-          <Dialog open={importOpen} onOpenChange={(o) => { setImportOpen(o); if (!o) setImportResults(null); }}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" disabled={isPeriodClosed}><Upload className="h-4 w-4 mr-1.5" />Importar</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Importar novedades desde archivo</DialogTitle>
-                <DialogDescription>Columnas: <strong>Empleado</strong>, <strong>Concepto</strong>, y opcionalmente Cantidad, Tarifa, Total, Nota.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <FormField label="Periodo destino" className="flex-1">
-                    <div className="text-sm font-medium mt-1">
-                      {periods.find(p => p.id === filterPeriod) ? `${periods.find(p => p.id === filterPeriod)!.start_date} → ${periods.find(p => p.id === filterPeriod)!.end_date}` : "Sin periodo"}
-                    </div>
-                  </FormField>
-                </div>
-                <FormField label="Archivo Excel o CSV" htmlFor="import-file">
-                  <Input id="import-file" type="file" accept=".xlsx,.xls,.csv" onChange={handleImportFile} disabled={importing || !filterPeriod} className="mt-1" />
-                </FormField>
-                {importing && <div className="text-center py-4 text-muted-foreground">Procesando...</div>}
-                {importResults && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-4">
-                      <Badge variant="outline" className="gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-earning" />{okCount} procesados</Badge>
-                      {errCount > 0 && <Badge variant="outline" className="gap-1"><XCircle className="h-3.5 w-3.5 text-destructive" />{errCount} omitidos</Badge>}
-                      <Button variant="ghost" size="sm" onClick={exportResultsCSV} className="ml-auto"><Download className="h-4 w-4 mr-1" />Exportar</Button>
-                    </div>
-                    <div className="border rounded-lg overflow-hidden max-h-[300px] overflow-y-auto">
-                      <Table>
-                        <TableHeader><TableRow>
-                          <TableHead className="w-14">Fila</TableHead><TableHead>Empleado</TableHead><TableHead>Concepto</TableHead><TableHead className="w-16">Estado</TableHead><TableHead>Detalle</TableHead>
-                        </TableRow></TableHeader>
-                        <TableBody>
-                          {importResults.map((r, i) => (
-                            <TableRow key={i} className={r.status === "error" ? "bg-destructive/5" : ""}>
-                              <TableCell className="font-mono text-xs">{r.row}</TableCell>
-                              <TableCell className="text-sm">{r.employeeName}</TableCell>
-                              <TableCell className="text-sm">{r.conceptName}</TableCell>
-                              <TableCell>{r.status === "ok" ? <CheckCircle2 className="h-4 w-4 text-earning" /> : <AlertTriangle className="h-4 w-4 text-destructive" />}</TableCell>
-                              <TableCell className="text-xs text-muted-foreground">{r.status === "ok" ? `$${r.totalValue?.toFixed(2)}` : r.reason}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" disabled={isPeriodClosed}><Plus className="h-4 w-4 mr-1.5" />Nueva novedad</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Registrar novedad</DialogTitle></DialogHeader>
-              <form onSubmit={handleCreate} className="space-y-3">
-                <FormField label="Empleado">
-                  <Popover open={employeePopoverOpen} onOpenChange={setEmployeePopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
-                        {form.employee_id ? (() => { const e = employees.find(e => e.id === form.employee_id); return e ? `${e.first_name} ${e.last_name}` : "Seleccionar"; })() : "Buscar empleado..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Buscar por nombre..." />
-                        <CommandList>
-                          <CommandEmpty>No encontrado.</CommandEmpty>
-                          <CommandGroup>
-                            {employees.map(e => (
-                              <CommandItem key={e.id} value={`${e.first_name} ${e.last_name}`} onSelect={() => { setForm(f => ({ ...f, employee_id: e.id })); setEmployeePopoverOpen(false); }}>
-                                <Check className={cn("mr-2 h-4 w-4", form.employee_id === e.id ? "opacity-100" : "opacity-0")} />
-                                {e.first_name} {e.last_name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </FormField>
-                <FormField label="Periodo">
-                  <Select value={form.period_id || filterPeriod} onValueChange={v => setForm(f => ({ ...f, period_id: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{periods.map(p => {
-                      const today2 = new Date().toISOString().slice(0, 10);
-                      const isCurr = p.start_date <= today2 && p.end_date >= today2;
-                      return <SelectItem key={p.id} value={p.id} className={isCurr ? "font-semibold text-primary" : ""}>{isCurr ? "● " : ""}{p.start_date} → {p.end_date}</SelectItem>;
-                    })}</SelectContent>
-                  </Select>
-                </FormField>
-                <FormField label="Concepto">
-                  <Select value={form.concept_id} onValueChange={v => setForm(f => ({ ...f, concept_id: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar concepto" /></SelectTrigger>
-                    <SelectContent>{concepts.map(c => <SelectItem key={c.id} value={c.id}>{c.name} ({c.category})</SelectItem>)}</SelectContent>
-                  </Select>
-                </FormField>
-                {selectedConcept && selectedConcept.calc_mode !== "manual_value" && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField label="Cantidad"><Input type="number" step="0.01" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} /></FormField>
-                    <FormField label="Tarifa"><Input type="number" step="0.01" value={form.rate} onChange={e => setForm(f => ({ ...f, rate: e.target.value }))} /></FormField>
-                  </div>
-                )}
-                <FormField label="Total"><Input type="number" step="0.01" value={form.total_value} onChange={e => setForm(f => ({ ...f, total_value: e.target.value }))} required /></FormField>
-                <FormField label="Nota"><Textarea value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} rows={2} /></FormField>
-                <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : "Registrar"}</Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>}
-      />
-
-      {isPeriodClosed && (
-        <div className="flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3">
-          <Lock className="h-4 w-4 text-warning shrink-0" />
-          <p className="text-sm"><strong>Periodo cerrado.</strong> No se pueden modificar novedades.</p>
-        </div>
-      )}
-
-      {/* Period selector + search */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="max-w-[220px]">
+    <OperationalWorkspace
+      title="Ajustes"
+      context={selectedPeriod ? formatPeriod(selectedPeriod) : "Selecciona un período"}
+      search={<WorkspaceSearch value={searchTerm} onChange={setSearchTerm} placeholder="Buscar persona, concepto u origen..." />}
+      action={headerActions}
+      filters={(
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <Select value={filterPeriod} onValueChange={setFilterPeriod}>
-            <SelectTrigger className="h-9"><SelectValue placeholder="Filtrar por periodo" /></SelectTrigger>
-            <SelectContent>{periods.map(p => {
-              const today = new Date().toISOString().slice(0, 10);
-              const isCurrent = p.start_date <= today && p.end_date >= today;
-              return (
-                <SelectItem key={p.id} value={p.id} className={isCurrent ? "font-semibold text-primary" : ""}>
-                  {isCurrent ? "● " : ""}{p.start_date} → {p.end_date}{p.status === "closed" ? " 🔒" : ""}
-                </SelectItem>
-              );
-            })}</SelectContent>
+            <SelectTrigger className="h-9 w-full md:w-[230px]"><SelectValue placeholder="Seleccionar período" /></SelectTrigger>
+            <SelectContent>{periods.map(period => <SelectItem key={period.id} value={period.id}>{formatPeriod(period)}{period.status === "closed" ? " · Cerrado" : ""}</SelectItem>)}</SelectContent>
           </Select>
-        </div>
-        <DataTableToolbar
-          search={searchTerm}
-          onSearchChange={setSearchTerm}
-          searchPlaceholder="Buscar empleado o concepto..."
-          className="flex-1"
-        />
-      </div>
-
-      {/* KPI Cards */}
-      {movements.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <KpiCard value={filtered.length.toString()} label="Total novedades" accent="primary" icon={<DollarSign className="h-5 w-5 text-primary" />} />
-          {pendingCount > 0 && (
-            <KpiCard value={pendingCount.toString()} label="Pendientes de aprobación" accent="warning" icon={<Clock3 className="h-5 w-5 text-warning" />} />
-          )}
-          <KpiCard value={`$${fmt(extrasTotal + deductionsTotal)}`} label="Valor aprobado" accent="primary" />
-          <KpiCard value={`$${fmt(extrasTotal)}`} label={`${extrasCount} extras`} accent="earning" icon={<TrendingUp className="h-5 w-5 text-earning" />} />
-          <KpiCard value={`$${fmt(deductionsTotal)}`} label={`${deductionsCount} deducciones`} accent="deduction" icon={<TrendingDown className="h-5 w-5 text-deduction" />} />
+          <StaflyFilterBar options={movementFilters} value={movementFilter} onChange={value => setMovementFilter(value as MovementFilter)} wrap={false} aria-label="Filtrar ajustes" />
         </div>
       )}
+      filtersActiveCount={movementFilter === "all" ? 0 : 1}
+      mobileFiltersTitle="Período y filtros"
+      metrics={movements.length > 0 ? [
+        { label: "movimientos", value: movements.length, tone: "neutral" },
+        { label: "extras", value: `+${formatMoney(extrasTotal)}`, tone: "success" },
+        { label: "deducciones", value: `−${formatMoney(deductionsTotal)}`, tone: "critical" },
+        { label: "neto ajustes", value: formatMoney(movementNet), tone: movementNet < 0 ? "critical" : "primary" },
+      ] : []}
+    >
+      <div className="space-y-3">
+        {isPeriodClosed && <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3"><Lock className="h-4 w-4 shrink-0 text-warning" /><p className="text-sm"><strong>Período cerrado.</strong> Los ajustes están disponibles solo para consulta.</p></div>}
+        {pendingCount > 0 && <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3"><Clock3 className="h-4 w-4 shrink-0 text-warning" /><p className="text-sm"><strong>{pendingCount} ajuste(s) pendiente(s)</strong> de aprobación.</p></div>}
 
-      {filtered.length > 0 && (
-        <ReportActionsBar
-          title="Novedades"
-          subtitle={selectedPeriod ? `${selectedPeriod.start_date} — ${selectedPeriod.end_date}` : undefined}
-          onExportCSV={() => {
-            const headers = ["Empleado", "Concepto", "Categoría", "Cantidad", "Tarifa", "Total", "Estado", "Nota"];
-            const rows = filtered.map(m => [
-              m.employees ? `${m.employees.first_name} ${m.employees.last_name}` : "",
-              m.concepts?.name ?? "", m.concepts?.category ?? "",
-              String(m.quantity ?? ""), String(m.rate ?? ""),
-              String(m.total_value), m.approval_status, m.note ?? "",
-            ]);
-            return [headers, ...rows];
-          }}
-        />
-      )}
+        {filtered.length > 0 && <ReportActionsBar title="Ajustes" subtitle={formatPeriod(selectedPeriod)} onExportCSV={() => {
+          const headers = ["Empleado", "Concepto", "Categoría", "Cantidad", "Tarifa", "Total", "Estado", "Nota"];
+          const rows = filtered.map(movement => [movement.employees ? `${movement.employees.first_name} ${movement.employees.last_name}` : "", movement.concepts?.name ?? "", movement.concepts?.category ?? "", String(movement.quantity ?? ""), String(movement.rate ?? ""), String(movement.total_value), movement.approval_status, movement.note ?? ""]);
+          return [headers, ...rows];
+        }} />}
 
-      {/* Pending warning banner */}
-      {pendingCount > 0 && (
-        <div className="flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3">
-          <Clock3 className="h-4 w-4 text-warning shrink-0" />
-          <p className="text-sm"><strong>{pendingCount} novedad(es) pendiente(s)</strong> de aprobación. El periodo no podrá cerrarse hasta que se aprueben o denieguen todas.</p>
+        <div className="hidden md:block data-table-wrapper">
+          <Table>
+            <TableHeader><TableRow className="bg-muted/30"><TableHead>Persona</TableHead><TableHead>Concepto</TableHead><TableHead>Tipo</TableHead><TableHead>Estado</TableHead><TableHead className="text-right">Cant.</TableHead><TableHead className="text-right">Valor</TableHead><TableHead className="text-right">Total</TableHead><TableHead>Origen</TableHead><TableHead className="w-36">Acciones</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {movements.length === 0 && !filterPeriod ? <TableRow><TableCell colSpan={9} className="p-0"><PageSkeleton variant="table" className="border-0 p-4 shadow-none" /></TableCell></TableRow> : filtered.length === 0 ? <TableRow><TableCell colSpan={9} className="p-0"><EmptyState icon={DollarSign} title="No hay ajustes" description="No hay registros para este período y filtro" compact /></TableCell></TableRow> : filtered.map(movement => (
+                <TableRow key={movement.id} className={cn("group transition-colors hover:bg-accent/40", movement.approval_status === "denied" && "opacity-60", movement.approval_status === "pending" && "bg-warning/5")}>
+                  <TableCell className="min-w-[210px]">{identityFor(movement)}</TableCell>
+                  <TableCell className="max-w-[220px] font-medium"><span className="line-clamp-2">{movement.concepts?.name}</span></TableCell>
+                  <TableCell>{movementTypeBadge(movement)}</TableCell>
+                  <TableCell>{movementStatusBadge(movement)}</TableCell>
+                  <TableCell className="text-right font-mono text-xs tabular-nums">{movement.quantity ?? "—"}</TableCell>
+                  <TableCell className="text-right font-mono text-xs tabular-nums">{movement.rate != null ? formatMoney(movement.rate) : "—"}</TableCell>
+                  <TableCell className={cn("text-right font-mono font-semibold tabular-nums", movement.approval_status === "denied" ? "text-muted-foreground line-through" : movement.concepts?.category === "extra" ? "text-success" : "text-destructive")}>{movement.concepts?.category === "extra" ? "+" : "−"}{formatMoney(Math.abs(movement.total_value))}</TableCell>
+                  <TableCell><Button type="button" variant="link" size="sm" onClick={() => setDetailMovement(movement)} className="h-auto max-w-[180px] justify-start truncate p-0 text-left text-xs font-normal text-muted-foreground" title="Ver detalle">{movement.note || "Sin origen registrado"}</Button></TableCell>
+                  <TableCell>{movementActions(movement)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
-      )}
 
-      {/* Progress */}
-      {movements.length > 0 && (
-        <ProgressBar current={extrasCount} total={approvedMovements.length || 1} label="Extras aprobados vs total" accent="earning" />
-      )}
-
-      {/* Table */}
-      <div className="data-table-wrapper">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/30">
-              <TableHead>Empleado</TableHead>
-              <TableHead>Concepto</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead className="text-center">Estado</TableHead>
-              <TableHead className="text-right">Cant.</TableHead>
-              <TableHead className="text-right">Tarifa</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead>Nota</TableHead>
-              <TableHead className="w-28"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {movements.length === 0 && !filterPeriod ? (
-              <TableRow><TableCell colSpan={9} className="p-0"><PageSkeleton variant="table" className="border-0 shadow-none p-4" /></TableCell></TableRow>
-            ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={9} className="p-0">
-                <EmptyState icon={DollarSign} title="No hay novedades" description="Agrega extras o deducciones en este periodo" compact />
-              </TableCell></TableRow>
-            ) : (
-              filtered.map(m => (
-                <Tooltip key={m.id}>
-                  <TooltipTrigger asChild>
-                    <TableRow className={cn(
-                      "group hover:bg-accent/40 transition-colors",
-                      m.approval_status === "denied" && "opacity-50",
-                      m.approval_status === "pending" && "bg-warning/5"
-                    )}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <EmployeeAvatar firstName={m.employees?.first_name ?? "?"} lastName={m.employees?.last_name ?? "?"} size="sm" />
-                          <span className="font-medium">{m.employees?.first_name} {m.employees?.last_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">{m.concepts?.name}</TableCell>
-                      <TableCell>
-                        <span className={m.concepts?.category === "extra" ? "earning-badge" : "deduction-badge"}>
-                          {m.concepts?.category === "extra" ? "Extra" : "Deducción"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {m.approval_status === "approved" && (
-                          <Badge variant="outline" className="gap-1 text-earning border-earning/30 bg-earning/5 text-[10px]">
-                            <ShieldCheck className="h-3 w-3" /> Aprobado
-                          </Badge>
-                        )}
-                        {m.approval_status === "pending" && (
-                          <Badge variant="outline" className="gap-1 text-warning border-warning/30 bg-warning/5 text-[10px]">
-                            <Clock3 className="h-3 w-3" /> Pendiente
-                          </Badge>
-                        )}
-                        {m.approval_status === "denied" && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="outline" className="gap-1 text-destructive border-destructive/30 bg-destructive/5 text-[10px] cursor-help">
-                                <ShieldX className="h-3 w-3" /> Denegado
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent side="left"><p className="text-xs max-w-48">{m.approval_note || "Sin motivo"}</p></TooltipContent>
-                          </Tooltip>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs tabular-nums">{m.quantity ?? "—"}</TableCell>
-                      <TableCell className="text-right font-mono text-xs tabular-nums">{m.rate ? `$${m.rate}` : "—"}</TableCell>
-                      <TableCell className={cn("text-right font-mono font-medium tabular-nums", m.approval_status === "denied" ? "line-through text-muted-foreground" : m.concepts?.category === "extra" ? "text-earning" : "text-deduction")}>
-                        {m.concepts?.category === "extra" ? "+" : "−"}${Math.abs(m.total_value).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-32 truncate">{m.note ?? ""}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {canApprove && m.approval_status === "pending" && (
-                            <>
-                              <Button variant="ghost" size="icon" className="text-earning hover:text-earning" onClick={() => handleApprove(m.id)} title="Aprobar">
-                                <ShieldCheck className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => openDenyDialog(m.id)} title="Denegar">
-                                <ShieldX className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          <Button variant="ghost" size="icon" onClick={() => openEditMovement(m)} disabled={isPeriodClosed}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => requestDelete(m.id)} className="text-deduction hover:text-deduction" disabled={isPeriodClosed}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  </TooltipTrigger>
-                  <TooltipContent side="left" className="text-xs space-y-0.5">
-                    <p className="font-semibold">{m.employees?.first_name} {m.employees?.last_name}</p>
-                    <p>{m.concepts?.name} · {m.concepts?.category === "extra" ? "Extra" : "Deducción"}</p>
-                    {m.quantity && <p>Cantidad: {m.quantity} × ${m.rate}</p>}
-                    <p className="font-mono font-bold">Total: ${m.total_value}</p>
-                    {m.note && <p className="text-muted-foreground italic">{m.note}</p>}
-                  </TooltipContent>
-                </Tooltip>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <div className="space-y-2 md:hidden">
+          {filtered.length === 0 ? <EmptyState icon={DollarSign} title="No hay ajustes" description="No hay registros para este período y filtro" compact /> : filtered.map(movement => (
+            <div key={movement.id} className={cn("rounded-lg border border-border/60 bg-card p-3", movement.approval_status === "pending" && "border-warning/30", movement.approval_status === "denied" && "opacity-70")}>
+              <div className="flex items-start justify-between gap-3">{identityFor(movement, true)}<p className={cn("shrink-0 font-mono text-base font-bold tabular-nums", movement.concepts?.category === "extra" ? "text-success" : "text-destructive")}>{movement.concepts?.category === "extra" ? "+" : "−"}{formatMoney(Math.abs(movement.total_value))}</p></div>
+              <div className="mt-3 border-t border-border/50 pt-3"><p className="font-medium">{movement.concepts?.name}</p><div className="mt-2 flex flex-wrap gap-1.5">{movementTypeBadge(movement)}{movementStatusBadge(movement)}</div></div>
+              <div className="mt-3 flex items-end justify-between gap-3"><div className="min-w-0 text-xs text-muted-foreground"><p className="font-mono tabular-nums">{movement.quantity != null && movement.rate != null ? `${movement.quantity} × ${formatMoney(movement.rate)}` : "Valor directo"}</p><p className="mt-1 truncate">{movement.note || "Sin origen registrado"}</p></div>{movementActions(movement, true)}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <AlertDialog open={confirmImport} onOpenChange={setConfirmImport}>
@@ -701,10 +633,33 @@ export default function Movements() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!detailMovement} onOpenChange={(value) => { if (!value) setDetailMovement(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Detalle del ajuste</DialogTitle>
+            <DialogDescription>{detailMovement ? `${detailMovement.employees?.first_name ?? ""} ${detailMovement.employees?.last_name ?? ""}`.trim() : ""}</DialogDescription>
+          </DialogHeader>
+          {detailMovement && (
+            <div className="space-y-4">
+              {identityFor(detailMovement, true)}
+              <div className="grid grid-cols-2 gap-3 rounded-lg border border-border/60 bg-muted/20 p-3 text-sm">
+                <div className="col-span-2"><p className="text-xs text-muted-foreground">Concepto</p><p className="font-semibold">{detailMovement.concepts?.name}</p></div>
+                <div><p className="text-xs text-muted-foreground">Tipo</p><div className="mt-1">{movementTypeBadge(detailMovement)}</div></div>
+                <div><p className="text-xs text-muted-foreground">Estado</p><div className="mt-1">{movementStatusBadge(detailMovement)}</div></div>
+                <div><p className="text-xs text-muted-foreground">Cálculo</p><p className="mt-1 font-mono tabular-nums">{detailMovement.quantity != null && detailMovement.rate != null ? `${detailMovement.quantity} × ${formatMoney(detailMovement.rate)}` : "Valor directo"}</p></div>
+                <div><p className="text-xs text-muted-foreground">Total</p><p className="mt-1 font-mono font-bold tabular-nums">{formatMoney(detailMovement.total_value)}</p></div>
+                <div className="col-span-2"><p className="text-xs text-muted-foreground">Origen o nota</p><p className="mt-1">{detailMovement.note || "Sin origen registrado"}</p></div>
+                {detailMovement.approval_note && <div className="col-span-2"><p className="text-xs text-muted-foreground">Motivo de denegación</p><p className="mt-1">{detailMovement.approval_note}</p></div>}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Audit trail */}
       <div className="mt-8">
         <AuditPanel entityType="movement" title="Actividad de novedades" hideViews compact />
       </div>
-    </div>
+    </OperationalWorkspace>
   );
 }
