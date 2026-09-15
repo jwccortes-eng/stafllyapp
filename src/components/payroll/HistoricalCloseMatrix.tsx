@@ -77,6 +77,29 @@ const STATUS_META: Record<CloseStatus, { label: string; tone: "success" | "warni
 
 const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
+/** Prioridad de la cola de excepciones: bloqueados, luego mayor diferencia, luego más reciente. */
+export function exceptionSort(a: MatrixRow, b: MatrixRow): number {
+  const rank = (r: MatrixRow) => (r.status === "red" ? 0 : r.status === "yellow" ? 1 : 2);
+  if (rank(a) !== rank(b)) return rank(a) - rank(b);
+  const da = Math.abs(a.difference);
+  const db = Math.abs(b.difference);
+  if (Math.abs(da - db) > CENT) return db - da;
+  return (b.period.sequence_number ?? 0) - (a.period.sequence_number ?? 0);
+}
+
+/** Etiqueta de acción para cada excepción, según la evidencia que falta. */
+export function exceptionCta(row: MatrixRow): string {
+  if (row.status === "red") return "Revisar cierre externo";
+  if (row.status === "gray") return "Verificar sin actividad";
+  return "Revisar diferencias";
+}
+
+export function exceptionPriority(row: MatrixRow): { label: string; tone: "critical" | "warning" | "neutral" } {
+  if (row.status === "red") return { label: "Alta", tone: "critical" };
+  if (row.status === "gray") return { label: "Baja", tone: "neutral" };
+  return { label: Math.abs(row.difference) >= 500 ? "Alta" : "Media", tone: "warning" };
+}
+
 const shortRange = (start: string, end: string) => {
   const s = new Date(`${start}T12:00:00`);
   const e = new Date(`${end}T12:00:00`);
