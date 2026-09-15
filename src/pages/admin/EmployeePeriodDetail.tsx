@@ -12,6 +12,7 @@ import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Pencil, Save, X,
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import PayStatementPublishCard from "@/components/payroll/PayStatementPublishCard";
+import { computePeriodDetailTotals } from "@/lib/payroll/period-detail-totals";
 
 interface ShiftRow {
   id: string;
@@ -33,6 +34,7 @@ interface MovementRow {
   note: string | null;
   concept_name: string;
   category: string;
+  approval_status: string | null;
 }
 
 interface BasePay {
@@ -43,6 +45,8 @@ interface BasePay {
   total_paid_hours: number | null;
   total_regular: number | null;
   import_id?: string | null;
+  approved_total_override?: number | null;
+  approved_total_source?: string | null;
 }
 
 type TraceLevel = "final_total_only" | "concept_breakdown";
@@ -96,9 +100,9 @@ export default function EmployeePeriodDetail() {
     const [empRes, periodRes, baseRes, shiftsRes, movRes] = await Promise.all([
       supabase.from("employees").select("first_name, last_name").eq("id", employeeId).single(),
       supabase.from("pay_periods").select("start_date, end_date, status").eq("id", periodId).single(),
-      supabase.from("period_base_pay").select("id, base_total_pay, total_work_hours, total_overtime, total_paid_hours, total_regular, import_id").eq("employee_id", employeeId).eq("period_id", periodId).maybeSingle(),
+      supabase.from("period_base_pay").select("id, base_total_pay, total_work_hours, total_overtime, total_paid_hours, total_regular, import_id, approved_total_override, approved_total_source").eq("employee_id", employeeId).eq("period_id", periodId).maybeSingle(),
       supabase.from("shifts").select("id, shift_start_date, shift_hours, hourly_rate_usd, daily_total_pay_usd, daily_total_hours, type, customer, job_code").eq("employee_id", employeeId).eq("period_id", periodId).order("shift_start_date"),
-      supabase.from("movements").select("id, total_value, quantity, rate, note, concepts(name, category)").eq("employee_id", employeeId).eq("period_id", periodId),
+      supabase.from("movements").select("id, total_value, quantity, rate, note, approval_status, concepts(name, category)").eq("employee_id", employeeId).eq("period_id", periodId),
     ]);
 
     setEmployee(empRes.data);
@@ -150,6 +154,7 @@ export default function EmployeePeriodDetail() {
         note: m.note,
         concept_name: m.concepts?.name ?? "—",
         category: m.concepts?.category ?? "extra",
+        approval_status: m.approval_status ?? null,
       }))
     );
     setLoading(false);
@@ -244,12 +249,12 @@ export default function EmployeePeriodDetail() {
     return <div className="py-12 text-center text-muted-foreground">Cargando detalle...</div>;
   }
 
-  const extras = movements.filter(m => m.category === "extra");
-  const deductions = movements.filter(m => m.category === "deduction");
-  const extrasTotal = extras.reduce((s, m) => s + m.total_value, 0);
-  const deductionsTotal = deductions.reduce((s, m) => s + m.total_value, 0);
-  const base = basePay?.base_total_pay ?? 0;
-  const finalTotal = base + extrasTotal - deductionsTotal;
+  const totals = computePeriodDetailTotals(
+    basePay?.base_total_pay ?? 0,
+    movements,
+    basePay?.approved_total_override ?? null,
+  );
+  const money = (n: number) => `$${Math.abs(n).toFixed(2)}`;
 
   return (
     <div>
@@ -273,33 +278,84 @@ export default function EmployeePeriodDetail() {
         </div>
       )}
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground mb-1">Pago base</p>
-            <p className="text-xl font-bold font-mono">${base.toFixed(2)}</p>
+      {/* Calculado en Stafly — aritmética con signo, deducciones restadas una sola vez */}
+      <Card className="mb-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Calculado en Stafly</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Pago base</p>
+              <p className="text-lg font-bold font-mono">{money(totals.base)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Extras aprobados</p>
+              <p className="text-lg font-bold font-mono text-earning">+{money(totals.approvedExtras)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><TrendingDown className="h-3 w-3" /> Deducciones aprobadas</p>
+              <p className="text-lg font-bold font-mono text-deduction">−{money(totals.approvedDeductions)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><DollarSign className="h-3 w-3" /> Total calculado</p>
+              <p className="text-lg font-bold font-mono">{money(totals.calculatedTotal)}</p>
+            </div>
+          </div>
+          {totals.pendingCount > 0 && (
+            <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground flex items-start gap-2">
+              <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>
+                {totals.pendingCount} movimiento(s) pendiente(s) por{" "}
+                <span className="font-mono">+{money(totals.pendingExtras)}</span>
+                {totals.pendingDeductions > 0 && (
+                  <> y <span className="font-mono">−{money(totals.pendingDeductions)}</span></>
+                )}{" "}
+                — no entran en el total calculado ni explican el cierre externo.
+              </span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Cierre externo aprobado — verdad monetaria distinta, nunca derivada del desglose */}
+      {totals.hasExternalClose && totals.approvedTotal !== null && (
+        <Card className="mb-6 border-border/60">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              Cierre externo aprobado
+              {basePay?.approved_total_source && (
+                <Badge variant="outline" className="text-[10px] font-normal">
+                  {basePay.approved_total_source}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Total aprobado</p>
+                <p className="text-lg font-bold font-mono">{money(totals.approvedTotal)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Desglose aprobado visible</p>
+                <p className="text-lg font-bold font-mono">{money(totals.calculatedTotal)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Diferencia</p>
+                <p className="text-lg font-bold font-mono">
+                  {totals.externalDifference >= 0 ? "+" : "−"}{money(totals.externalDifference)}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground flex items-start gap-2">
+              <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              El cierre externo incluye componentes que no tienen un movimiento equivalente
+              aprobado en Stafly. El total aprobado no se recalcula desde el desglose.
+            </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Extras</p>
-            <p className="text-xl font-bold font-mono text-earning">+${extrasTotal.toFixed(2)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><TrendingDown className="h-3 w-3" /> Deducciones</p>
-            <p className="text-xl font-bold font-mono text-deduction">−${deductionsTotal.toFixed(2)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><DollarSign className="h-3 w-3" /> Total final</p>
-            <p className="text-xl font-bold font-mono">${finalTotal.toFixed(2)}</p>
-          </CardContent>
-        </Card>
-      </div>
+      )}
 
       <PayStatementPublishCard periodId={periodId} employeeId={employeeId} />
 
@@ -433,6 +489,7 @@ export default function EmployeePeriodDetail() {
                 <TableRow>
                   <TableHead className="text-xs">Concepto</TableHead>
                   <TableHead className="text-xs text-center">Tipo</TableHead>
+                  <TableHead className="text-xs text-center">Estado</TableHead>
                   <TableHead className="text-xs text-right">Cantidad</TableHead>
                   <TableHead className="text-xs text-right">Tarifa</TableHead>
                   <TableHead className="text-xs text-right">Valor</TableHead>
@@ -448,10 +505,18 @@ export default function EmployeePeriodDetail() {
                         {m.category === "extra" ? "Extra" : "Deducción"}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-center">
+                      <Badge
+                        variant={(m.approval_status ?? "approved") === "approved" ? "outline" : "secondary"}
+                        className="text-xs"
+                      >
+                        {(m.approval_status ?? "approved") === "approved" ? "Aprobado" : "Pendiente"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right font-mono text-xs">{m.quantity ?? "—"}</TableCell>
                     <TableCell className="text-right font-mono text-xs">{m.rate != null ? `$${m.rate}` : "—"}</TableCell>
                     <TableCell className={`text-right font-mono text-xs font-bold ${m.category === "extra" ? "text-earning" : "text-deduction"}`}>
-                      {m.category === "extra" ? "+" : "−"}${m.total_value.toFixed(2)}
+                      {m.category === "extra" ? "+" : "−"}${Math.abs(m.total_value).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground max-w-40 truncate">{m.note ?? ""}</TableCell>
                   </TableRow>
