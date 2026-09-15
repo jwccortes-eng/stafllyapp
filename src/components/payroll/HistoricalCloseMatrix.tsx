@@ -219,6 +219,11 @@ export default function HistoricalCloseMatrix({ companyId, onOpenSummary }: Prop
 
   const visible = filter === "all" ? rows : rows.filter((r) => r.status === filter);
 
+  const exceptions = useMemo(
+    () => rows.filter((r) => r.status !== "green").sort(exceptionSort),
+    [rows],
+  );
+
   return (
     <div id="historical-close-matrix" className="mb-4 scroll-mt-20">
       <Collapsible open={open} onOpenChange={setOpen}>
