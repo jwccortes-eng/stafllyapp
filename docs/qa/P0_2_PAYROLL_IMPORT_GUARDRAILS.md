@@ -117,9 +117,8 @@ Conclusiones del impacto:
 - 22 movimientos están marcados como visibles para el trabajador, pero sin recibo
   publicado no aparecen como pago del periodo.
 
-**No se ha aplicado ninguna limpieza.** Queda pendiente decisión humana: mover estas 26
-filas al periodo Aug 19–25 correcto o anularlas. Ambas opciones requieren autorización
-explícita y un flujo privilegiado.
+**No se ha aplicado ninguna limpieza.** Verificado en P0.3: estas 26 filas **ya están en el
+período correcto** (146 = Aug 19–25). No hay nada que mover ni anular.
 
 ## 7. PERIOD 142 REGRESSION (Rule 8)
 
@@ -207,8 +206,9 @@ Archivos modificados:
    el periodo cerrado en cliente. Es la próxima candidata a endurecer.
 3. **153 periodos cerrados.** Con la Rule 2 activa, cualquier corrección histórica
    legítima queda bloqueada hasta que exista el flujo privilegiado de reapertura.
-4. **Periodo 146 sin resolver.** 26 filas y $15.714,14 siguen en el periodo equivocado,
-   sin impacto visible para el trabajador, esperando decisión humana.
+4. **Periodo 146: escritura sobre periodo cerrado.** Las 26 filas y $15.714,14 están en el
+   período correcto (Aug 19–25), pero entraron con el período ya cerrado. Sin impacto para
+   el trabajador. Detalle en `docs/qa/P0_3_PERIOD_146_IMPORT_REPAIR.md`.
 5. **Sin enforcement de identidad reforzado.** El matching por nombre como fallback sigue
    siendo posible fuera de este alcance.
 
