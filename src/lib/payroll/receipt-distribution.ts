@@ -98,6 +98,16 @@ export const DISTRIBUTION_COPY: Record<
     tone: "warning",
     help: "El recibo existe y está congelado, pero el trabajador aún no puede abrirlo.",
   },
+  AUXILIARY_DUPLICATE: {
+    label: "Registro auxiliar",
+    tone: "neutral",
+    help: "Fila histórica de la misma persona. Su importe ya está dentro del total aprobado del registro canónico: no genera recibo propio.",
+  },
+  AUXILIARY_NO_APPROVED_PAYROLL: {
+    label: "Sin nómina aprobada",
+    tone: "neutral",
+    help: "Solo tiene movimientos del periodo, sin nómina aprobada. No es candidato a recibo.",
+  },
   OTHER_BLOCKER: {
     label: "Otro bloqueo",
     tone: "critical",
@@ -113,7 +123,8 @@ export interface DistributionFilterKey {
     | "no_account"
     | "identity"
     | "published"
-    | "published_no_access";
+    | "published_no_access"
+    | "auxiliary";
   label: string;
 }
 
@@ -125,6 +136,7 @@ export const DISTRIBUTION_FILTERS: DistributionFilterKey[] = [
   { key: "identity", label: "Revisión de identidad" },
   { key: "published", label: "Publicados" },
   { key: "published_no_access", label: "Publicados sin acceso" },
+  { key: "auxiliary", label: "Registros auxiliares" },
 ];
 
 const PENDING_RE = /pendiente|pending|ajuste/i;
