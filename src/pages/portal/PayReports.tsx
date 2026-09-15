@@ -90,7 +90,7 @@ export default function PayReports() {
               Mis pagos
             </h1>
             <p className="text-[11px] leading-tight text-muted-foreground">
-              Recibos aprobados y publicados por tu empresa.
+              Recibos publicados y tus reportes de pago históricos.
             </p>
           </div>
         </div>
