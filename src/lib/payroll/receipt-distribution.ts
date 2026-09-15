@@ -225,6 +225,7 @@ export function deriveDistributionRow(
 }
 
 export interface DistributionSummary {
+  /** Candidatos canónicos del periodo (excluye filas auxiliares). */
   approved: number;
   ready: number;
   blocked: number;
@@ -233,26 +234,30 @@ export interface DistributionSummary {
   published: number;
   visible: number;
   publishedNoAccess: number;
+  /** Filas auxiliares preservadas, nunca publicables. */
+  auxiliary: number;
   readyTotal: number;
 }
 
 export function summarizeDistribution(rows: DistributionRow[]): DistributionSummary {
-  const ready = rows.filter((r) => r.status === "READY_TO_PUBLISH");
-  const noAccount = rows.filter((r) => r.status === "NEEDS_ACCOUNT");
+  const candidates = rows.filter((r) => !isAuxiliaryStatus(r.status));
+  const ready = candidates.filter((r) => r.status === "READY_TO_PUBLISH");
+  const noAccount = candidates.filter((r) => r.status === "NEEDS_ACCOUNT");
   return {
-    approved: rows.length,
+    approved: candidates.length,
     ready: ready.length,
-    blocked: rows.filter(
+    blocked: candidates.filter(
       (r) =>
         r.status === "BLOCKED_PENDING_ADJUSTMENT" ||
         r.status === "BLOCKED_PAYROLL_REVIEW" ||
         r.status === "OTHER_BLOCKER",
     ).length,
     noAccount: noAccount.length,
-    identity: rows.filter((r) => r.status === "IDENTITY_REVIEW").length,
-    published: rows.filter((r) => r.published).length,
-    visible: rows.filter((r) => r.status === "PUBLISHED_VISIBLE").length,
-    publishedNoAccess: rows.filter((r) => r.status === "PUBLISHED_NO_ACCESS").length,
+    identity: candidates.filter((r) => r.status === "IDENTITY_REVIEW").length,
+    published: candidates.filter((r) => r.published).length,
+    visible: candidates.filter((r) => r.status === "PUBLISHED_VISIBLE").length,
+    publishedNoAccess: candidates.filter((r) => r.status === "PUBLISHED_NO_ACCESS").length,
+    auxiliary: rows.length - candidates.length,
     readyTotal: [...ready, ...noAccount].reduce((s, r) => s + (r.eligible ? r.amount : 0), 0),
   };
 }
