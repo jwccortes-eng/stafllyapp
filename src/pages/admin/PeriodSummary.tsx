@@ -788,13 +788,21 @@ function DesktopPeriodSummary() {
                       ) : !selectedPeriod ? (
                         "Selecciona un periodo para ver el resumen"
                       ) : (
-                        <span className="block space-y-1">
+                        <span className="block space-y-2">
                           <span className="block font-medium text-foreground">
-                            Este período todavía no tiene datos de pago cargados.
+                            Este período todavía no tiene datos cargados.
                           </span>
                           <span className="block text-sm">
-                            Importa o genera los datos del período para ver el resumen.
+                            {selectedPeriodObj
+                              ? `Importa el archivo correspondiente a ${selectedPeriodObj.start_date} – ${selectedPeriodObj.end_date} para comenzar la revisión.`
+                              : "Importa el archivo correspondiente al período para comenzar la revisión."}
                           </span>
+                          <Link
+                            to={`/app/import-extras?periodId=${selectedPeriod}`}
+                            className="inline-block text-sm font-medium text-primary hover:underline"
+                          >
+                            Importar datos del período
+                          </Link>
                         </span>
                       )}
                     </TableCell>
