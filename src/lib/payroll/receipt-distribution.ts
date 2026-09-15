@@ -154,6 +154,8 @@ function classifyBlocker(reason: string | null): DistributionStatus {
 export interface DeriveContext {
   employee?: PortalStatusEmployeeLike | null;
   invitation?: PortalStatusInvitationLike | null;
+  /** P0.4 — candidatura canónica de recibo. Sin ella no hay elegibilidad segura. */
+  candidacy?: Candidacy | null;
 }
 
 /** Derivación pura. Nunca copia estado entre sistemas: solo lo interpreta. */
