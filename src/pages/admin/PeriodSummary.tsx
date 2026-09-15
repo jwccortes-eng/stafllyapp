@@ -667,11 +667,22 @@ function DesktopPeriodSummary() {
       <TabsContent value="summary" className="space-y-5 mt-0">
         {/* Período sin datos de pago: nunca mostrar ceros como si la nómina estuviera lista */}
         {selectedPeriod && rows.length === 0 && (
-          <StaflyAlertBanner
-            tone="info"
-            title="Este período todavía no tiene datos de pago cargados."
-            description="Importa o genera los datos del período para ver el resumen."
-          />
+          <div className="space-y-3">
+            <StaflyAlertBanner
+              tone="info"
+              title="Este período todavía no tiene datos cargados."
+              description={
+                selectedPeriodObj
+                  ? `Importa el archivo correspondiente a ${fmtDate(selectedPeriodObj.start_date)} – ${fmtDate(selectedPeriodObj.end_date)} para comenzar la revisión.`
+                  : "Importa el archivo correspondiente al período para comenzar la revisión."
+              }
+            />
+            <Button asChild>
+              <Link to={`/app/import-extras?periodId=${selectedPeriod}`}>
+                Importar datos del período
+              </Link>
+            </Button>
+          </div>
         )}
 
         {/* KPI Cards */}
