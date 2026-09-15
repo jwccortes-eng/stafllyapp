@@ -77,6 +77,29 @@ const STATUS_META: Record<CloseStatus, { label: string; tone: "success" | "warni
 
 const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
+/** Prioridad de la cola de excepciones: bloqueados, luego mayor diferencia, luego más reciente. */
+export function exceptionSort(a: MatrixRow, b: MatrixRow): number {
+  const rank = (r: MatrixRow) => (r.status === "red" ? 0 : r.status === "yellow" ? 1 : 2);
+  if (rank(a) !== rank(b)) return rank(a) - rank(b);
+  const da = Math.abs(a.difference);
+  const db = Math.abs(b.difference);
+  if (Math.abs(da - db) > CENT) return db - da;
+  return (b.period.sequence_number ?? 0) - (a.period.sequence_number ?? 0);
+}
+
+/** Etiqueta de acción para cada excepción, según la evidencia que falta. */
+export function exceptionCta(row: MatrixRow): string {
+  if (row.status === "red") return "Revisar cierre externo";
+  if (row.status === "gray") return "Verificar sin actividad";
+  return "Revisar diferencias";
+}
+
+export function exceptionPriority(row: MatrixRow): { label: string; tone: "critical" | "warning" | "neutral" } {
+  if (row.status === "red") return { label: "Alta", tone: "critical" };
+  if (row.status === "gray") return { label: "Baja", tone: "neutral" };
+  return { label: Math.abs(row.difference) >= 500 ? "Alta" : "Media", tone: "warning" };
+}
+
 const shortRange = (start: string, end: string) => {
   const s = new Date(`${start}T12:00:00`);
   const e = new Date(`${end}T12:00:00`);
@@ -196,6 +219,11 @@ export default function HistoricalCloseMatrix({ companyId, onOpenSummary }: Prop
 
   const visible = filter === "all" ? rows : rows.filter((r) => r.status === filter);
 
+  const exceptions = useMemo(
+    () => rows.filter((r) => r.status !== "green").sort(exceptionSort),
+    [rows],
+  );
+
   return (
     <div id="historical-close-matrix" className="mb-4 scroll-mt-20">
       <Collapsible open={open} onOpenChange={setOpen}>
@@ -222,6 +250,92 @@ export default function HistoricalCloseMatrix({ companyId, onOpenSummary }: Prop
         </CollapsibleTrigger>
 
         <CollapsibleContent className="mt-3 space-y-3">
+          {!loading && exceptions.length > 0 && (
+            <section className="rounded-xl border border-border/60 bg-card p-3">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-bold">Períodos que requieren acción</span>
+                <StaflyStatusBadge tone="warning">{exceptions.length}</StaflyStatusBadge>
+              </div>
+
+              {/* Escritorio */}
+              <div className="hidden md:block data-table-wrapper">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead>Período</TableHead>
+                      <TableHead>Fechas</TableHead>
+                      <TableHead className="text-right">Diferencia</TableHead>
+                      <TableHead className="text-right">Personas afectadas</TableHead>
+                      <TableHead>Motivo</TableHead>
+                      <TableHead>Prioridad</TableHead>
+                      <TableHead className="w-44">Acción</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {exceptions.map((r) => {
+                      const prio = exceptionPriority(r);
+                      return (
+                        <TableRow key={`exc-${r.period.id}`}>
+                          <TableCell className="font-mono text-xs">#{r.period.sequence_number ?? "—"}</TableCell>
+                          <TableCell className="whitespace-nowrap text-sm">
+                            {shortRange(r.period.start_date, r.period.end_date)}
+                          </TableCell>
+                          <TableCell
+                            className={cn(
+                              "text-right font-mono text-xs font-semibold tabular-nums",
+                              Math.abs(r.difference) > CENT ? "text-destructive" : "text-muted-foreground",
+                            )}
+                          >
+                            {money(r.difference)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs tabular-nums">
+                            {r.movementOnlyWorkers > 0 ? r.movementOnlyWorkers : r.workers}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{r.reason}</TableCell>
+                          <TableCell>
+                            <StaflyStatusBadge tone={prio.tone}>{prio.label}</StaflyStatusBadge>
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="outline" size="sm" onClick={() => onOpenSummary?.(r.period)}>
+                              {exceptionCta(r)}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Móvil */}
+              <div className="space-y-2 md:hidden">
+                {exceptions.map((r) => (
+                  <div key={`exc-m-${r.period.id}`} className="rounded-xl border border-border/60 bg-background p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold">Período #{r.period.sequence_number ?? "—"}</p>
+                      <StaflyStatusBadge tone={exceptionPriority(r).tone}>
+                        {exceptionPriority(r).label}
+                      </StaflyStatusBadge>
+                    </div>
+                    <p className="mt-1 font-mono text-base font-bold tabular-nums">{money(r.difference)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.movementOnlyWorkers > 0 ? r.movementOnlyWorkers : r.workers} persona(s) afectada(s)
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{r.reason}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 w-full"
+                      onClick={() => onOpenSummary?.(r.period)}
+                    >
+                      {exceptionCta(r)}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           <StaflyFilterBar
             options={[
               { value: "all", label: "Todos", count: counts.all },
