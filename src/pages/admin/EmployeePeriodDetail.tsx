@@ -489,6 +489,7 @@ export default function EmployeePeriodDetail() {
                 <TableRow>
                   <TableHead className="text-xs">Concepto</TableHead>
                   <TableHead className="text-xs text-center">Tipo</TableHead>
+                  <TableHead className="text-xs text-center">Estado</TableHead>
                   <TableHead className="text-xs text-right">Cantidad</TableHead>
                   <TableHead className="text-xs text-right">Tarifa</TableHead>
                   <TableHead className="text-xs text-right">Valor</TableHead>
@@ -504,10 +505,18 @@ export default function EmployeePeriodDetail() {
                         {m.category === "extra" ? "Extra" : "Deducción"}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-center">
+                      <Badge
+                        variant={(m.approval_status ?? "approved") === "approved" ? "outline" : "secondary"}
+                        className="text-xs"
+                      >
+                        {(m.approval_status ?? "approved") === "approved" ? "Aprobado" : "Pendiente"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right font-mono text-xs">{m.quantity ?? "—"}</TableCell>
                     <TableCell className="text-right font-mono text-xs">{m.rate != null ? `$${m.rate}` : "—"}</TableCell>
                     <TableCell className={`text-right font-mono text-xs font-bold ${m.category === "extra" ? "text-earning" : "text-deduction"}`}>
-                      {m.category === "extra" ? "+" : "−"}${m.total_value.toFixed(2)}
+                      {m.category === "extra" ? "+" : "−"}${Math.abs(m.total_value).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground max-w-40 truncate">{m.note ?? ""}</TableCell>
                   </TableRow>
