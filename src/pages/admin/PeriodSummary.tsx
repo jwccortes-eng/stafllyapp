@@ -673,7 +673,7 @@ function DesktopPeriodSummary() {
               title="Este período todavía no tiene datos cargados."
               description={
                 selectedPeriodObj
-                  ? `Importa el archivo correspondiente a ${fmtDate(selectedPeriodObj.start_date)} – ${fmtDate(selectedPeriodObj.end_date)} para comenzar la revisión.`
+                  ? `Importa el archivo correspondiente a ${selectedPeriodObj.start_date} – ${selectedPeriodObj.end_date} para comenzar la revisión.`
                   : "Importa el archivo correspondiente al período para comenzar la revisión."
               }
             />
