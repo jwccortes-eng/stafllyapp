@@ -57,6 +57,8 @@ export interface DistributionRow {
   blocker: string | null;
   hasOverride: boolean;
   pendingCount: number;
+  /** Candidatura canónica de recibo (P0.4). */
+  candidacy: Candidacy | null;
   preview: BulkPreviewRow;
 }
 
