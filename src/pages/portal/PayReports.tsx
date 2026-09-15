@@ -1,20 +1,22 @@
 /**
  * PayReports — "Mis pagos" (worker).
  *
- * Fuente única: recibos publicados (`pay_statements`) leídos vía el RPC
- * `worker_pay_statements`, con desglose por conceptos canónicos (`movements`).
+ * Historial único con las dos fuentes canónicas ya existentes:
+ *   - Recibos nativos publicados (`pay_statements` vía `worker_pay_statements`).
+ *   - Reportes históricos importados (`period_base_pay` con `import_id`).
  *
  * Reglas:
- *  - Nunca se recalcula el total en el cliente: se muestra `frozen_total`.
+ *  - Nunca se recalcula el total en el cliente: nativo = `frozen_total`,
+ *    histórico = `base_total_pay` importado.
+ *  - Un periodo con recibo nativo nunca se duplica con su histórico.
  *  - Nunca se leen movimientos pendientes ni notas internas (RLS + RPC).
- *  - Nunca se usan horas programadas ni `time_entries`.
- *  - Solo recibos del propio trabajador.
+ *  - Solo pagos del propio trabajador.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Wallet, CheckCircle2, ChevronRight, Receipt } from "lucide-react";
+import { ArrowLeft, Wallet, CheckCircle2, ChevronRight, Receipt, Archive } from "lucide-react";
 import {
   StaflyCard,
   StaflyStatusBadge,
@@ -24,11 +26,15 @@ import {
 import PayStatementDetailSheet from "@/components/portal/PayStatementDetailSheet";
 import { notifyError } from "@/lib/feedback/notify";
 import {
-  fetchWorkerPayStatements,
   fmtStatementMoney,
   statementStatusLabel,
   type WorkerPayStatementSummary,
 } from "@/lib/payroll/pay-statement";
+import {
+  fetchWorkerPaymentHistory,
+  summarizePaymentHistory,
+  type PaymentHistoryItem,
+} from "@/lib/payroll/payment-history";
 
 function fmtRange(start: string, end: string): string {
   try {
@@ -41,18 +47,18 @@ function fmtRange(start: string, end: string): string {
 }
 
 export default function PayReports() {
-  const [rows, setRows] = useState<WorkerPayStatementSummary[]>([]);
+  const [rows, setRows] = useState<PaymentHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<WorkerPayStatementSummary | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setRows(await fetchWorkerPayStatements());
+      setRows(await fetchWorkerPaymentHistory());
     } catch (e) {
       notifyError({
         title: "No pudimos cargar tus pagos",
-        fact: "La lista de recibos no se pudo leer.",
+        fact: "La lista de pagos no se pudo leer.",
         consequence: "No verás tu historial de pagos hasta reintentar.",
         cause: e,
       });
@@ -66,19 +72,7 @@ export default function PayReports() {
     void load();
   }, [load]);
 
-  const kpis = useMemo(() => {
-    const year = new Date().getFullYear();
-    const ytd = rows
-      .filter((r) => {
-        try {
-          return parseISO(r.end_date).getFullYear() === year;
-        } catch {
-          return false;
-        }
-      })
-      .reduce((s, r) => s + r.frozen_total, 0);
-    return { count: rows.length, latest: rows[0]?.frozen_total ?? 0, ytd };
-  }, [rows]);
+  const kpis = useMemo(() => summarizePaymentHistory(rows), [rows]);
 
   return (
     <div className="min-h-dvh bg-background pb-28">
@@ -96,7 +90,7 @@ export default function PayReports() {
               Mis pagos
             </h1>
             <p className="text-[11px] leading-tight text-muted-foreground">
-              Recibos aprobados y publicados por tu empresa.
+              Recibos publicados y tus reportes de pago históricos.
             </p>
           </div>
         </div>
@@ -108,7 +102,7 @@ export default function PayReports() {
         ) : rows.length === 0 ? (
           <StaflyEmptyState
             icon={Wallet}
-            title="Todavía no tienes recibos publicados"
+            title="Todavía no tienes pagos registrados"
             description="Cuando tu empresa publique un pago aprobado, lo verás aquí con su desglose."
           />
         ) : (
@@ -127,57 +121,73 @@ export default function PayReports() {
                 </p>
               </div>
               <div className="rounded-2xl border bg-card p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Recibos</p>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Pagos</p>
                 <p className="mt-1 text-sm font-bold tabular-nums">{kpis.count}</p>
               </div>
             </div>
 
             <ul className="space-y-2">
-              {rows.map((r) => (
-                <li key={r.statement_id}>
-                  <StaflyCard
-                    tone="interactive"
-                    as="button"
-                    onClick={() => setSelected(r)}
-                    aria-label={`Ver detalle del pago ${fmtRange(r.start_date, r.end_date)}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold">
-                          {fmtRange(r.start_date, r.end_date)}
-                        </p>
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <StaflyStatusBadge
-                            tone={r.paid_at ? "success" : "info"}
-                            icon={CheckCircle2}
-                          >
-                            {statementStatusLabel(r)}
-                          </StaflyStatusBadge>
-                          {r.company_name && (
-                            <span className="text-[11px] text-muted-foreground">
-                              {r.company_name}
+              {rows.map((r) => {
+                const isNative = r.kind === "native" && r.statement !== null;
+                return (
+                  <li key={r.key}>
+                    <StaflyCard
+                      tone={isNative ? "interactive" : "default"}
+                      as={isNative ? "button" : "div"}
+                      onClick={isNative ? () => setSelected(r.statement) : undefined}
+                      aria-label={
+                        isNative
+                          ? `Ver detalle del pago ${fmtRange(r.start_date, r.end_date)}`
+                          : undefined
+                      }
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold">
+                            {fmtRange(r.start_date, r.end_date)}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            {isNative ? (
+                              <StaflyStatusBadge
+                                tone={r.paid_at ? "success" : "info"}
+                                icon={CheckCircle2}
+                              >
+                                {statementStatusLabel({ paid_at: r.paid_at })}
+                              </StaflyStatusBadge>
+                            ) : (
+                              <StaflyStatusBadge tone="neutral" icon={Archive}>
+                                Reporte histórico
+                              </StaflyStatusBadge>
+                            )}
+                            {r.company_name && (
+                              <span className="text-[11px] text-muted-foreground">
+                                {r.company_name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold font-heading tabular-nums">
+                            {fmtStatementMoney(r.amount)}
+                          </p>
+                          {isNative && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                              Ver detalle <ChevronRight className="h-3 w-3" />
                             </span>
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold font-heading tabular-nums">
-                          {fmtStatementMoney(r.frozen_total)}
-                        </p>
-                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                          Ver detalle <ChevronRight className="h-3 w-3" />
-                        </span>
-                      </div>
-                    </div>
-                  </StaflyCard>
-                </li>
-              ))}
+                    </StaflyCard>
+                  </li>
+                );
+              })}
             </ul>
 
             <p className="flex items-start gap-2 pt-1 text-[11px] text-muted-foreground">
               <Receipt className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              Cada recibo queda congelado al publicarse. Si detectas una diferencia,
-              habla con tu coordinador.
+              Cada recibo queda congelado al publicarse. Los reportes históricos
+              conservan el importe con el que se cerraron. Si detectas una
+              diferencia, habla con tu coordinador.
             </p>
           </>
         )}
