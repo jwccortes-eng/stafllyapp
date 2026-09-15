@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { parseMoney, round2 } from "../_shared/payroll-money.ts";
+import { evaluatePayrollImportGuards } from "../_shared/payroll-import-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -176,6 +177,24 @@ async function handleBridge(
   if (!period || period.company_id !== companyId) {
     return json({ error: "Periodo no encontrado para esta compañía" }, 400);
   }
+
+  // 1.b GUARDARRAÍLES P0 (server-side, sin override en el flujo normal):
+  //     rango del archivo vs periodo, periodo cerrado, recibos publicados.
+  const { count: publishedStatements } = await supabase
+    .from("pay_statements")
+    .select("id", { count: "exact", head: true })
+    .eq("pay_period_id", periodId)
+    .eq("status", "published");
+
+  const guard = evaluatePayrollImportGuards({
+    fileName: body.fileName,
+    period: {
+      start_date: period.start_date,
+      end_date: period.end_date,
+      status: period.status,
+    },
+    publishedStatements: publishedStatements ?? 0,
+  });
 
   // 2. Identidad: matching por Employer identification (nunca crea empleados).
   //    Roster completo paginado (PostgREST corta en 1000 filas por defecto).
