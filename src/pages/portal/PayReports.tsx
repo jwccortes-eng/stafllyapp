@@ -121,57 +121,73 @@ export default function PayReports() {
                 </p>
               </div>
               <div className="rounded-2xl border bg-card p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Recibos</p>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Pagos</p>
                 <p className="mt-1 text-sm font-bold tabular-nums">{kpis.count}</p>
               </div>
             </div>
 
             <ul className="space-y-2">
-              {rows.map((r) => (
-                <li key={r.statement_id}>
-                  <StaflyCard
-                    tone="interactive"
-                    as="button"
-                    onClick={() => setSelected(r)}
-                    aria-label={`Ver detalle del pago ${fmtRange(r.start_date, r.end_date)}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold">
-                          {fmtRange(r.start_date, r.end_date)}
-                        </p>
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <StaflyStatusBadge
-                            tone={r.paid_at ? "success" : "info"}
-                            icon={CheckCircle2}
-                          >
-                            {statementStatusLabel(r)}
-                          </StaflyStatusBadge>
-                          {r.company_name && (
-                            <span className="text-[11px] text-muted-foreground">
-                              {r.company_name}
+              {rows.map((r) => {
+                const isNative = r.kind === "native" && r.statement !== null;
+                return (
+                  <li key={r.key}>
+                    <StaflyCard
+                      tone={isNative ? "interactive" : "default"}
+                      as={isNative ? "button" : "div"}
+                      onClick={isNative ? () => setSelected(r.statement) : undefined}
+                      aria-label={
+                        isNative
+                          ? `Ver detalle del pago ${fmtRange(r.start_date, r.end_date)}`
+                          : undefined
+                      }
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold">
+                            {fmtRange(r.start_date, r.end_date)}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            {isNative ? (
+                              <StaflyStatusBadge
+                                tone={r.paid_at ? "success" : "info"}
+                                icon={CheckCircle2}
+                              >
+                                {statementStatusLabel({ paid_at: r.paid_at })}
+                              </StaflyStatusBadge>
+                            ) : (
+                              <StaflyStatusBadge tone="muted" icon={Archive}>
+                                Reporte histórico
+                              </StaflyStatusBadge>
+                            )}
+                            {r.company_name && (
+                              <span className="text-[11px] text-muted-foreground">
+                                {r.company_name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold font-heading tabular-nums">
+                            {fmtStatementMoney(r.amount)}
+                          </p>
+                          {isNative && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                              Ver detalle <ChevronRight className="h-3 w-3" />
                             </span>
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold font-heading tabular-nums">
-                          {fmtStatementMoney(r.frozen_total)}
-                        </p>
-                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                          Ver detalle <ChevronRight className="h-3 w-3" />
-                        </span>
-                      </div>
-                    </div>
-                  </StaflyCard>
-                </li>
-              ))}
+                    </StaflyCard>
+                  </li>
+                );
+              })}
             </ul>
 
             <p className="flex items-start gap-2 pt-1 text-[11px] text-muted-foreground">
               <Receipt className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              Cada recibo queda congelado al publicarse. Si detectas una diferencia,
-              habla con tu coordinador.
+              Cada recibo queda congelado al publicarse. Los reportes históricos
+              conservan el importe con el que se cerraron. Si detectas una
+              diferencia, habla con tu coordinador.
             </p>
           </>
         )}
