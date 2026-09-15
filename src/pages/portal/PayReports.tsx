@@ -102,7 +102,7 @@ export default function PayReports() {
         ) : rows.length === 0 ? (
           <StaflyEmptyState
             icon={Wallet}
-            title="Todavía no tienes recibos publicados"
+            title="Todavía no tienes pagos registrados"
             description="Cuando tu empresa publique un pago aprobado, lo verás aquí con su desglose."
           />
         ) : (
