@@ -111,17 +111,23 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
         const { data } = await supabase
           .from("employees")
           .select(
-            "id, first_name, last_name, user_id, is_active, phone_number, email, employer_identification, avatar_url",
+            "id, company_id, first_name, last_name, user_id, is_active, phone_number, email, employer_identification, merged_into_employee_id, avatar_url",
           )
           .in("id", ids);
         for (const e of (data ?? []) as EmployeeLite[]) emps[e.id] = e;
       }
       setEmployees(emps);
+      // P0.4 — candidatura canónica: una persona + empresa + periodo = un recibo.
+      const candidacy = resolveReceiptCandidacy(
+        preview,
+        emps as unknown as Record<string, PersonRecord | undefined>,
+      );
       setRows(
         preview.map((p) =>
           deriveDistributionRow(p, {
             employee: emps[p.employee_id],
             invitation: invitations[p.employee_id],
+            candidacy: candidacy[p.employee_id] ?? null,
           }),
         ),
       );
