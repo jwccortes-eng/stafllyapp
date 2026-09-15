@@ -527,8 +527,9 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
               <li>Elegibles seleccionados: {selectedRows.length}</li>
               <li>Ya publicados (se omitirán): {summary.published}</li>
               <li>Excluidos — ajustes pendientes: {summary.blocked}</li>
-              <li>Revisión de identidad: {summary.identity}</li>
-              <li>Sin acceso a Stafly: {summary.noAccount}</li>
+              <li>Excluidos — revisión de identidad: {summary.identity}</li>
+              <li>Excluidos — registros auxiliares de la misma persona: {summary.auxiliary}</li>
+              <li>Sin cuenta, aún sin publicar: {summary.noAccount}</li>
             </ul>
             {selectedNoAccess > 0 && (
               <p className="flex items-start gap-2 rounded-md border border-warning/40 p-2 text-xs">
