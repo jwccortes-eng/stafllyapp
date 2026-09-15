@@ -1,46 +1,38 @@
-## Operation-First Experience Pass
+# Ajustes — identidad canónica y experiencia operativa
 
-Rediseño de experiencia basado en frecuencia real de uso. Solo capa visual y de navegación: sin tocar backend, payroll, RLS, auth, Operational Signals, OCS ni lógica de negocio.
+## Objetivo
+Actualizar `/app/movements` para que use el lenguaje visual operativo actual y la misma identidad de trabajador que Equipo, conservando íntegramente consultas, importación, importes, aprobaciones y permisos.
 
-### Fase 1 — Home operativo (móvil + escritorio)
-- El Home deja de listar módulos. Cuatro anclas permanentes: Workers, Shifts, Time Clock, Payroll.
-- Todo lo demás baja a un acceso secundario ("Más herramientas"), sin eliminarse.
-- Se conserva el titular de estado y el bloque "Hoy" ya existentes; se recorta el resto.
+## Cambios
+1. **Identidad única**
+   - Ampliar la lectura existente de trabajadores/movimientos únicamente con `avatar_url` y los campos mínimos necesarios para presentar la identidad canónica.
+   - Sustituir `EmployeeAvatar` —cuyo fallback genera ilustraciones— por el patrón actual `EntityCard`/`buildWorkerEntityView`, adaptado como identidad compacta dentro de tabla y tarjetas.
+   - Foto real cuando exista; iniciales canónicas cuando no exista. Sin crear ni modificar datos de trabajador.
 
-### Fase 2 — Empresa como experiencia premium
-- El cambio de empresa deja de ser un icono: pasa a ser un bloque de identidad con nombre y logo visibles.
-- Móvil: hoja inferior a pantalla completa, filas de 56px, empresa activa marcada.
-- Un solo toque para cambiar; estado de carga explícito y confirmación al terminar.
+2. **Contexto del período y resumen**
+   - Migrar la cabecera a `OperationalScreenHeader`, mostrando claramente las fechas del período activo.
+   - Reutilizar el selector de período y presentar un resumen compacto derivado solo de los movimientos ya cargados: cantidad, extras aprobados, deducciones aprobadas y neto de movimientos.
+   - No introducir un total de nómina ni persistir agregados.
 
-### Fase 3 — Shifts: hoy y próximos primero
-- Vista inicial en dos bloques: "Hoy" y "Próximos".
-- Historial y turnos pasados pasan a una pestaña/sección secundaria, sin peso visual.
-- Filtros colapsados por defecto en móvil.
+3. **Filtros operativos**
+   - Mantener búsqueda por persona/concepto y añadir filtros canónicos para Todos, Extras, Deducciones, Pendientes y Aprobados.
+   - Derivar cada filtro de `concepts.category` y `approval_status` existentes, sin estados nuevos.
 
-### Fase 4 — Crear turno: secuencia mental
-- Reconstrucción en pasos cortos siguiendo el orden del usuario: cuándo → dónde → qué → quién.
-- Un objetivo por pantalla, sin scroll largo, texto de ayuda reducido al mínimo.
-- Mismos campos y mismo guardado que hoy: solo cambia la secuencia y la presentación.
+4. **Escritorio y móvil**
+   - Escritorio conserva una tabla densa y escaneable con Persona, Concepto, Tipo, Estado, Cant., Valor, Total, Origen y Acciones.
+   - Móvil muestra tarjetas —no una tabla comprimida— con identidad, concepto, tipo/estado, total, cálculo cantidad × valor, origen y acceso al detalle.
+   - Las mismas acciones de aprobar, denegar, editar y eliminar conservarán sus condiciones actuales.
 
-### Fase 5 — Team building inmediato
-- Al entrar al equipo de un turno, la primera pantalla ya permite añadir gente.
-- Los resúmenes de cobertura pasan a una franja compacta arriba, no a una pantalla previa.
+5. **Trazabilidad**
+   - Conservar toda la información del tooltip actual y ofrecerla mediante detalle accesible tanto en escritorio como en móvil.
+   - Mantener notas, fuente/origen, motivo de denegación y desglose de cantidad por valor.
 
-### Fase 6 — Formularios nativos en móvil
-- Eliminar desplazamiento horizontal, alturas excesivas y jerarquías dispares.
-- Campos a ancho completo, teclado adecuado por tipo de dato, acción principal fija abajo.
+6. **Validación y reporte**
+   - Verificar escritorio y móvil en la vista real: foto, fallback, filtros, detalle, acciones, ausencia de ilustraciones y desbordamiento.
+   - Ejecutar pruebas relevantes y comparar los totales derivados antes/después sin realizar escrituras de nómina.
+   - Documentar el resultado y los usos legacy encontrados fuera de esta pantalla en `docs/qa/P1_PAYROLL_ADJUSTMENTS_UX_CANONICAL_IDENTITY.md`.
 
-### Fase 7 — Continuidad
-- Pasar las pantallas tocadas al mismo ritmo, densidad, tipografía y profundidad del Centro de Validación.
-- Voz única en español y mismos componentes de estado y aviso.
-
-### Detalles técnicos
-- Archivos previstos: `MobileAdminHome.tsx`, `admin/Home.tsx`, `ContextSwitcher.tsx`, `admin/Shifts.tsx` y vistas asociadas, `ShiftFormShell.tsx` / `ShiftFormFields.tsx` (composición, no contrato de datos), `MobileShiftTeamHub.tsx`, `Auth.tsx`.
-- Reutilización obligatoria de OCS, `notify()`, `StatusBadge`, escala móvil OX-3 y tokens OX-2.
-- Sin migraciones, sin cambios en consultas ni permisos.
-
-### Sobre LOGIN
-El punto de "teléfono como método principal" implica habilitar autenticación por teléfono, que es backend/auth y queda fuera de las restricciones indicadas. Propongo, dentro del alcance: una sola puerta de entrada visual, jerarquía móvil pensada para workers y captains, y el campo de teléfono como principal **solo si ya existe soporte**; si no, lo dejo señalado y lo tratamos aparte.
-
-### Entrega
-Fases 1 a 3 en la primera tanda, luego 4 a 7. Cada fase se verifica en móvil y escritorio antes de continuar.
+## Detalles técnicos
+- Se limitarán los cambios a presentación y campos de lectura en `src/pages/admin/Movements.tsx`, con un componente visual pequeño solo si evita duplicación dentro de la misma pantalla.
+- Se reutilizarán exclusivamente componentes y tokens canónicos existentes de Stafly.
+- No habrá migraciones, cambios de backend, mutaciones de datos, nuevas fórmulas ni cambios en los handlers de movimientos.
