@@ -55,6 +55,11 @@ import {
   type DistributionFilterKey,
   type DistributionRow,
 } from "@/lib/payroll/receipt-distribution";
+import {
+  assertUniqueReceiptCandidates,
+  resolveReceiptCandidacy,
+} from "@/lib/payroll/receipt-candidates";
+import type { PersonRecord } from "@/lib/identity/canonical-person";
 
 interface Props {
   periodId: string;
@@ -63,6 +68,7 @@ interface Props {
 
 interface EmployeeLite {
   id: string;
+  company_id: string | null;
   first_name: string | null;
   last_name: string | null;
   user_id: string | null;
@@ -70,6 +76,7 @@ interface EmployeeLite {
   phone_number: string | null;
   email: string | null;
   employer_identification: string | null;
+  merged_into_employee_id: string | null;
   avatar_url: string | null;
 }
 
@@ -104,17 +111,23 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
         const { data } = await supabase
           .from("employees")
           .select(
-            "id, first_name, last_name, user_id, is_active, phone_number, email, employer_identification, avatar_url",
+            "id, company_id, first_name, last_name, user_id, is_active, phone_number, email, employer_identification, merged_into_employee_id, avatar_url",
           )
           .in("id", ids);
         for (const e of (data ?? []) as EmployeeLite[]) emps[e.id] = e;
       }
       setEmployees(emps);
+      // P0.4 — candidatura canónica: una persona + empresa + periodo = un recibo.
+      const candidacy = resolveReceiptCandidacy(
+        preview,
+        emps as unknown as Record<string, PersonRecord | undefined>,
+      );
       setRows(
         preview.map((p) =>
           deriveDistributionRow(p, {
             employee: emps[p.employee_id],
             invitation: invitations[p.employee_id],
+            candidacy: candidacy[p.employee_id] ?? null,
           }),
         ),
       );
@@ -158,6 +171,11 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
   );
   const selectedTotal = selectedRows.reduce((s, r) => s + r.amount, 0);
   const selectedNoAccess = selectedRows.filter((r) => !r.portalAccess).length;
+  /** Aserción de unicidad: nunca dos recibos de la misma persona en el periodo. */
+  const duplicateConflicts = useMemo(
+    () => assertUniqueReceiptCandidates(selectedRows),
+    [selectedRows],
+  );
 
   const toggle = (row: DistributionRow) => {
     if (!row.eligible) return;
@@ -170,9 +188,19 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
   };
 
   const selectEligible = () =>
+    // `eligible` ya exige candidato canónico: excluye auxiliares, identidad,
+    // publicados y bloqueados.
     setSelected(new Set(visible.filter((r) => r.eligible).map((r) => r.employeeId)));
 
   const openPreview = () => {
+    if (duplicateConflicts.length > 0) {
+      notifyWarning({
+        title: "Hay más de un recibo para la misma persona",
+        fact: `${duplicateConflicts.length} caso(s) con dos candidatos en este periodo.`,
+        consequence: "No se abrió la publicación: revisa la identidad antes de continuar.",
+      });
+      return;
+    }
     if (selectedRows.length === 0) {
       notifyWarning({
         title: "No hay recibos seleccionados",
@@ -187,6 +215,16 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
 
   const runPublish = async () => {
     if (!confirmChecked) return;
+    // Última barrera antes de escribir: unicidad persona+empresa+periodo.
+    if (assertUniqueReceiptCandidates(selectedRows).length > 0) {
+      setPreviewOpen(false);
+      notifyWarning({
+        title: "Publicación detenida por duplicado de persona",
+        fact: "La selección contiene dos candidatos de la misma persona en este periodo.",
+        consequence: "No se publicó ningún recibo de esos casos.",
+      });
+      return;
+    }
     setWorking(true);
     try {
       const res = await bulkPublish(
@@ -222,12 +260,18 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
   };
 
   const kpis: { key: FilterKey; label: string; value: string }[] = [
-    { key: "all", label: "Aprobados", value: String(summary.approved) },
+    { key: "all", label: "Aprobados (candidatos)", value: String(summary.approved) },
     { key: "ready", label: "Listos para publicar", value: String(summary.ready) },
     { key: "blocked", label: "Bloqueados", value: String(summary.blocked) },
-    { key: "no_account", label: "Sin acceso", value: String(summary.noAccount) },
+    { key: "no_account", label: "Sin cuenta, aún sin publicar", value: String(summary.noAccount) },
+    { key: "identity", label: "Revisión de identidad", value: String(summary.identity) },
     { key: "published", label: "Publicados", value: String(summary.published) },
-    { key: "published_no_access", label: "Publicados sin acceso", value: String(summary.publishedNoAccess) },
+    {
+      key: "published_no_access",
+      label: "Ya publicados sin acceso",
+      value: String(summary.publishedNoAccess),
+    },
+    { key: "auxiliary", label: "Registros auxiliares", value: String(summary.auxiliary) },
   ];
 
   return (
@@ -243,7 +287,9 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
         </div>
         <p className="text-xs text-muted-foreground">
           {summary.published} / {summary.approved} publicados · {summary.visible} visibles ·{" "}
-          {summary.publishedNoAccess} sin acceso · {summary.blocked} bloqueados
+          {summary.publishedNoAccess} ya publicados sin acceso · {summary.noAccount} sin cuenta aún
+          sin publicar · {summary.blocked} bloqueados
+          {summary.auxiliary > 0 ? ` · ${summary.auxiliary} registros auxiliares` : ""}
         </p>
       </CardHeader>
 
@@ -258,7 +304,7 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               {kpis.map((k) => (
                 <button
                   key={k.label}
@@ -481,8 +527,9 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
               <li>Elegibles seleccionados: {selectedRows.length}</li>
               <li>Ya publicados (se omitirán): {summary.published}</li>
               <li>Excluidos — ajustes pendientes: {summary.blocked}</li>
-              <li>Revisión de identidad: {summary.identity}</li>
-              <li>Sin acceso a Stafly: {summary.noAccount}</li>
+              <li>Excluidos — revisión de identidad: {summary.identity}</li>
+              <li>Excluidos — registros auxiliares de la misma persona: {summary.auxiliary}</li>
+              <li>Sin cuenta, aún sin publicar: {summary.noAccount}</li>
             </ul>
             {selectedNoAccess > 0 && (
               <p className="flex items-start gap-2 rounded-md border border-warning/40 p-2 text-xs">
@@ -494,8 +541,13 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
             )}
             <div className="max-h-48 overflow-y-auto rounded-md border p-2 text-xs">
               {selectedRows.map((r) => (
-                <div key={r.employeeId} className="flex justify-between gap-2 py-0.5">
-                  <span className="truncate">{r.workerName}</span>
+                <div key={r.employeeId} className="flex items-baseline justify-between gap-2 py-0.5">
+                  <span className="min-w-0 truncate">
+                    {r.workerName}
+                    <span className="ml-1 font-mono text-[10px] text-muted-foreground">
+                      {r.employeeId}
+                    </span>
+                  </span>
                   <span className="font-mono">{bulkMoney(r.amount)}</span>
                 </div>
               ))}

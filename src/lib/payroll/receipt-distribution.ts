@@ -13,6 +13,7 @@
  */
 
 import type { BulkPreviewRow } from "@/lib/payroll/bulk-publish";
+import type { Candidacy } from "@/lib/payroll/receipt-candidates";
 import {
   resolvePortalStatus,
   type PortalStatusEmployeeLike,
@@ -28,7 +29,17 @@ export type DistributionStatus =
   | "IDENTITY_REVIEW"
   | "PUBLISHED_VISIBLE"
   | "PUBLISHED_NO_ACCESS"
+  | "AUXILIARY_DUPLICATE"
+  | "AUXILIARY_NO_APPROVED_PAYROLL"
   | "OTHER_BLOCKER";
+
+/** Estados auxiliares: se preservan en pantalla, nunca publican ni cuentan como aprobados. */
+export const AUXILIARY_STATUSES: DistributionStatus[] = [
+  "AUXILIARY_DUPLICATE",
+  "AUXILIARY_NO_APPROVED_PAYROLL",
+];
+
+export const isAuxiliaryStatus = (s: DistributionStatus) => AUXILIARY_STATUSES.includes(s);
 
 export interface DistributionRow {
   employeeId: string;
@@ -46,6 +57,8 @@ export interface DistributionRow {
   blocker: string | null;
   hasOverride: boolean;
   pendingCount: number;
+  /** Candidatura canónica de recibo (P0.4). */
+  candidacy: Candidacy | null;
   preview: BulkPreviewRow;
 }
 
@@ -88,6 +101,16 @@ export const DISTRIBUTION_COPY: Record<
     tone: "warning",
     help: "El recibo existe y está congelado, pero el trabajador aún no puede abrirlo.",
   },
+  AUXILIARY_DUPLICATE: {
+    label: "Registro auxiliar",
+    tone: "neutral",
+    help: "Fila histórica de la misma persona. Su importe ya está dentro del total aprobado del registro canónico: no genera recibo propio.",
+  },
+  AUXILIARY_NO_APPROVED_PAYROLL: {
+    label: "Sin nómina aprobada",
+    tone: "neutral",
+    help: "Solo tiene movimientos del periodo, sin nómina aprobada. No es candidato a recibo.",
+  },
   OTHER_BLOCKER: {
     label: "Otro bloqueo",
     tone: "critical",
@@ -103,7 +126,8 @@ export interface DistributionFilterKey {
     | "no_account"
     | "identity"
     | "published"
-    | "published_no_access";
+    | "published_no_access"
+    | "auxiliary";
   label: string;
 }
 
@@ -115,6 +139,7 @@ export const DISTRIBUTION_FILTERS: DistributionFilterKey[] = [
   { key: "identity", label: "Revisión de identidad" },
   { key: "published", label: "Publicados" },
   { key: "published_no_access", label: "Publicados sin acceso" },
+  { key: "auxiliary", label: "Registros auxiliares" },
 ];
 
 const PENDING_RE = /pendiente|pending|ajuste/i;
@@ -132,6 +157,8 @@ function classifyBlocker(reason: string | null): DistributionStatus {
 export interface DeriveContext {
   employee?: PortalStatusEmployeeLike | null;
   invitation?: PortalStatusInvitationLike | null;
+  /** P0.4 — candidatura canónica de recibo. Sin ella no hay elegibilidad segura. */
+  candidacy?: Candidacy | null;
 }
 
 /** Derivación pura. Nunca copia estado entre sistemas: solo lo interpreta. */
@@ -143,12 +170,21 @@ export function deriveDistributionRow(
   // El acceso real es `employees.user_id`; el preview lo confirma server-side.
   const portalAccess = portal.hasPortalAccess || preview.portal_access;
   const published = preview.readiness === "published";
-  const eligible = preview.readiness === "ready";
+  const role = ctx.candidacy?.role ?? "canonical_candidate";
+  const isCanonicalCandidate = role === "canonical_candidate";
+  // Elegible = listo server-side Y candidato canónico de recibo del periodo.
+  const eligible = preview.readiness === "ready" && isCanonicalCandidate;
   const pendingCount = preview.pending_count;
 
   let status: DistributionStatus;
   if (published) {
     status = portalAccess ? "PUBLISHED_VISIBLE" : "PUBLISHED_NO_ACCESS";
+  } else if (role === "auxiliary_duplicate") {
+    status = "AUXILIARY_DUPLICATE";
+  } else if (role === "auxiliary_no_approved_payroll") {
+    status = "AUXILIARY_NO_APPROVED_PAYROLL";
+  } else if (role === "identity_review") {
+    status = "IDENTITY_REVIEW";
   } else if (preview.readiness === "blocked") {
     status = classifyBlocker(preview.blocking_reason);
     if (status === "BLOCKED_PENDING_ADJUSTMENT" && pendingCount === 0) {
@@ -180,14 +216,16 @@ export function deriveDistributionRow(
     portalLabel: portal.label,
     hasPendingInvitation: portal.status === "invited",
     status,
-    blocker: preview.blocking_reason,
+    blocker: preview.blocking_reason ?? (isCanonicalCandidate ? null : ctx.candidacy?.reason ?? null),
     hasOverride: preview.has_override,
     pendingCount,
+    candidacy: ctx.candidacy ?? null,
     preview,
   };
 }
 
 export interface DistributionSummary {
+  /** Candidatos canónicos del periodo (excluye filas auxiliares). */
   approved: number;
   ready: number;
   blocked: number;
@@ -196,26 +234,30 @@ export interface DistributionSummary {
   published: number;
   visible: number;
   publishedNoAccess: number;
+  /** Filas auxiliares preservadas, nunca publicables. */
+  auxiliary: number;
   readyTotal: number;
 }
 
 export function summarizeDistribution(rows: DistributionRow[]): DistributionSummary {
-  const ready = rows.filter((r) => r.status === "READY_TO_PUBLISH");
-  const noAccount = rows.filter((r) => r.status === "NEEDS_ACCOUNT");
+  const candidates = rows.filter((r) => !isAuxiliaryStatus(r.status));
+  const ready = candidates.filter((r) => r.status === "READY_TO_PUBLISH");
+  const noAccount = candidates.filter((r) => r.status === "NEEDS_ACCOUNT");
   return {
-    approved: rows.length,
+    approved: candidates.length,
     ready: ready.length,
-    blocked: rows.filter(
+    blocked: candidates.filter(
       (r) =>
         r.status === "BLOCKED_PENDING_ADJUSTMENT" ||
         r.status === "BLOCKED_PAYROLL_REVIEW" ||
         r.status === "OTHER_BLOCKER",
     ).length,
     noAccount: noAccount.length,
-    identity: rows.filter((r) => r.status === "IDENTITY_REVIEW").length,
-    published: rows.filter((r) => r.published).length,
-    visible: rows.filter((r) => r.status === "PUBLISHED_VISIBLE").length,
-    publishedNoAccess: rows.filter((r) => r.status === "PUBLISHED_NO_ACCESS").length,
+    identity: candidates.filter((r) => r.status === "IDENTITY_REVIEW").length,
+    published: candidates.filter((r) => r.published).length,
+    visible: candidates.filter((r) => r.status === "PUBLISHED_VISIBLE").length,
+    publishedNoAccess: candidates.filter((r) => r.status === "PUBLISHED_NO_ACCESS").length,
+    auxiliary: rows.length - candidates.length,
     readyTotal: [...ready, ...noAccount].reduce((s, r) => s + (r.eligible ? r.amount : 0), 0),
   };
 }
@@ -241,6 +283,8 @@ export function matchesDistributionFilter(
       return row.published;
     case "published_no_access":
       return row.status === "PUBLISHED_NO_ACCESS";
+    case "auxiliary":
+      return isAuxiliaryStatus(row.status);
     default:
       return true;
   }
