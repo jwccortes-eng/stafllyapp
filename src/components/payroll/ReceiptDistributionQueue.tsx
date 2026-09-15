@@ -55,6 +55,11 @@ import {
   type DistributionFilterKey,
   type DistributionRow,
 } from "@/lib/payroll/receipt-distribution";
+import {
+  assertUniqueReceiptCandidates,
+  resolveReceiptCandidacy,
+} from "@/lib/payroll/receipt-candidates";
+import type { PersonRecord } from "@/lib/identity/canonical-person";
 
 interface Props {
   periodId: string;
