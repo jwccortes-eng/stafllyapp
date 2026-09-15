@@ -24,6 +24,7 @@ import PayrollSequenceSettings from "@/components/payroll/PayrollSequenceSetting
 import PeriodReconciliationCell from "@/components/payroll/PeriodReconciliationCell";
 import PayrollPeriodSummaryDialog from "@/components/payroll/PayrollPeriodSummaryDialog";
 import HistoricalCloseoutBoard from "@/components/payroll/HistoricalCloseoutBoard";
+import HistoricalCloseMatrix from "@/components/payroll/HistoricalCloseMatrix";
 import WeeklyPayBreakdownDrawer from "@/components/payroll/WeeklyPayBreakdownDrawer";
 import ReviewPolicyBoard from "@/components/payroll/ReviewPolicyBoard";
 import { usePayrollSequenceConfig, formatSequence } from "@/hooks/usePayrollSequenceConfig";
@@ -520,6 +521,12 @@ export default function PayPeriods() {
           <PayrollSequenceSettings />
         </div>
       )}
+
+      <HistoricalCloseMatrix
+        key={`historical-close-matrix-${selectedCompanyId ?? "none"}`}
+        companyId={selectedCompanyId}
+        onOpenSummary={(p) => setSummaryPeriod(p as any)}
+      />
 
       <HistoricalCloseoutBoard
         key={`historical-closeout-${selectedCompanyId ?? "none"}`}
