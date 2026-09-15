@@ -12,6 +12,7 @@ import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Pencil, Save, X,
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import PayStatementPublishCard from "@/components/payroll/PayStatementPublishCard";
+import { computePeriodDetailTotals } from "@/lib/payroll/period-detail-totals";
 
 interface ShiftRow {
   id: string;
