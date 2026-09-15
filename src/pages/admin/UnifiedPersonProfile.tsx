@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { useEmployeeReadiness } from "@/hooks/useEmployeeReadiness";
+import { useCanonicalPerson } from "@/hooks/useCanonicalPerson";
 import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
 import { useToast } from "@/hooks/use-toast";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
