@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { KpiCard } from "@/components/ui/kpi-card";
+import { StaflyAlertBanner } from "@/components/stafly-ui/StaflyAlertBanner";
 import { cn } from "@/lib/utils";
 import { format, isWithinInterval, parseISO } from "date-fns";
 import { ProgressBar } from "@/components/ui/progress-bar";
