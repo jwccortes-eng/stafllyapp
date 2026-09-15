@@ -33,6 +33,7 @@ interface MovementRow {
   note: string | null;
   concept_name: string;
   category: string;
+  approval_status: string | null;
 }
 
 interface BasePay {
@@ -43,6 +44,8 @@ interface BasePay {
   total_paid_hours: number | null;
   total_regular: number | null;
   import_id?: string | null;
+  approved_total_override?: number | null;
+  approved_total_source?: string | null;
 }
 
 type TraceLevel = "final_total_only" | "concept_breakdown";
@@ -96,9 +99,9 @@ export default function EmployeePeriodDetail() {
     const [empRes, periodRes, baseRes, shiftsRes, movRes] = await Promise.all([
       supabase.from("employees").select("first_name, last_name").eq("id", employeeId).single(),
       supabase.from("pay_periods").select("start_date, end_date, status").eq("id", periodId).single(),
-      supabase.from("period_base_pay").select("id, base_total_pay, total_work_hours, total_overtime, total_paid_hours, total_regular, import_id").eq("employee_id", employeeId).eq("period_id", periodId).maybeSingle(),
+      supabase.from("period_base_pay").select("id, base_total_pay, total_work_hours, total_overtime, total_paid_hours, total_regular, import_id, approved_total_override, approved_total_source").eq("employee_id", employeeId).eq("period_id", periodId).maybeSingle(),
       supabase.from("shifts").select("id, shift_start_date, shift_hours, hourly_rate_usd, daily_total_pay_usd, daily_total_hours, type, customer, job_code").eq("employee_id", employeeId).eq("period_id", periodId).order("shift_start_date"),
-      supabase.from("movements").select("id, total_value, quantity, rate, note, concepts(name, category)").eq("employee_id", employeeId).eq("period_id", periodId),
+      supabase.from("movements").select("id, total_value, quantity, rate, note, approval_status, concepts(name, category)").eq("employee_id", employeeId).eq("period_id", periodId),
     ]);
 
     setEmployee(empRes.data);
@@ -150,6 +153,7 @@ export default function EmployeePeriodDetail() {
         note: m.note,
         concept_name: m.concepts?.name ?? "—",
         category: m.concepts?.category ?? "extra",
+        approval_status: m.approval_status ?? null,
       }))
     );
     setLoading(false);
