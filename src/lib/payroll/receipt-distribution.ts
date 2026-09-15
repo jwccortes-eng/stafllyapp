@@ -28,7 +28,17 @@ export type DistributionStatus =
   | "IDENTITY_REVIEW"
   | "PUBLISHED_VISIBLE"
   | "PUBLISHED_NO_ACCESS"
+  | "AUXILIARY_DUPLICATE"
+  | "AUXILIARY_NO_APPROVED_PAYROLL"
   | "OTHER_BLOCKER";
+
+/** Estados auxiliares: se preservan en pantalla, nunca publican ni cuentan como aprobados. */
+export const AUXILIARY_STATUSES: DistributionStatus[] = [
+  "AUXILIARY_DUPLICATE",
+  "AUXILIARY_NO_APPROVED_PAYROLL",
+];
+
+export const isAuxiliaryStatus = (s: DistributionStatus) => AUXILIARY_STATUSES.includes(s);
 
 export interface DistributionRow {
   employeeId: string;
