@@ -417,7 +417,7 @@ export async function resolveCanonicalPerson(
 
   const candidates: PersonRecord[] = [
     ...(anchor ? [anchor as PersonRecord] : []),
-    ...(((shadows ?? []) as PersonRecord[]) ?? []),
+    ...((shadows ?? []) as PersonRecord[]),
   ];
 
   // Vínculo por cuenta (puede abarcar otras empresas: sólo para conteo).
