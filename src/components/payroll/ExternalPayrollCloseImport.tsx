@@ -338,8 +338,19 @@ export default function ExternalPayrollCloseImport({ companyId, periods }: Props
             )}
 
             <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={runImport} disabled={blocked || needsAck || importing || !!imported}>
-                {importing ? "Cargando…" : `Importar cierre (${formatMoney(s.grandApprovedTotal)})`}
+              <Button
+                onClick={runImport}
+                disabled={
+                  blocked ||
+                  needsAck ||
+                  importing ||
+                  !!imported ||
+                  (localGuard?.blockers.length ?? 0) > 0
+                }
+              >
+                {importing
+                  ? "Cargando…"
+                  : `Importar al período ${s.period.startDate} → ${s.period.endDate} · ${s.workers} filas · ${formatMoney(s.grandApprovedTotal)}`}
               </Button>
               <span className="text-xs text-muted-foreground">
                 No publica recibos ni envía notificaciones. La publicación es un paso posterior.
