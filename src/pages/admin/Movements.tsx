@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
-import { DataTableToolbar } from "@/components/ui/data-table-toolbar";
 
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,8 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Search, Lock, ArrowUpDown, TrendingUp, TrendingDown, DollarSign, Pencil, ShieldCheck, ShieldX, Clock3 } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Lock, DollarSign, Pencil, ShieldCheck, ShieldX, Clock3, Eye } from "lucide-react";
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -28,9 +26,10 @@ import { safeRead, safeSheetToJson, getSheetNames, getSheet } from "@/lib/safe-x
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
-import { KpiCard } from "@/components/ui/kpi-card";
-import { ProgressBar } from "@/components/ui/progress-bar";
-import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { EntityCard } from "@/components/entities/EntityCard";
+import { buildWorkerEntityView } from "@/lib/entities/entity-presenters";
+import { OperationalWorkspace, WorkspaceSearch } from "@/components/stafly-ui/OperationalWorkspace";
+import { StaflyFilterBar, StaflyStatusBadge } from "@/components/stafly-ui";
 
 interface Employee { id: string; first_name: string; last_name: string; }
 interface Period { id: string; start_date: string; end_date: string; status: string; }
@@ -39,7 +38,15 @@ interface Movement {
   id: string; employee_id: string; period_id: string; concept_id: string;
   quantity: number | null; rate: number | null; total_value: number; note: string | null;
   approval_status: string; approval_note: string | null; approved_by: string | null;
-  employees: { first_name: string; last_name: string; } | null;
+  employees: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    avatar_url: string | null;
+    employer_identification: string | null;
+    is_active: boolean | null;
+    user_id: string | null;
+  } | null;
   concepts: { name: string; category: string; } | null;
 }
 
@@ -53,6 +60,25 @@ interface ImportResult {
 }
 
 const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+type MovementFilter = "all" | "extra" | "deduction" | "pending" | "approved";
+
+const formatMoney = (value: number) => value.toLocaleString("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+});
+
+const formatPeriod = (period?: Period) => {
+  if (!period) return "Selecciona un período";
+  const start = new Date(`${period.start_date}T12:00:00`);
+  const end = new Date(`${period.end_date}T12:00:00`);
+  const sameMonth = start.getMonth() === end.getMonth();
+  const startLabel = new Intl.DateTimeFormat("es-US", sameMonth
+    ? { day: "numeric" }
+    : { month: "short", day: "numeric" }).format(start);
+  const endLabel = new Intl.DateTimeFormat("es-US", { month: "short", day: "numeric", year: "numeric" }).format(end);
+  return `${startLabel}–${endLabel}`;
+};
 
 export default function Movements() {
   const { selectedCompanyId } = useCompany();
