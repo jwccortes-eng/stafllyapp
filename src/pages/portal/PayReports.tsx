@@ -1,20 +1,22 @@
 /**
  * PayReports — "Mis pagos" (worker).
  *
- * Fuente única: recibos publicados (`pay_statements`) leídos vía el RPC
- * `worker_pay_statements`, con desglose por conceptos canónicos (`movements`).
+ * Historial único con las dos fuentes canónicas ya existentes:
+ *   - Recibos nativos publicados (`pay_statements` vía `worker_pay_statements`).
+ *   - Reportes históricos importados (`period_base_pay` con `import_id`).
  *
  * Reglas:
- *  - Nunca se recalcula el total en el cliente: se muestra `frozen_total`.
+ *  - Nunca se recalcula el total en el cliente: nativo = `frozen_total`,
+ *    histórico = `base_total_pay` importado.
+ *  - Un periodo con recibo nativo nunca se duplica con su histórico.
  *  - Nunca se leen movimientos pendientes ni notas internas (RLS + RPC).
- *  - Nunca se usan horas programadas ni `time_entries`.
- *  - Solo recibos del propio trabajador.
+ *  - Solo pagos del propio trabajador.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Wallet, CheckCircle2, ChevronRight, Receipt } from "lucide-react";
+import { ArrowLeft, Wallet, CheckCircle2, ChevronRight, Receipt, Archive } from "lucide-react";
 import {
   StaflyCard,
   StaflyStatusBadge,
@@ -24,11 +26,15 @@ import {
 import PayStatementDetailSheet from "@/components/portal/PayStatementDetailSheet";
 import { notifyError } from "@/lib/feedback/notify";
 import {
-  fetchWorkerPayStatements,
   fmtStatementMoney,
   statementStatusLabel,
   type WorkerPayStatementSummary,
 } from "@/lib/payroll/pay-statement";
+import {
+  fetchWorkerPaymentHistory,
+  summarizePaymentHistory,
+  type PaymentHistoryItem,
+} from "@/lib/payroll/payment-history";
 
 function fmtRange(start: string, end: string): string {
   try {
