@@ -283,6 +283,8 @@ export function matchesDistributionFilter(
       return row.published;
     case "published_no_access":
       return row.status === "PUBLISHED_NO_ACCESS";
+    case "auxiliary":
+      return isAuxiliaryStatus(row.status);
     default:
       return true;
   }
