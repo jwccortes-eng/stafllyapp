@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useCompany } from "@/hooks/useCompany";
 import { useEmployeeReadiness } from "@/hooks/useEmployeeReadiness";
+import { useCanonicalPerson } from "@/hooks/useCanonicalPerson";
 import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
 import { useToast } from "@/hooks/use-toast";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
@@ -189,6 +190,9 @@ export default function UnifiedPersonProfile() {
 
   const { invitations, refetch: refetchInvitations, logInvitation } = useEmployeeInvitations(selectedCompanyId ?? null);
   const readiness = useEmployeeReadiness(id ?? null);
+  // Capa canónica de persona (solo lectura / modo sombra): explica la identidad,
+  // nunca escribe ni copia contacto entre fichas.
+  const { data: canonicalPerson } = useCanonicalPerson(id ?? null, stableCompanyId);
 
   // ── Fetch core employee record ──────────────────────────────────────────
   useEffect(() => {
@@ -789,13 +793,22 @@ export default function UnifiedPersonProfile() {
 
                 {/* Contact row — desktop only. On mobile these live in Datos principales. */}
                 <div className="mt-3 hidden sm:flex items-center gap-x-4 gap-y-1 flex-wrap text-xs text-muted-foreground">
-                  {employee.phone_number && (
+                  {(employee.phone_number || canonicalPerson?.contact.phone) && (
                     <a
-                      href={`tel:${employee.phone_number}`}
+                      href={`tel:${employee.phone_number || canonicalPerson?.contact.phone}`}
                       className="inline-flex items-center gap-1 hover:text-foreground"
                     >
-                      <Phone className="h-3.5 w-3.5" /> {employee.phone_number}
+                      <Phone className="h-3.5 w-3.5" />{" "}
+                      {employee.phone_number || canonicalPerson?.contact.phone}
                     </a>
+                  )}
+                  {canonicalPerson && canonicalPerson.linked_record_count > 1 && (
+                    <span
+                      className="inline-flex items-center gap-1 text-muted-foreground/80"
+                      title={canonicalPerson.reason}
+                    >
+                      Registros de identidad vinculados: {canonicalPerson.linked_record_count}
+                    </span>
                   )}
                   {employee.email && (
                     <a
