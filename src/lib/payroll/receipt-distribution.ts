@@ -13,6 +13,7 @@
  */
 
 import type { BulkPreviewRow } from "@/lib/payroll/bulk-publish";
+import type { Candidacy } from "@/lib/payroll/receipt-candidates";
 import {
   resolvePortalStatus,
   type PortalStatusEmployeeLike,
