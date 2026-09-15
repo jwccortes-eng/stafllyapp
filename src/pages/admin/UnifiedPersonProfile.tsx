@@ -190,6 +190,9 @@ export default function UnifiedPersonProfile() {
 
   const { invitations, refetch: refetchInvitations, logInvitation } = useEmployeeInvitations(selectedCompanyId ?? null);
   const readiness = useEmployeeReadiness(id ?? null);
+  // Capa canónica de persona (solo lectura / modo sombra): explica la identidad,
+  // nunca escribe ni copia contacto entre fichas.
+  const { data: canonicalPerson } = useCanonicalPerson(id ?? null, stableCompanyId);
 
   // ── Fetch core employee record ──────────────────────────────────────────
   useEffect(() => {
