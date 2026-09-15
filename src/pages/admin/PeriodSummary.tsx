@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { describeConsolidation, type ConsolidationOutcome } from "@/lib/payroll/rate-resolver";
-import BulkPublishPanel from "@/components/payroll/BulkPublishPanel";
+import ReceiptDistributionQueue from "@/components/payroll/ReceiptDistributionQueue";
 
 
 /**
@@ -658,7 +658,14 @@ function DesktopPeriodSummary() {
 
       <TabsContent value="statements" className="space-y-5 mt-0">
         {selectedPeriod ? (
-          <BulkPublishPanel periodId={selectedPeriod} />
+          <ReceiptDistributionQueue
+            periodId={selectedPeriod}
+            periodLabel={
+              selectedPeriodObj
+                ? `${selectedPeriodObj.start_date} – ${selectedPeriodObj.end_date}`
+                : null
+            }
+          />
         ) : (
           <p className="text-sm text-muted-foreground">Selecciona un periodo para ver los recibos.</p>
         )}
