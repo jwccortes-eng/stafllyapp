@@ -762,7 +762,20 @@ function DesktopPeriodSummary() {
                 {sorted.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={grandAdvances > 0 ? 7 : 6} className="text-center text-muted-foreground py-16">
-                      {rows.length === 0 ? "Selecciona un periodo para ver el resumen" : "Sin resultados para los filtros aplicados"}
+                      {rows.length > 0 ? (
+                        "Sin resultados para los filtros aplicados"
+                      ) : !selectedPeriod ? (
+                        "Selecciona un periodo para ver el resumen"
+                      ) : (
+                        <span className="block space-y-1">
+                          <span className="block font-medium text-foreground">
+                            Este período todavía no tiene datos de pago cargados.
+                          </span>
+                          <span className="block text-sm">
+                            Importa o genera los datos del período para ver el resumen.
+                          </span>
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ) : (
