@@ -79,6 +79,12 @@ export interface BridgeSummary {
   grandDifference: number;
   canImport: boolean;
   blockers: string[];
+  /** Guardarraíles P0 (servidor). */
+  fileRange?: { start: string; end: string } | null;
+  guardBlockers?: string[];
+  guardWarnings?: string[];
+  publishedStatements?: number;
+  duplicateCandidates?: number;
 }
 
 export interface BridgePreviewResult {
