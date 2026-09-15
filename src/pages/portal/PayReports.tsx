@@ -47,18 +47,18 @@ function fmtRange(start: string, end: string): string {
 }
 
 export default function PayReports() {
-  const [rows, setRows] = useState<WorkerPayStatementSummary[]>([]);
+  const [rows, setRows] = useState<PaymentHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<WorkerPayStatementSummary | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setRows(await fetchWorkerPayStatements());
+      setRows(await fetchWorkerPaymentHistory());
     } catch (e) {
       notifyError({
         title: "No pudimos cargar tus pagos",
-        fact: "La lista de recibos no se pudo leer.",
+        fact: "La lista de pagos no se pudo leer.",
         consequence: "No verás tu historial de pagos hasta reintentar.",
         cause: e,
       });
@@ -72,19 +72,7 @@ export default function PayReports() {
     void load();
   }, [load]);
 
-  const kpis = useMemo(() => {
-    const year = new Date().getFullYear();
-    const ytd = rows
-      .filter((r) => {
-        try {
-          return parseISO(r.end_date).getFullYear() === year;
-        } catch {
-          return false;
-        }
-      })
-      .reduce((s, r) => s + r.frozen_total, 0);
-    return { count: rows.length, latest: rows[0]?.frozen_total ?? 0, ytd };
-  }, [rows]);
+  const kpis = useMemo(() => summarizePaymentHistory(rows), [rows]);
 
   return (
     <div className="min-h-dvh bg-background pb-28">
