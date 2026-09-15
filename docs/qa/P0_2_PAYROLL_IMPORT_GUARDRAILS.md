@@ -15,12 +15,17 @@ El bridge de cierre externo (`supabase/functions/import-payroll-extras/index.ts`
 - que el total esperado coincidiera al centavo.
 
 No validaba **nada del contenedor temporal**: ni el rango real del archivo, ni el estado
-del periodo, ni la existencia de recibos publicados. Por eso el 14-sep-2026 el archivo
-`146 UNTITLED_REPORT_2026-08-19_2026-08-25.xlsx` (rango real Aug 19–25) se escribió en el
-periodo 146 estando ya cerrado: 26 filas de `period_base_pay`, $15.714,14 aprobados.
+del periodo, ni la existencia de recibos publicados. El 14-sep-2026 el archivo
+`146 UNTITLED_REPORT_2026-08-19_2026-08-25.xlsx` se escribió en el periodo 146 **estando
+ya cerrado**: 26 filas de `period_base_pay`, $15.714,14 aprobados.
 
-El operador nunca vio el rango del archivo en pantalla, así que la discrepancia era
-invisible antes de confirmar.
+> **Corrección (P0.3, 15-sep-2026):** la verificación posterior demostró que el periodo 146
+> de Quality Staff **es exactamente Aug 19–25**, es decir el período correcto para ese
+> archivo. El único fallo real fue la escritura en un período ya cerrado, no un período
+> equivocado. Ver `docs/qa/P0_3_PERIOD_146_IMPORT_REPAIR.md`.
+
+El operador nunca vio el rango del archivo en pantalla, así que no tenía forma de
+verificar la correspondencia antes de confirmar.
 
 ## 2. FILE/PERIOD VALIDATION (Rule 1)
 
@@ -112,9 +117,8 @@ Conclusiones del impacto:
 - 22 movimientos están marcados como visibles para el trabajador, pero sin recibo
   publicado no aparecen como pago del periodo.
 
-**No se ha aplicado ninguna limpieza.** Queda pendiente decisión humana: mover estas 26
-filas al periodo Aug 19–25 correcto o anularlas. Ambas opciones requieren autorización
-explícita y un flujo privilegiado.
+**No se ha aplicado ninguna limpieza.** Verificado en P0.3: estas 26 filas **ya están en el
+período correcto** (146 = Aug 19–25). No hay nada que mover ni anular.
 
 ## 7. PERIOD 142 REGRESSION (Rule 8)
 
@@ -202,8 +206,9 @@ Archivos modificados:
    el periodo cerrado en cliente. Es la próxima candidata a endurecer.
 3. **153 periodos cerrados.** Con la Rule 2 activa, cualquier corrección histórica
    legítima queda bloqueada hasta que exista el flujo privilegiado de reapertura.
-4. **Periodo 146 sin resolver.** 26 filas y $15.714,14 siguen en el periodo equivocado,
-   sin impacto visible para el trabajador, esperando decisión humana.
+4. **Periodo 146: escritura sobre periodo cerrado.** Las 26 filas y $15.714,14 están en el
+   período correcto (Aug 19–25), pero entraron con el período ya cerrado. Sin impacto para
+   el trabajador. Detalle en `docs/qa/P0_3_PERIOD_146_IMPORT_REPAIR.md`.
 5. **Sin enforcement de identidad reforzado.** El matching por nombre como fallback sigue
    siendo posible fuera de este alcance.
 
