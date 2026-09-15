@@ -304,7 +304,7 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               {kpis.map((k) => (
                 <button
                   key={k.label}
