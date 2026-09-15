@@ -41,7 +41,9 @@ interface Props {
 }
 
 export default function ExternalPayrollCloseImport({ companyId, periods }: Props) {
-  const [periodId, setPeriodId] = useState("");
+  // Permite llegar desde el resumen del período con el período ya preseleccionado.
+  const [searchParams] = useSearchParams();
+  const [periodId, setPeriodId] = useState(searchParams.get("periodId") ?? "");
   const [fileName, setFileName] = useState<string | null>(null);
   const [rawRows, setRawRows] = useState<Payroll142RawRow[]>([]);
   const [secretariaTotal, setSecretariaTotal] = useState<number | null>(null);
