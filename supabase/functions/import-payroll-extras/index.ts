@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { parseMoney, round2 } from "../_shared/payroll-money.ts";
+import { evaluatePayrollImportGuards } from "../_shared/payroll-import-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -177,6 +178,24 @@ async function handleBridge(
     return json({ error: "Periodo no encontrado para esta compañía" }, 400);
   }
 
+  // 1.b GUARDARRAÍLES P0 (server-side, sin override en el flujo normal):
+  //     rango del archivo vs periodo, periodo cerrado, recibos publicados.
+  const { count: publishedStatements } = await supabase
+    .from("pay_statements")
+    .select("id", { count: "exact", head: true })
+    .eq("pay_period_id", periodId)
+    .eq("status", "published");
+
+  const guard = evaluatePayrollImportGuards({
+    fileName: body.fileName,
+    period: {
+      start_date: period.start_date,
+      end_date: period.end_date,
+      status: period.status,
+    },
+    publishedStatements: publishedStatements ?? 0,
+  });
+
   // 2. Identidad: matching por Employer identification (nunca crea empleados).
   //    Roster completo paginado (PostgREST corta en 1000 filas por defecto).
   const roster: any[] = [];
@@ -249,10 +268,10 @@ async function handleBridge(
   const movementExisting = new Set((existingMovements ?? []).map((m: any) => `${m.employee_id}|${m.concept_id}`));
 
   const previewRows: any[] = [];
-  const blockers: string[] = [];
+  const blockers: string[] = [...guard.blockers];
   let grandApproved = 0;
   let grandComponents = 0;
-  let matched = 0, ambiguous = 0, notFound = 0, overrides = 0, parseIssues = 0;
+  let matched = 0, ambiguous = 0, notFound = 0, overrides = 0, parseIssues = 0, duplicates = 0;
   const seenEmployeeIds = new Set<string>();
 
   for (const row of rows) {
@@ -290,6 +309,7 @@ async function handleBridge(
 
     if (identityStatus === "MATCHED" && employeeId) {
       if (seenEmployeeIds.has(employeeId)) {
+        duplicates++;
         identityStatus = "AMBIGUOUS";
         warnings.push("Este trabajador aparece en más de una fila del archivo.");
       } else {
@@ -416,6 +436,12 @@ async function handleBridge(
     grandDifference: round2(grandApproved - grandComponents),
     canImport: blockers.length === 0,
     blockers,
+    // Guardarraíles P0
+    fileRange: guard.fileRange,
+    guardBlockers: guard.blockers,
+    guardWarnings: guard.warnings,
+    publishedStatements: publishedStatements ?? 0,
+    duplicateCandidates: duplicates,
   };
 
   if (mode === "preview") {
@@ -424,6 +450,9 @@ async function handleBridge(
   }
 
   // ---------------- IMPORT CONTROLADO ----------------
+  if (guard.blockers.length > 0) {
+    return json({ error: guard.blockers.join(" "), summary, rows: previewRows }, 409);
+  }
   if (blockers.length > 0) {
     return json({ error: "Hay filas bloqueadas. Resuelve identidad y parseo antes de importar.", summary, rows: previewRows }, 409);
   }

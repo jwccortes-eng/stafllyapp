@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { KpiCard } from "@/components/ui/kpi-card";
+import { StaflyAlertBanner } from "@/components/stafly-ui/StaflyAlertBanner";
 import { cn } from "@/lib/utils";
 import { format, isWithinInterval, parseISO } from "date-fns";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -664,6 +665,15 @@ function DesktopPeriodSummary() {
       </TabsContent>
 
       <TabsContent value="summary" className="space-y-5 mt-0">
+        {/* Período sin datos de pago: nunca mostrar ceros como si la nómina estuviera lista */}
+        {selectedPeriod && rows.length === 0 && (
+          <StaflyAlertBanner
+            tone="info"
+            title="Este período todavía no tiene datos de pago cargados."
+            description="Importa o genera los datos del período para ver el resumen."
+          />
+        )}
+
         {/* KPI Cards */}
         {rows.length > 0 && (
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -762,7 +772,20 @@ function DesktopPeriodSummary() {
                 {sorted.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={grandAdvances > 0 ? 7 : 6} className="text-center text-muted-foreground py-16">
-                      {rows.length === 0 ? "Selecciona un periodo para ver el resumen" : "Sin resultados para los filtros aplicados"}
+                      {rows.length > 0 ? (
+                        "Sin resultados para los filtros aplicados"
+                      ) : !selectedPeriod ? (
+                        "Selecciona un periodo para ver el resumen"
+                      ) : (
+                        <span className="block space-y-1">
+                          <span className="block font-medium text-foreground">
+                            Este período todavía no tiene datos de pago cargados.
+                          </span>
+                          <span className="block text-sm">
+                            Importa o genera los datos del período para ver el resumen.
+                          </span>
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ) : (

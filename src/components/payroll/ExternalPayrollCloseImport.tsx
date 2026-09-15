@@ -20,6 +20,10 @@ import {
   type BridgePreviewResult,
   type Payroll142RawRow,
 } from "@/lib/payroll/payroll142-bridge";
+import {
+  detectFileRange,
+  evaluatePayrollImportGuards,
+} from "@/lib/payroll/import-period-guard";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -137,6 +141,21 @@ export default function ExternalPayrollCloseImport({ companyId, periods }: Props
     setImporting(false);
   };
 
+  const selectedPeriod = useMemo(
+    () => periods.find((p) => p.id === periodId) ?? null,
+    [periods, periodId],
+  );
+
+  /** Aviso local antes de llamar al preview. La autoridad es el servidor. */
+  const localGuard = useMemo(() => {
+    if (!selectedPeriod || !fileName) return null;
+    return evaluatePayrollImportGuards({
+      fileName,
+      period: selectedPeriod,
+      publishedStatements: 0,
+    });
+  }, [selectedPeriod, fileName]);
+
   const s = preview?.summary;
   const blocked = !!s && !s.canImport;
   const needsAck = !!s && s.approvedTotalOverrides > 0 && !ackOverrides;
@@ -195,14 +214,53 @@ export default function ExternalPayrollCloseImport({ companyId, periods }: Props
           </div>
         )}
 
+        {localGuard && localGuard.blockers.length > 0 && (
+          <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+            <AlertCircle className="mt-0.5 h-4 w-4 text-destructive" />
+            <div>
+              <p className="font-medium">Revisa antes de continuar</p>
+              <ul className="mt-1 list-disc pl-4 text-muted-foreground">
+                {localGuard.blockers.map((b, i) => <li key={i}>{b}</li>)}
+              </ul>
+            </div>
+          </div>
+        )}
+
         {s && (
           <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
-              <Kpi label="Trabajadores" value={String(s.workers)} />
-              <Kpi label="Total aprobado" value={formatMoney(s.grandApprovedTotal)} />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-sm">
+              <Kpi label="Compañía" value={companyId ? "Compañía activa" : "—"} />
+              <Kpi
+                label="Período seleccionado"
+                value={`${s.period.startDate} → ${s.period.endDate} · ${s.period.status}`}
+              />
+              <Kpi
+                label="Período detectado en el archivo"
+                value={
+                  s.fileRange
+                    ? `${s.fileRange.start} → ${s.fileRange.end}`
+                    : detectFileRange(fileName)
+                      ? `${detectFileRange(fileName)!.start} → ${detectFileRange(fileName)!.end}`
+                      : "No detectado"
+                }
+              />
+              <Kpi label="Filas de trabajador" value={String(s.workers)} />
+              <Kpi
+                label="Filas válidas / inválidas"
+                value={`${s.matched} · ${s.workers - s.matched}`}
+              />
+              <Kpi label="Sin ficha (no emparejados)" value={String(s.notFound)} />
+              <Kpi label="Posibles duplicados" value={String(s.duplicateCandidates ?? s.ambiguous)} />
+              <Kpi label="Total aprobado del archivo" value={formatMoney(s.grandApprovedTotal)} />
+              <Kpi label="Destino de escritura" value="period_base_pay + movements" />
+              <Kpi label="Recibos publicados en el período" value={String(s.publishedStatements ?? 0)} />
               <Kpi label="Suma de componentes" value={formatMoney(s.grandComponentSum)} />
               <Kpi label="Identidades" value={`${s.matched} ok · ${s.ambiguous} ambiguas · ${s.notFound} sin ficha`} />
             </div>
+
+            {(s.guardWarnings ?? []).length > 0 && (
+              <p className="text-sm text-muted-foreground">{(s.guardWarnings ?? []).join(" ")}</p>
+            )}
 
             {secretariaTotal !== null && Math.abs(secretariaTotal - s.grandApprovedTotal) >= 0.01 && (
               <p className="text-sm text-muted-foreground">
@@ -280,8 +338,19 @@ export default function ExternalPayrollCloseImport({ companyId, periods }: Props
             )}
 
             <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={runImport} disabled={blocked || needsAck || importing || !!imported}>
-                {importing ? "Cargando…" : `Importar cierre (${formatMoney(s.grandApprovedTotal)})`}
+              <Button
+                onClick={runImport}
+                disabled={
+                  blocked ||
+                  needsAck ||
+                  importing ||
+                  !!imported ||
+                  (localGuard?.blockers.length ?? 0) > 0
+                }
+              >
+                {importing
+                  ? "Cargando…"
+                  : `Importar al período ${s.period.startDate} → ${s.period.endDate} · ${s.workers} filas · ${formatMoney(s.grandApprovedTotal)}`}
               </Button>
               <span className="text-xs text-muted-foreground">
                 No publica recibos ni envía notificaciones. La publicación es un paso posterior.
