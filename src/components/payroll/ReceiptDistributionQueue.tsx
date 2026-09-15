@@ -287,7 +287,9 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
         </div>
         <p className="text-xs text-muted-foreground">
           {summary.published} / {summary.approved} publicados · {summary.visible} visibles ·{" "}
-          {summary.publishedNoAccess} sin acceso · {summary.blocked} bloqueados
+          {summary.publishedNoAccess} ya publicados sin acceso · {summary.noAccount} sin cuenta aún
+          sin publicar · {summary.blocked} bloqueados
+          {summary.auxiliary > 0 ? ` · ${summary.auxiliary} registros auxiliares` : ""}
         </p>
       </CardHeader>
 
