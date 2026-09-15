@@ -260,12 +260,18 @@ export default function ReceiptDistributionQueue({ periodId, periodLabel }: Prop
   };
 
   const kpis: { key: FilterKey; label: string; value: string }[] = [
-    { key: "all", label: "Aprobados", value: String(summary.approved) },
+    { key: "all", label: "Aprobados (candidatos)", value: String(summary.approved) },
     { key: "ready", label: "Listos para publicar", value: String(summary.ready) },
     { key: "blocked", label: "Bloqueados", value: String(summary.blocked) },
-    { key: "no_account", label: "Sin acceso", value: String(summary.noAccount) },
+    { key: "no_account", label: "Sin cuenta, aún sin publicar", value: String(summary.noAccount) },
+    { key: "identity", label: "Revisión de identidad", value: String(summary.identity) },
     { key: "published", label: "Publicados", value: String(summary.published) },
-    { key: "published_no_access", label: "Publicados sin acceso", value: String(summary.publishedNoAccess) },
+    {
+      key: "published_no_access",
+      label: "Ya publicados sin acceso",
+      value: String(summary.publishedNoAccess),
+    },
+    { key: "auxiliary", label: "Registros auxiliares", value: String(summary.auxiliary) },
   ];
 
   return (
